@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -8,7 +9,9 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .permissions import IsAdminRole
-from .serializers import LoginSerializer, UserInviteSerializer
+from .serializers import LoginSerializer, UserInviteSerializer, UserListSerializer
+
+User = get_user_model()
 
 
 def _set_auth_cookies(response, user):
@@ -92,9 +95,17 @@ class RefreshView(APIView):
         return response
 
 
-class UserInviteView(generics.CreateAPIView):
-    serializer_class = UserInviteSerializer
+STAFF_ROLES = ("sales", "operations", "admin")
+
+
+class UserInviteView(generics.ListCreateAPIView):
     permission_classes = [IsAdminRole]
+    queryset = User.objects.filter(role__in=STAFF_ROLES).order_by("name")
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return UserInviteSerializer
+        return UserListSerializer
 
     def perform_create(self, serializer):
         user = serializer.save()

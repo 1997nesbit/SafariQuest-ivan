@@ -1,12 +1,14 @@
 from django.conf import settings
-from rest_framework import status
+from django.core.mail import send_mail
+from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .serializers import LoginSerializer
+from .permissions import IsAdminRole
+from .serializers import LoginSerializer, UserInviteSerializer
 
 
 def _set_auth_cookies(response, user):
@@ -62,3 +64,21 @@ class LogoutView(APIView):
         if not blacklisted:
             response.status_code = status.HTTP_401_UNAUTHORIZED
         return response
+
+
+class UserInviteView(generics.CreateAPIView):
+    serializer_class = UserInviteSerializer
+    permission_classes = [IsAdminRole]
+
+    def perform_create(self, serializer):
+        user = serializer.save()
+        send_mail(
+            subject="You've been invited to SafariQuest",
+            message=(
+                f"Hi {user.name or user.email},\n\n"
+                f"You've been invited to join SafariQuest as {user.get_role_display()}. "
+                "Sign in and set your password to get started."
+            ),
+            from_email=None,
+            recipient_list=[user.email],
+        )

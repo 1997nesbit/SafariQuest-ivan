@@ -27,6 +27,13 @@ class LogoutViewTests(APITestCase):
         response = self.client.post(self.logout_url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    def test_logout_clears_cookies_even_with_unusable_access_token(self):
+        self._login()
+        self.client.cookies[settings.AUTH_COOKIE_ACCESS] = "garbage"
+        response = self.client.post(self.logout_url)
+        self.assertEqual(response.cookies[settings.AUTH_COOKIE_ACCESS].value, "")
+        self.assertEqual(response.cookies[settings.AUTH_COOKIE_REFRESH].value, "")
+
     def test_replaying_blacklisted_refresh_token_is_rejected(self):
         self._login()
         refresh_cookie_value = self.client.cookies[settings.AUTH_COOKIE_REFRESH].value

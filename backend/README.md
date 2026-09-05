@@ -22,7 +22,8 @@ cp .env.example .env
 | Method | Path | Auth |
 |---|---|---|
 | POST | `/api/auth/login/` | Public |
-| POST | `/api/auth/logout/` | Authenticated |
+| POST | `/api/auth/logout/` | Public |
+| POST | `/api/auth/refresh/` | Public |
 | POST | `/api/users/` | Admin |
 | GET | `/api/destinations/` | Public |
 | POST/PATCH/DELETE | `/api/destinations/` | Admin |
@@ -42,3 +43,4 @@ cp .env.example .env
 - Google OAuth login
 - Bookings, inquiries, invoicing, complaints (later ops-manual parts)
 - Frontend wiring (see `website/`)
+- Set-password / activation flow for admin-invited users (accounts created via POST /api/users/ currently have no way to authenticate until a password-set endpoint is added)

@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.core.mail import send_mail
 from rest_framework import generics, status
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
@@ -47,7 +47,8 @@ class LoginView(APIView):
 
 
 class LogoutView(APIView):
-    permission_classes = [IsAuthenticated]
+    authentication_classes = []
+    permission_classes = [AllowAny]
 
     def post(self, request):
         raw_refresh = request.COOKIES.get(settings.AUTH_COOKIE_REFRESH)
@@ -66,6 +67,31 @@ class LogoutView(APIView):
         return response
 
 
+class RefreshView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        raw_refresh = request.COOKIES.get(settings.AUTH_COOKIE_REFRESH)
+        if not raw_refresh:
+            return Response(status=status.HTTP_401_UNAUTHORIZED)
+        try:
+            refresh = RefreshToken(raw_refresh)
+        except TokenError:
+            return Response(status=status.HTTP_401_UNAUTHORIZED)
+        access = refresh.access_token
+        response = Response(status=status.HTTP_200_OK)
+        response.set_cookie(
+            settings.AUTH_COOKIE_ACCESS,
+            str(access),
+            max_age=int(access.lifetime.total_seconds()),
+            httponly=True,
+            secure=settings.AUTH_COOKIE_SECURE,
+            samesite=settings.AUTH_COOKIE_SAMESITE,
+        )
+        return response
+
+
 class UserInviteView(generics.CreateAPIView):
     serializer_class = UserInviteSerializer
     permission_classes = [IsAdminRole]
@@ -77,7 +103,7 @@ class UserInviteView(generics.CreateAPIView):
             message=(
                 f"Hi {user.name or user.email},\n\n"
                 f"You've been invited to join SafariQuest as {user.get_role_display()}. "
-                "Sign in and set your password to get started."
+                "An administrator will help you set up access."
             ),
             from_email=None,
             recipient_list=[user.email],

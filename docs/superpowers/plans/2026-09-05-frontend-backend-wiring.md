@@ -14,7 +14,8 @@
 - Every network call from the frontend sends `credentials: 'include'` so the backend's HttpOnly cookies flow.
 - A `401` (except from `/api/auth/login/` or `/api/auth/refresh/` themselves) triggers exactly one silent `POST /api/auth/refresh/` retry before giving up.
 - Backend DRF `DecimalField`s (`rating`, `multiplier`) serialize as JSON strings — every frontend type mapping must `Number(...)` them.
-- Out of scope: bookings, inquiries, invoicing, complaints, finance/analytics, trips, guide reviews, FAQs, content builder, Google OAuth, granular RBAC permissions, password-set flow for invited users. Their pages are untouched.
+- Out of scope: bookings, inquiries, invoicing, complaints, finance/analytics, trips, guide reviews, FAQs, content builder, Google OAuth, granular RBAC permissions. Their pages are untouched.
+- **Addendum (added mid-execution, see Tasks 13–17 below):** tourist self-registration, inviting guides via the same admin invite flow as sales/operations, and a token-based set-password flow for all admin-created accounts (sales/operations/guide) are now IN scope, superseding the "password-set flow ... out of scope" line from the original Non-goals.
 - No new frontend test framework — verification is manual, in-browser, against both dev servers running together.
 
 ---
@@ -2469,6 +2470,810 @@ git commit -m "chore: verify frontend-backend wiring end to end"
 ```
 
 (Only run this if there are actual changes from Step 1/2 cleanup — an empty `git status` means nothing to commit here, which is fine.)
+
+---
+
+---
+
+## Addendum: Tourist Registration, Guide Invites, Token-Based Set-Password
+
+Added mid-execution after the user clarified the intended account-creation model: admin creates guide accounts (and staff), the account holder then sets their own password via an emailed link, and tourists self-register. Tasks 13–17 below implement this; execute them after Task 5 and before Task 11 (Task 11's brief is amended by Task 17 to add a "Guide" invite option).
+
+### Task 13: Backend — `POST /api/auth/register/` (tourist self-registration)
+
+**Files:**
+- Modify: `backend/accounts/serializers.py`
+- Modify: `backend/accounts/views.py`
+- Modify: `backend/accounts/urls.py`
+- Create: `backend/accounts/tests/test_register.py`
+
+**Interfaces:**
+- Produces: `POST /api/auth/register/` → `accounts.views.RegisterView`, public (`AllowAny`). Payload `{email, name, password}`. On success: creates a `User(role="tourist")`, sets the same HttpOnly cookies as login, returns `{"role": "tourist"}` with status 201. On failure (duplicate email, weak password): 400 with `{"detail": "<first error message>"}`, matching the existing error-shape convention used by `LoginView`.
+
+- [ ] **Step 1: Write the failing test**
+
+`backend/accounts/tests/test_register.py`:
+
+```python
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APITestCase
+
+User = get_user_model()
+
+
+class RegisterViewTests(APITestCase):
+    def setUp(self):
+        self.url = reverse("register")
+
+    def test_valid_registration_creates_tourist_and_sets_cookies(self):
+        response = self.client.post(
+            self.url, {"email": "new@example.com", "name": "New Tourist", "password": "correct-horse-battery"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data, {"role": "tourist"})
+        self.assertIn(settings.AUTH_COOKIE_ACCESS, response.cookies)
+        self.assertIn(settings.AUTH_COOKIE_REFRESH, response.cookies)
+        user = User.objects.get(email="new@example.com")
+        self.assertEqual(user.role, "tourist")
+        self.assertTrue(user.check_password("correct-horse-battery"))
+
+    def test_duplicate_email_returns_400(self):
+        User.objects.create_user(email="dup@example.com", password="pw12345678", role="tourist")
+        response = self.client.post(self.url, {"email": "dup@example.com", "name": "Dup", "password": "another-long-pw"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("detail", response.data)
+
+    def test_weak_password_returns_400(self):
+        response = self.client.post(self.url, {"email": "weak@example.com", "name": "Weak", "password": "123"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_no_tokens_in_response_body(self):
+        response = self.client.post(
+            self.url, {"email": "clean@example.com", "name": "Clean", "password": "correct-horse-battery"}
+        )
+        self.assertNotIn("access", response.data)
+        self.assertNotIn("refresh", response.data)
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+```bash
+cd backend
+.venv/Scripts/python manage.py test accounts.tests.test_register
+```
+
+Expected: FAIL — `NoReverseMatch: 'register' is not a registered namespace`.
+
+- [ ] **Step 3: Write the serializer**
+
+Append to `backend/accounts/serializers.py` (add `from django.contrib.auth.password_validation import validate_password` to the top imports):
+
+```python
+class RegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = ["email", "name", "password"]
+
+    def validate_email(self, value):
+        value = User.objects.normalize_email(value)
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("An account with this email already exists.")
+        return value
+
+    def validate_password(self, value):
+        validate_password(value)
+        return value
+
+    def create(self, validated_data):
+        return User.objects.create_user(
+            email=validated_data["email"],
+            password=validated_data["password"],
+            name=validated_data.get("name", ""),
+            role="tourist",
+        )
+```
+
+- [ ] **Step 4: Write the view**
+
+Append to `backend/accounts/views.py`:
+
+```python
+class RegisterView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = RegisterSerializer(data=request.data)
+        if not serializer.is_valid():
+            first_error = str(next(iter(serializer.errors.values()))[0])
+            return Response({"detail": first_error}, status=status.HTTP_400_BAD_REQUEST)
+        user = serializer.save()
+        response = Response({"role": user.role}, status=status.HTTP_201_CREATED)
+        _set_auth_cookies(response, user)
+        return response
+```
+
+Add `RegisterSerializer` to the existing import line: `from .serializers import LoginSerializer, RegisterSerializer, UserInviteSerializer, UserListSerializer`.
+
+- [ ] **Step 5: Wire up the URL**
+
+`backend/accounts/urls.py`:
+
+```python
+from django.urls import path
+
+from .views import LoginView, LogoutView, MeView, RefreshView, RegisterView
+
+urlpatterns = [
+    path("login/", LoginView.as_view(), name="login"),
+    path("logout/", LogoutView.as_view(), name="logout"),
+    path("refresh/", RefreshView.as_view(), name="refresh"),
+    path("me/", MeView.as_view(), name="me"),
+    path("register/", RegisterView.as_view(), name="register"),
+]
+```
+
+- [ ] **Step 6: Run test to verify it passes, then the full suite**
+
+```bash
+cd backend
+.venv/Scripts/python manage.py test accounts.tests.test_register
+.venv/Scripts/python manage.py test
+```
+
+Expected: `Ran 4 tests ... OK`, then full suite passes with zero failures.
+
+- [ ] **Step 7: Commit**
+
+```bash
+cd backend
+git add accounts/serializers.py accounts/views.py accounts/urls.py accounts/tests/test_register.py
+git commit -m "feat(accounts): add POST /api/auth/register/ for tourist self-registration"
+```
+
+---
+
+### Task 14: Backend — allow inviting guides via `POST /api/users/`
+
+**Files:**
+- Modify: `backend/accounts/serializers.py`
+- Modify: `backend/accounts/views.py`
+- Create: `backend/accounts/tests/test_invite_guide.py`
+
+**Interfaces:**
+- Modifies: `UserInviteSerializer.validate_role` now accepts `sales`, `operations`, or `guide` (was `sales`/`operations` only). `UserInviteView.queryset` (the `GET` list) now includes `guide` alongside the existing `sales`/`operations`/`admin`, so newly-invited guides show up in the admin Users table. `admin` remains **not** invitable via this endpoint (unchanged — founder/admin accounts are created via `createsuperuser`).
+
+- [ ] **Step 1: Write the failing test**
+
+`backend/accounts/tests/test_invite_guide.py`:
+
+```python
+from django.contrib.auth import get_user_model
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APITestCase
+
+User = get_user_model()
+
+
+class InviteGuideTests(APITestCase):
+    def setUp(self):
+        self.url = reverse("invite-user")
+        self.admin = User.objects.create_user(email="admin@example.com", password="pw12345", role="admin")
+
+    def _login_as_admin(self):
+        self.client.post(reverse("login"), {"email": self.admin.email, "password": "pw12345"})
+
+    def test_admin_can_invite_a_guide(self):
+        self._login_as_admin()
+        response = self.client.post(self.url, {"email": "guide@example.com", "name": "New Guide", "role": "guide"})
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user = User.objects.get(email="guide@example.com")
+        self.assertEqual(user.role, "guide")
+        self.assertFalse(user.has_usable_password())
+
+    def test_tourist_role_still_rejected(self):
+        self._login_as_admin()
+        response = self.client.post(self.url, {"email": "x@example.com", "name": "X", "role": "tourist"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_admin_role_still_rejected(self):
+        self._login_as_admin()
+        response = self.client.post(self.url, {"email": "y@example.com", "name": "Y", "role": "admin"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_invited_guide_appears_in_list(self):
+        self._login_as_admin()
+        self.client.post(self.url, {"email": "guide2@example.com", "name": "Guide Two", "role": "guide"})
+        response = self.client.get(self.url)
+        emails = {row["email"] for row in response.data}
+        self.assertIn("guide2@example.com", emails)
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+```bash
+cd backend
+.venv/Scripts/python manage.py test accounts.tests.test_invite_guide
+```
+
+Expected: FAIL — `test_admin_can_invite_a_guide` gets 400 (role rejected by the current `validate_role`).
+
+- [ ] **Step 3: Update the serializer**
+
+In `backend/accounts/serializers.py`, change `UserInviteSerializer.validate_role`:
+
+```python
+    def validate_role(self, value):
+        if value not in ("sales", "operations", "guide"):
+            raise serializers.ValidationError("Invitable roles are 'sales', 'operations', or 'guide'.")
+        return value
+```
+
+- [ ] **Step 4: Update the view's queryset**
+
+In `backend/accounts/views.py`, change:
+
+```python
+STAFF_ROLES = ("sales", "operations", "admin")
+```
+
+to:
+
+```python
+STAFF_ROLES = ("sales", "operations", "guide", "admin")
+```
+
+- [ ] **Step 5: Run test to verify it passes, then the full suite**
+
+```bash
+cd backend
+.venv/Scripts/python manage.py test accounts.tests.test_invite_guide
+.venv/Scripts/python manage.py test
+```
+
+Expected: `Ran 4 tests ... OK`, full suite zero failures — pay special attention to `accounts/tests/test_users_list.py::test_admin_sees_only_staff_roles`, which asserts an exact email set; confirm it still passes since it never created a guide user, so `STAFF_ROLES` gaining `guide` doesn't change its expected set. `accounts/tests/test_users.py::test_non_admin_cannot_invite` and friends are unaffected (they test permission, not role choice).
+
+- [ ] **Step 6: Commit**
+
+```bash
+cd backend
+git add accounts/serializers.py accounts/views.py accounts/tests/test_invite_guide.py
+git commit -m "feat(accounts): allow inviting guides via POST /api/users/"
+```
+
+---
+
+### Task 15: Backend — token-based set-password flow
+
+**Files:**
+- Modify: `backend/config/settings.py`
+- Modify: `backend/.env.example`
+- Modify: `backend/accounts/serializers.py`
+- Modify: `backend/accounts/views.py`
+- Modify: `backend/accounts/urls.py`
+- Create: `backend/accounts/tests/test_set_password.py`
+
+**Interfaces:**
+- Produces: `POST /api/auth/set-password/` → `accounts.views.SetPasswordView`, public (`AllowAny`). Payload `{uid, token, password}` (both `uid`/`token` come from the link emailed on invite). On success: sets the password, signs the user in (same cookies as login), returns `{"role": ...}`. On failure (bad/expired token): 400 `{"detail": "Invalid or expired link."}`.
+- Modifies: `UserInviteView.perform_create` (in `accounts/views.py`) now builds a signed set-password link using Django's `django.contrib.auth.tokens.default_token_generator` and includes it in the invite email, replacing the old "An administrator will help you set up access" copy.
+- Uses: `settings.FRONTEND_URL` (new setting, default `http://localhost:5173`) to build the link.
+
+- [ ] **Step 1: Add the `FRONTEND_URL` setting**
+
+In `backend/config/settings.py`, add near the `CORS_ALLOWED_ORIGINS` block:
+
+```python
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+```
+
+In `backend/.env.example`, add:
+
+```env
+FRONTEND_URL=http://localhost:5173
+```
+
+- [ ] **Step 2: Write the failing test**
+
+`backend/accounts/tests/test_set_password.py`:
+
+```python
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.contrib.auth.tokens import default_token_generator
+from django.urls import reverse
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+from rest_framework import status
+from rest_framework.test import APITestCase
+
+User = get_user_model()
+
+
+class SetPasswordViewTests(APITestCase):
+    def setUp(self):
+        self.url = reverse("set-password")
+        self.user = User.objects.create_user(email="invited@example.com", role="operations")
+        self.user.set_unusable_password()
+        self.user.save()
+        self.uid = urlsafe_base64_encode(force_bytes(self.user.pk))
+        self.token = default_token_generator.make_token(self.user)
+
+    def test_valid_token_sets_password_and_signs_in(self):
+        response = self.client.post(self.url, {"uid": self.uid, "token": self.token, "password": "brand-new-pw-123"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {"role": "operations"})
+        self.assertIn(settings.AUTH_COOKIE_ACCESS, response.cookies)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("brand-new-pw-123"))
+
+    def test_invalid_token_returns_400(self):
+        response = self.client.post(self.url, {"uid": self.uid, "token": "garbage-token", "password": "brand-new-pw-123"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_invalid_uid_returns_400(self):
+        response = self.client.post(self.url, {"uid": "not-a-real-uid", "token": self.token, "password": "brand-new-pw-123"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_token_cannot_be_reused_after_password_changes(self):
+        self.client.post(self.url, {"uid": self.uid, "token": self.token, "password": "brand-new-pw-123"})
+        response = self.client.post(self.url, {"uid": self.uid, "token": self.token, "password": "second-attempt-pw"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+```
+
+- [ ] **Step 3: Run test to verify it fails**
+
+```bash
+cd backend
+.venv/Scripts/python manage.py test accounts.tests.test_set_password
+```
+
+Expected: FAIL — `NoReverseMatch: 'set-password' is not a registered namespace`.
+
+- [ ] **Step 4: Write the serializer**
+
+Append to `backend/accounts/serializers.py` (add these imports at the top: `from django.contrib.auth.tokens import default_token_generator`, `from django.utils.encoding import force_str`, `from django.utils.http import urlsafe_base64_decode`):
+
+```python
+class SetPasswordSerializer(serializers.Serializer):
+    uid = serializers.CharField()
+    token = serializers.CharField()
+    password = serializers.CharField(write_only=True)
+
+    def validate_password(self, value):
+        validate_password(value)
+        return value
+
+    def validate(self, attrs):
+        try:
+            pk = force_str(urlsafe_base64_decode(attrs["uid"]))
+            user = User.objects.get(pk=pk)
+        except (ValueError, TypeError, OverflowError, User.DoesNotExist):
+            raise serializers.ValidationError("Invalid or expired link.")
+        if not default_token_generator.check_token(user, attrs["token"]):
+            raise serializers.ValidationError("Invalid or expired link.")
+        attrs["user"] = user
+        return attrs
+```
+
+- [ ] **Step 5: Write the view**
+
+Append to `backend/accounts/views.py` (add `from django.contrib.auth.tokens import default_token_generator`, `from django.utils.encoding import force_bytes`, `from django.utils.http import urlsafe_base64_encode` to the imports, and add `SetPasswordSerializer` to the existing `.serializers` import line):
+
+```python
+class SetPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = SetPasswordSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({"detail": "Invalid or expired link."}, status=status.HTTP_400_BAD_REQUEST)
+        user = serializer.validated_data["user"]
+        user.set_password(serializer.validated_data["password"])
+        user.save()
+        response = Response({"role": user.role}, status=status.HTTP_200_OK)
+        _set_auth_cookies(response, user)
+        return response
+```
+
+- [ ] **Step 6: Wire up the URL**
+
+`backend/accounts/urls.py`:
+
+```python
+from django.urls import path
+
+from .views import LoginView, LogoutView, MeView, RefreshView, RegisterView, SetPasswordView
+
+urlpatterns = [
+    path("login/", LoginView.as_view(), name="login"),
+    path("logout/", LogoutView.as_view(), name="logout"),
+    path("refresh/", RefreshView.as_view(), name="refresh"),
+    path("me/", MeView.as_view(), name="me"),
+    path("register/", RegisterView.as_view(), name="register"),
+    path("set-password/", SetPasswordView.as_view(), name="set-password"),
+]
+```
+
+- [ ] **Step 7: Update the invite email to include the real link**
+
+In `backend/accounts/views.py`, replace `UserInviteView.perform_create`:
+
+```python
+    def perform_create(self, serializer):
+        user = serializer.save()
+        send_mail(
+            subject="You've been invited to SafariQuest",
+            message=(
+                f"Hi {user.name or user.email},\n\n"
+                f"You've been invited to join SafariQuest as {user.get_role_display()}. "
+                "An administrator will help you set up access."
+            ),
+            from_email=None,
+            recipient_list=[user.email],
+        )
+```
+
+with:
+
+```python
+    def perform_create(self, serializer):
+        user = serializer.save()
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        set_password_url = f"{settings.FRONTEND_URL}/set-password?uid={uid}&token={token}"
+        send_mail(
+            subject="You've been invited to SafariQuest",
+            message=(
+                f"Hi {user.name or user.email},\n\n"
+                f"You've been invited to join SafariQuest as {user.get_role_display()}. "
+                f"Set your password to get started: {set_password_url}"
+            ),
+            from_email=None,
+            recipient_list=[user.email],
+        )
+```
+
+This changes the wording the existing `accounts/tests/test_users.py::test_admin_can_invite_sales_agent` test's mailbox assertion runs against — re-check that test after this step; if it only asserts `len(mail.outbox) == 1` and the recipient (not exact body text), it needs no change. If it asserts exact body text, update the expected string to match.
+
+- [ ] **Step 8: Run tests to verify, then the full suite**
+
+```bash
+cd backend
+.venv/Scripts/python manage.py test accounts.tests.test_set_password
+.venv/Scripts/python manage.py test
+```
+
+Expected: `Ran 4 tests ... OK` for the new file, then the full suite passes with zero failures.
+
+- [ ] **Step 9: Commit**
+
+```bash
+cd backend
+git add config/settings.py .env.example accounts/serializers.py accounts/views.py accounts/urls.py accounts/tests/test_set_password.py
+git commit -m "feat(accounts): add token-based POST /api/auth/set-password/, link it from invite emails"
+```
+
+---
+
+### Task 16: Frontend — wire tourist self-registration (SignIn.tsx "Create Account" tab)
+
+**Files:**
+- Modify: `website/src/api/auth.ts`
+- Modify: `website/src/auth/AuthContext.tsx`
+- Modify: `website/src/pages/SignIn.tsx`
+
+**Interfaces:**
+- Consumes: `POST /api/auth/register/` (Task 13).
+- Adds: `register(input: {email, name, password}): Promise<{role: Role}>` to `api/auth.ts`. `useAuth()` gains a `register` function alongside `login`/`logout`.
+
+**Note:** `SignIn.tsx` was already modified once in this session (Task 5, done directly by the controller rather than a subagent) to wire the "Sign In" tab to real `login()`, add a `handleSignInSubmit`/`handleSignUpSubmit` split, and disable the Google button. The sign-up tab's `handleSignUpSubmit` currently just sets an inert "not available yet" error message — this task replaces that stub with a real call. Read the current file before editing; it will not match the plan's earlier (Task 5) before/after snippets verbatim.
+
+- [ ] **Step 1: Add `register` to the auth API module**
+
+In `website/src/api/auth.ts`, add:
+
+```typescript
+interface RegisterInput {
+  email: string
+  name: string
+  password: string
+}
+
+export function register(input: RegisterInput): Promise<RoleResponse> {
+  return apiPost<RoleResponse>('/api/auth/register/', input)
+}
+```
+
+- [ ] **Step 2: Expose `register` from `AuthContext`**
+
+In `website/src/auth/AuthContext.tsx`, import `register as apiRegister` alongside the existing `login as apiLogin, logout as apiLogout` import (extend that import line), add to `AuthContextValue`:
+
+```typescript
+  register: (email: string, name: string, password: string) => Promise<Role>
+```
+
+and implement it next to the existing `login` function:
+
+```typescript
+  async function register(email: string, name: string, password: string): Promise<Role> {
+    const res = await apiRegister({ email, name, password })
+    setRole(res.role)
+    return res.role
+  }
+```
+
+Add `register` to the `<AuthContext.Provider value={{ role, isLoading, login, logout }}>` line, making it `value={{ role, isLoading, login, logout, register }}`.
+
+- [ ] **Step 3: Wire the sign-up form in `SignIn.tsx`**
+
+Read the current `handleSignUpSubmit` and the sign-up form's JSX first. Replace the stub:
+
+```typescript
+  function handleSignUpSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError('Self-service account creation is not available yet — please contact us to get started.')
+  }
+```
+
+with:
+
+```typescript
+  async function handleSignUpSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError(null)
+    const form = new FormData(event.currentTarget)
+    const firstName = String(form.get('firstName') ?? '')
+    const lastName = String(form.get('lastName') ?? '')
+    const email = String(form.get('email') ?? '')
+    const password = String(form.get('password') ?? '')
+    setSubmitting(true)
+    try {
+      const role = await register(`${firstName} ${lastName}`.trim(), email, password)
+      navigate(ROLE_HOME[role] ?? '/account')
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+```
+
+Wait — `register` from `useAuth()` has signature `(email, name, password)`, not `(name, email, password)`. Call it correctly: `await register(email, \`${firstName} ${lastName}\`.trim(), password)`. Fix the call to match the context function's actual parameter order from Step 2.
+
+Add `const { login, register } = useAuth()` (extend the existing `const { login } = useAuth()` line to also destructure `register`).
+
+Add `name` attributes to the sign-up form's four inputs so `FormData` can read them: `signup-first` → `name="firstName"`, `signup-last` → `name="lastName"`, `signup-email` → `name="email"`, `signup-password` → `name="password"`.
+
+Update the sign-up submit button to reflect submitting state, matching the sign-in button's pattern:
+
+```typescript
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full min-h-[44px] bg-savanna-green text-on-primary font-label-md py-4 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {submitting ? 'Creating Account…' : 'Create Account'}
+              </button>
+```
+
+- [ ] **Step 4: Type-check**
+
+```bash
+cd website
+pnpm exec tsc -b --noEmit
+```
+
+Expected: no errors.
+
+- [ ] **Step 5: Commit**
+
+```bash
+cd website
+git add src/api/auth.ts src/auth/AuthContext.tsx src/pages/SignIn.tsx
+git commit -m "feat(sign-in): wire Create Account tab to real tourist self-registration"
+```
+
+---
+
+### Task 17: Frontend — set-password page
+
+**Files:**
+- Create: `website/src/pages/SetPassword.tsx`
+- Modify: `website/src/App.tsx`
+- Modify: `website/src/api/auth.ts`
+- Modify: `website/src/auth/AuthContext.tsx`
+
+**Interfaces:**
+- Consumes: `POST /api/auth/set-password/` (Task 15).
+- Adds: `setPassword(uid: string, token: string, password: string): Promise<{role: Role}>` to `api/auth.ts`. `useAuth()` gains a `setPassword` function. New public route `/set-password` in `App.tsx`.
+
+- [ ] **Step 1: Add `setPassword` to the auth API module**
+
+In `website/src/api/auth.ts`, add:
+
+```typescript
+export function setPassword(uid: string, token: string, password: string): Promise<RoleResponse> {
+  return apiPost<RoleResponse>('/api/auth/set-password/', { uid, token, password })
+}
+```
+
+Also export the role-to-home mapping from this module so both `SignIn.tsx` and the new page can share it — add:
+
+```typescript
+export const ROLE_HOME: Record<Role, string> = {
+  tourist: '/account',
+  guide: '/guide',
+  sales: '/admin',
+  operations: '/admin',
+  admin: '/admin',
+}
+```
+
+(`SignIn.tsx` currently has its own local `ROLE_HOME` constant — in this task, leave it as-is; do not refactor `SignIn.tsx` to import this one, to keep this task's diff scoped to the new page. Note it as a minor duplication in your report rather than fixing it.)
+
+- [ ] **Step 2: Expose `setPassword` from `AuthContext`**
+
+In `website/src/auth/AuthContext.tsx`, import `setPassword as apiSetPassword` alongside the other auth API imports, add to `AuthContextValue`:
+
+```typescript
+  setPassword: (uid: string, token: string, password: string) => Promise<Role>
+```
+
+and implement:
+
+```typescript
+  async function setPassword(uid: string, token: string, password: string): Promise<Role> {
+    const res = await apiSetPassword(uid, token, password)
+    setRole(res.role)
+    return res.role
+  }
+```
+
+Add `setPassword` to the context provider's `value={{...}}` object.
+
+- [ ] **Step 3: Write the page**
+
+`website/src/pages/SetPassword.tsx`:
+
+```typescript
+import { useState, type FormEvent } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { ArrowRight, Eye, EyeSlash } from '@phosphor-icons/react'
+import { useAuth } from '../auth/AuthContext'
+import { ROLE_HOME } from '../api/auth'
+import { ApiError } from '../lib/api'
+
+export function SetPassword() {
+  const [params] = useSearchParams()
+  const uid = params.get('uid') ?? ''
+  const token = params.get('token') ?? ''
+  const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const navigate = useNavigate()
+  const { setPassword } = useAuth()
+
+  const linkLooksValid = uid.length > 0 && token.length > 0
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError(null)
+    const form = new FormData(event.currentTarget)
+    const password = String(form.get('password') ?? '')
+    setSubmitting(true)
+    try {
+      const role = await setPassword(uid, token, password)
+      navigate(ROLE_HOME[role] ?? '/account')
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <section className="min-h-[calc(100vh-96px)] flex items-center justify-center px-5 py-16 bg-surface-container-low">
+      <div className="w-full max-w-md bg-ivory-base rounded-2xl p-8 md:p-10 shadow-[0_10px_30px_-10px_rgba(45,45,45,0.15)]">
+        <h1 className="font-headline-md text-headline-md text-savanna-green mb-2">Set Your Password</h1>
+        <p className="font-body-md text-body-md text-on-surface-variant mb-8">
+          Choose a password to finish setting up your SafariQuest account.
+        </p>
+
+        {!linkLooksValid ? (
+          <p role="alert" className="text-error font-label-sm text-label-sm">
+            This link is missing information. Please use the link from your invite email.
+          </p>
+        ) : (
+          <form className="space-y-6" onSubmit={handleSubmit} noValidate>
+            <div>
+              <label htmlFor="new-password" className="block font-label-sm text-label-sm text-on-surface mb-2">
+                New Password
+              </label>
+              <div className="relative">
+                <input
+                  id="new-password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  autoComplete="new-password"
+                  className="w-full min-h-[44px] bg-ivory-base border border-sand-stone rounded-lg px-4 py-3 pr-11 focus:outline-none focus:ring-1 focus:ring-savanna-green"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface transition-colors"
+                >
+                  {showPassword ? <Eye size={20} /> : <EyeSlash size={20} />}
+                </button>
+              </div>
+            </div>
+            {error && (
+              <p role="alert" className="text-error font-label-sm text-label-sm">
+                {error}
+              </p>
+            )}
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full min-h-[44px] bg-savanna-green text-on-primary font-label-md py-4 rounded-lg hover:opacity-90 transition-opacity flex justify-center items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {submitting ? 'Saving…' : 'Set Password'}
+              <ArrowRight size={16} />
+            </button>
+          </form>
+        )}
+
+        <div className="mt-8 text-center">
+          <Link to="/sign-in" className="font-label-sm text-label-sm text-outline hover:text-savanna-green">
+            Back to Sign In
+          </Link>
+        </div>
+      </div>
+    </section>
+  )
+}
+```
+
+- [ ] **Step 4: Add the route**
+
+In `website/src/App.tsx`, add the import:
+
+```typescript
+import { SetPassword } from './pages/SetPassword'
+```
+
+Add the route inside the `MarketingLayout` route block (public, alongside `/sign-in`):
+
+```typescript
+          <Route path="/set-password" element={<SetPassword />} />
+```
+
+- [ ] **Step 5: Type-check**
+
+```bash
+cd website
+pnpm exec tsc -b --noEmit
+```
+
+Expected: no errors.
+
+- [ ] **Step 6: Commit**
+
+```bash
+cd website
+git add src/pages/SetPassword.tsx src/App.tsx src/api/auth.ts src/auth/AuthContext.tsx
+git commit -m "feat(auth): add /set-password page for admin-invited accounts"
+```
+
+---
+
+**Note for Task 11 (AdminUsers, below):** when you reach Task 11 in the original plan, amend it: the invite form's role selector should offer three options — Sales Agent, Operations, **and Guide** (not just the two originally specified) — since Task 14 above made `guide` an invitable role via the same endpoint. `api/users.ts`'s `InvitableRole` type should be `'sales' | 'operations' | 'guide'`, and `StaffRole`/`ROLE_LABEL`/`ROLE_BADGE` should include a `guide` entry.
 
 ---
 

@@ -2,9 +2,12 @@ import { Link } from 'react-router-dom'
 import { CalendarBlank, MapPinLine, ArrowRight, Compass, ShieldCheck } from '@phosphor-icons/react'
 import { Reveal } from '../components/Reveal'
 import { DestinationSlideshow } from '../components/DestinationSlideshow'
-import { destinations } from '../data/destinations'
+import { getDestinations } from '../api/destinations'
+import { useFetch } from '../lib/useFetch'
 
 export function Destinations() {
+  const { data: destinations, loading, error } = useFetch(getDestinations, [])
+
   return (
     <>
       {/* Hero */}
@@ -41,6 +44,12 @@ export function Destinations() {
             <span className="absolute left-0 bottom-0 w-16 h-1 bg-terracotta" />
           </h2>
         </Reveal>
+        {loading && <p className="text-center text-on-surface-variant py-20">Loading destinations…</p>}
+        {error && <p className="text-center text-error py-20">{error}</p>}
+        {!loading && !error && destinations && destinations.length === 0 && (
+          <p className="text-center text-on-surface-variant py-20">No destinations are available yet.</p>
+        )}
+        {!loading && !error && destinations && destinations.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter">
           {destinations.map((destination, i) => (
             <Reveal
@@ -81,7 +90,7 @@ export function Destinations() {
                 </div>
                 <div className="mt-auto pt-6 border-t border-sand-stone">
                   <Link
-                    to="/safaris"
+                    to={`/destinations/${destination.id}`}
                     className="text-savanna-green font-label-md flex items-center gap-1 group/link hover:underline transition-all min-h-[44px]"
                   >
                     {destination.linkLabel}
@@ -92,6 +101,7 @@ export function Destinations() {
             </Reveal>
           ))}
         </div>
+        )}
       </section>
 
       {/* Map Your Journey */}

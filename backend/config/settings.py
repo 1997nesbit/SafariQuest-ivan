@@ -18,7 +18,7 @@ if not DEBUG and SECRET_KEY == "dev-secret-key-change-me":
     raise ImproperlyConfigured(
         "SECRET_KEY must be set to a non-default value when DEBUG is False."
     )
-if not DEBUG and ALLOWED_HOSTS == ["*"]:
+if not DEBUG and "*" in ALLOWED_HOSTS:
     raise ImproperlyConfigured(
         "ALLOWED_HOSTS must be set to specific hosts when DEBUG is False."
     )

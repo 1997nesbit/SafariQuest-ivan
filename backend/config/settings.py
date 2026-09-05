@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "accounts",
     "destinations",
+    "safaris",
 ]
 
 MIDDLEWARE = [

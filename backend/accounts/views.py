@@ -1,6 +1,9 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -9,7 +12,13 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .permissions import IsAdminRole
-from .serializers import LoginSerializer, RegisterSerializer, UserInviteSerializer, UserListSerializer
+from .serializers import (
+    LoginSerializer,
+    RegisterSerializer,
+    SetPasswordSerializer,
+    UserInviteSerializer,
+    UserListSerializer,
+)
 
 User = get_user_model()
 
@@ -109,12 +118,15 @@ class UserInviteView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         user = serializer.save()
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        set_password_url = f"{settings.FRONTEND_URL}/set-password?uid={uid}&token={token}"
         send_mail(
             subject="You've been invited to SafariQuest",
             message=(
                 f"Hi {user.name or user.email},\n\n"
                 f"You've been invited to join SafariQuest as {user.get_role_display()}. "
-                "An administrator will help you set up access."
+                f"Set your password to get started: {set_password_url}"
             ),
             from_email=None,
             recipient_list=[user.email],
@@ -138,5 +150,20 @@ class RegisterView(APIView):
             return Response({"detail": first_error}, status=status.HTTP_400_BAD_REQUEST)
         user = serializer.save()
         response = Response({"role": user.role}, status=status.HTTP_201_CREATED)
+        _set_auth_cookies(response, user)
+        return response
+
+
+class SetPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = SetPasswordSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({"detail": "Invalid or expired link."}, status=status.HTTP_400_BAD_REQUEST)
+        user = serializer.validated_data["user"]
+        user.set_password(serializer.validated_data["password"])
+        user.save()
+        response = Response({"role": user.role}, status=status.HTTP_200_OK)
         _set_auth_cookies(response, user)
         return response

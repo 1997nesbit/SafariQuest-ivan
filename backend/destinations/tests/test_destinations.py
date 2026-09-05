@@ -57,3 +57,26 @@ class DestinationAPITests(APITestCase):
         response = self.client.get(reverse("destination-detail", args=["arusha"]))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["name"], "Arusha")
+
+    def test_patch_without_experiences_preserves_existing_children(self):
+        self._login_as(self.admin)
+        self.client.post(self.list_url, self.payload, format="json")
+        detail_url = reverse("destination-detail", args=["arusha"])
+        response = self.client.patch(detail_url, {"highlight": "Updated Highlight"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["experiences"]), 1)
+        self.assertEqual(response.data["experiences"][0]["name"], "Coffee Tour")
+        self.assertEqual(response.data["highlight"], "Updated Highlight")
+
+    def test_patch_with_experiences_replaces_existing_children(self):
+        self._login_as(self.admin)
+        self.client.post(self.list_url, self.payload, format="json")
+        detail_url = reverse("destination-detail", args=["arusha"])
+        response = self.client.patch(
+            detail_url,
+            {"experiences": [{"name": "Balloon Safari", "description": "Sunrise flight."}]},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["experiences"]), 1)
+        self.assertEqual(response.data["experiences"][0]["name"], "Balloon Safari")

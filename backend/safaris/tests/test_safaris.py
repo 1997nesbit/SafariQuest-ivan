@@ -61,3 +61,25 @@ class SafariPackageAPITests(APITestCase):
         self.client.post(self.list_url, payload, format="json")
         response = self.client.get(reverse("safari-detail", args=["reordered"]))
         self.assertEqual([d["day"] for d in response.data["itinerary"]], [1, 2])
+
+    def test_patch_without_itinerary_preserves_existing_children(self):
+        self._login_as_admin()
+        self.client.post(self.list_url, self.payload, format="json")
+        detail_url = reverse("safari-detail", args=["great-migration-path"])
+        response = self.client.patch(detail_url, {"badge": "Updated Badge"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["itinerary"]), 2)
+        self.assertEqual(response.data["badge"], "Updated Badge")
+
+    def test_patch_with_itinerary_replaces_existing_children(self):
+        self._login_as_admin()
+        self.client.post(self.list_url, self.payload, format="json")
+        detail_url = reverse("safari-detail", args=["great-migration-path"])
+        response = self.client.patch(
+            detail_url,
+            {"itinerary": [{"day": 1, "title": "Only Day", "description": "Replaced."}]},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["itinerary"]), 1)
+        self.assertEqual(response.data["itinerary"][0]["title"], "Only Day")

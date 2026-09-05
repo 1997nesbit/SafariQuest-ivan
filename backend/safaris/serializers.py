@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import serializers
 
 from .models import ItineraryDay, SafariPackage
@@ -21,19 +22,21 @@ class SafariPackageSerializer(serializers.ModelSerializer):
         ]
 
     def create(self, validated_data):
-        itinerary_data = validated_data.pop("itinerary")
-        safari = SafariPackage.objects.create(**validated_data)
-        for day in itinerary_data:
-            ItineraryDay.objects.create(safari=safari, **day)
+        with transaction.atomic():
+            itinerary_data = validated_data.pop("itinerary")
+            safari = SafariPackage.objects.create(**validated_data)
+            for day in itinerary_data:
+                ItineraryDay.objects.create(safari=safari, **day)
         return safari
 
     def update(self, instance, validated_data):
-        itinerary_data = validated_data.pop("itinerary", None)
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-        if itinerary_data is not None:
-            instance.itinerary.all().delete()
-            for day in itinerary_data:
-                ItineraryDay.objects.create(safari=instance, **day)
+        with transaction.atomic():
+            itinerary_data = validated_data.pop("itinerary", None)
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
+            if itinerary_data is not None:
+                instance.itinerary.all().delete()
+                for day in itinerary_data:
+                    ItineraryDay.objects.create(safari=instance, **day)
         return instance

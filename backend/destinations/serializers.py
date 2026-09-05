@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import serializers
 
 from .models import Destination, DestinationExperience
@@ -21,19 +22,21 @@ class DestinationSerializer(serializers.ModelSerializer):
         ]
 
     def create(self, validated_data):
-        experiences_data = validated_data.pop("experiences")
-        destination = Destination.objects.create(**validated_data)
-        for order, experience in enumerate(experiences_data):
-            DestinationExperience.objects.create(destination=destination, order=order, **experience)
+        with transaction.atomic():
+            experiences_data = validated_data.pop("experiences")
+            destination = Destination.objects.create(**validated_data)
+            for order, experience in enumerate(experiences_data):
+                DestinationExperience.objects.create(destination=destination, order=order, **experience)
         return destination
 
     def update(self, instance, validated_data):
-        experiences_data = validated_data.pop("experiences", None)
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-        if experiences_data is not None:
-            instance.experiences.all().delete()
-            for order, experience in enumerate(experiences_data):
-                DestinationExperience.objects.create(destination=instance, order=order, **experience)
+        with transaction.atomic():
+            experiences_data = validated_data.pop("experiences", None)
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
+            if experiences_data is not None:
+                instance.experiences.all().delete()
+                for order, experience in enumerate(experiences_data):
+                    DestinationExperience.objects.create(destination=instance, order=order, **experience)
         return instance

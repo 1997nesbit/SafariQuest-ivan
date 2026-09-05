@@ -1,8 +1,9 @@
 from django.conf import settings
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .serializers import LoginSerializer
@@ -40,4 +41,24 @@ class LoginView(APIView):
         user = serializer.validated_data["user"]
         response = Response({"role": user.role}, status=status.HTTP_200_OK)
         _set_auth_cookies(response, user)
+        return response
+
+
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        raw_refresh = request.COOKIES.get(settings.AUTH_COOKIE_REFRESH)
+        response = Response(status=status.HTTP_200_OK)
+        blacklisted = False
+        if raw_refresh:
+            try:
+                RefreshToken(raw_refresh).blacklist()
+                blacklisted = True
+            except TokenError:
+                blacklisted = False
+        response.delete_cookie(settings.AUTH_COOKIE_ACCESS)
+        response.delete_cookie(settings.AUTH_COOKIE_REFRESH)
+        if not blacklisted:
+            response.status_code = status.HTTP_401_UNAUTHORIZED
         return response

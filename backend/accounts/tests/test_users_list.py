@@ -31,9 +31,8 @@ class UserListViewTests(APITestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         emails = {row["email"] for row in response.data}
-        self.assertEqual(emails, {"admin@example.com", "sales@example.com"})
+        self.assertEqual(emails, {"admin@example.com", "sales@example.com", "guide@example.com"})
         self.assertNotIn("tourist@example.com", emails)
-        self.assertNotIn("guide@example.com", emails)
 
     def test_list_response_shape_has_no_password_fields(self):
         self._login_as(self.admin)

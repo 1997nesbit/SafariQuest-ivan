@@ -95,7 +95,7 @@ class RefreshView(APIView):
         return response
 
 
-STAFF_ROLES = ("sales", "operations", "admin")
+STAFF_ROLES = ("sales", "operations", "guide", "admin")
 
 
 class UserInviteView(generics.ListCreateAPIView):

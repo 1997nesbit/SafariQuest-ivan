@@ -24,8 +24,8 @@ class UserInviteSerializer(serializers.ModelSerializer):
         fields = ["email", "name", "role"]
 
     def validate_role(self, value):
-        if value not in ("sales", "operations"):
-            raise serializers.ValidationError("Invitable roles are 'sales' or 'operations'.")
+        if value not in ("sales", "operations", "guide"):
+            raise serializers.ValidationError("Invitable roles are 'sales', 'operations', or 'guide'.")
         return value
 
     def create(self, validated_data):

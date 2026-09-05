@@ -1,5 +1,12 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { fetchMe, login as apiLogin, logout as apiLogout, type Role } from '../api/auth'
+import {
+  fetchMe,
+  login as apiLogin,
+  logout as apiLogout,
+  register as apiRegister,
+  setPassword as apiSetPassword,
+  type Role,
+} from '../api/auth'
 import { ApiError } from '../lib/api'
 
 interface AuthContextValue {
@@ -7,6 +14,8 @@ interface AuthContextValue {
   isLoading: boolean
   login: (email: string, password: string) => Promise<Role>
   logout: () => Promise<void>
+  register: (email: string, name: string, password: string) => Promise<Role>
+  setPassword: (uid: string, token: string, password: string) => Promise<Role>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -51,7 +60,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  return <AuthContext.Provider value={{ role, isLoading, login, logout }}>{children}</AuthContext.Provider>
+  async function register(email: string, name: string, password: string): Promise<Role> {
+    const res = await apiRegister({ email, name, password })
+    setRole(res.role)
+    return res.role
+  }
+
+  async function setPassword(uid: string, token: string, password: string): Promise<Role> {
+    const res = await apiSetPassword(uid, token, password)
+    setRole(res.role)
+    return res.role
+  }
+
+  return (
+    <AuthContext.Provider value={{ role, isLoading, login, logout, register, setPassword }}>
+      {children}
+    </AuthContext.Provider>
+  )
 }
 
 export function useAuth(): AuthContextValue {

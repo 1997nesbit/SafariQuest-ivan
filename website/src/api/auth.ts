@@ -17,3 +17,25 @@ export function logout(): Promise<void> {
 export function fetchMe(): Promise<RoleResponse> {
   return apiGet<RoleResponse>('/api/auth/me/')
 }
+
+interface RegisterInput {
+  email: string
+  name: string
+  password: string
+}
+
+export function register(input: RegisterInput): Promise<RoleResponse> {
+  return apiPost<RoleResponse>('/api/auth/register/', input)
+}
+
+export function setPassword(uid: string, token: string, password: string): Promise<RoleResponse> {
+  return apiPost<RoleResponse>('/api/auth/set-password/', { uid, token, password })
+}
+
+export const ROLE_HOME: Record<Role, string> = {
+  tourist: '/account',
+  guide: '/guide',
+  sales: '/admin',
+  operations: '/admin',
+  admin: '/admin',
+}

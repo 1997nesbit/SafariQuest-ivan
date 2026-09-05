@@ -20,7 +20,7 @@ export function SignIn() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const navigate = useNavigate()
-  const { login } = useAuth()
+  const { login, register } = useAuth()
 
   async function handleSignInSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -39,9 +39,23 @@ export function SignIn() {
     }
   }
 
-  function handleSignUpSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSignUpSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setError('Self-service account creation is not available yet — please contact us to get started.')
+    setError(null)
+    const form = new FormData(event.currentTarget)
+    const firstName = String(form.get('firstName') ?? '')
+    const lastName = String(form.get('lastName') ?? '')
+    const email = String(form.get('email') ?? '')
+    const password = String(form.get('password') ?? '')
+    setSubmitting(true)
+    try {
+      const role = await register(email, `${firstName} ${lastName}`.trim(), password)
+      navigate(ROLE_HOME[role] ?? '/account')
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -165,6 +179,7 @@ export function SignIn() {
                   </label>
                   <input
                     id="signup-first"
+                    name="firstName"
                     type="text"
                     placeholder="Jane"
                     required
@@ -178,6 +193,7 @@ export function SignIn() {
                   </label>
                   <input
                     id="signup-last"
+                    name="lastName"
                     type="text"
                     placeholder="Doe"
                     required
@@ -192,6 +208,7 @@ export function SignIn() {
                 </label>
                 <input
                   id="signup-email"
+                  name="email"
                   type="email"
                   placeholder="explorer@example.com"
                   required
@@ -205,6 +222,7 @@ export function SignIn() {
                 </label>
                 <input
                   id="signup-password"
+                  name="password"
                   type="password"
                   placeholder="Create a strong password"
                   required
@@ -219,9 +237,10 @@ export function SignIn() {
               )}
               <button
                 type="submit"
-                className="w-full min-h-[44px] bg-savanna-green text-on-primary font-label-md py-4 rounded-lg hover:opacity-90 transition-opacity"
+                disabled={submitting}
+                className="w-full min-h-[44px] bg-savanna-green text-on-primary font-label-md py-4 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Create Account
+                {submitting ? 'Creating Account…' : 'Create Account'}
               </button>
               <p className="text-center font-label-sm text-label-sm text-on-surface-variant">
                 By creating an account, you agree to our{' '}

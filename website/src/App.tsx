@@ -10,6 +10,7 @@ import { Destinations } from './pages/Destinations'
 import { DestinationDetail } from './pages/DestinationDetail'
 import { About } from './pages/About'
 import { SignIn } from './pages/SignIn'
+import { SetPassword } from './pages/SetPassword'
 import { Faqs } from './pages/Faqs'
 import { Checkout } from './pages/Checkout'
 import { BookingConfirmed } from './pages/BookingConfirmed'
@@ -82,6 +83,7 @@ function App() {
           <Route path="/about" element={<About />} />
           <Route path="/faqs" element={<Faqs />} />
           <Route path="/sign-in" element={<SignIn />} />
+          <Route path="/set-password" element={<SetPassword />} />
           <Route path="/safaris/:id/book" element={<Checkout />} />
           <Route path="/booking-confirmed" element={<BookingConfirmed />} />
           <Route path="/inquiry-received" element={<InquiryReceived />} />

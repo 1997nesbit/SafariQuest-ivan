@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.core.mail import send_mail
 from rest_framework import generics, status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
@@ -108,3 +108,10 @@ class UserInviteView(generics.CreateAPIView):
             from_email=None,
             recipient_list=[user.email],
         )
+
+
+class MeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response({"role": request.user.role}, status=status.HTTP_200_OK)

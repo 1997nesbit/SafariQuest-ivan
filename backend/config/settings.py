@@ -3,6 +3,7 @@ from pathlib import Path
 
 import dj_database_url
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 import os
 
 load_dotenv()
@@ -10,8 +11,17 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key-change-me")
-DEBUG = os.environ.get("DEBUG", "True") == "True"
+DEBUG = os.environ.get("DEBUG", "False") == "True"
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
+
+if not DEBUG and SECRET_KEY == "dev-secret-key-change-me":
+    raise ImproperlyConfigured(
+        "SECRET_KEY must be set to a non-default value when DEBUG is False."
+    )
+if not DEBUG and ALLOWED_HOSTS == ["*"]:
+    raise ImproperlyConfigured(
+        "ALLOWED_HOSTS must be set to specific hosts when DEBUG is False."
+    )
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -103,7 +113,7 @@ SIMPLE_JWT = {
 AUTH_COOKIE_ACCESS = "access_token"
 AUTH_COOKIE_REFRESH = "refresh_token"
 AUTH_COOKIE_SECURE = not DEBUG
-AUTH_COOKIE_SAMESITE = "Lax"
+AUTH_COOKIE_SAMESITE = os.environ.get("AUTH_COOKIE_SAMESITE", "Lax")
 
 CORS_ALLOWED_ORIGINS = os.environ.get(
     "CORS_ALLOWED_ORIGINS", "http://localhost:5173"

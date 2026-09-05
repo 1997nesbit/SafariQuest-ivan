@@ -9,7 +9,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .permissions import IsAdminRole
-from .serializers import LoginSerializer, UserInviteSerializer, UserListSerializer
+from .serializers import LoginSerializer, RegisterSerializer, UserInviteSerializer, UserListSerializer
 
 User = get_user_model()
 
@@ -126,3 +126,17 @@ class MeView(APIView):
 
     def get(self, request):
         return Response({"role": request.user.role}, status=status.HTTP_200_OK)
+
+
+class RegisterView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = RegisterSerializer(data=request.data)
+        if not serializer.is_valid():
+            first_error = str(next(iter(serializer.errors.values()))[0])
+            return Response({"detail": first_error}, status=status.HTTP_400_BAD_REQUEST)
+        user = serializer.save()
+        response = Response({"role": user.role}, status=status.HTTP_201_CREATED)
+        _set_auth_cookies(response, user)
+        return response

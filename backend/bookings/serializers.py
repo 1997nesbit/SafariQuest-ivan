@@ -79,3 +79,19 @@ class BookingUpdateSerializer(serializers.ModelSerializer):
                 f"Cannot move from '{self.instance.stage}' directly to '{value}'."
             )
         return value
+
+
+class QuoteLineItemInputSerializer(serializers.Serializer):
+    label = serializers.CharField(max_length=200)
+    cost = serializers.IntegerField(min_value=0)
+    markup_percent = serializers.IntegerField(min_value=0)
+
+
+class QuoteUpdateSerializer(serializers.Serializer):
+    line_items = QuoteLineItemInputSerializer(many=True)
+
+    def update(self, instance, validated_data):
+        instance.line_items.all().delete()
+        for order, item in enumerate(validated_data["line_items"]):
+            QuoteLineItem.objects.create(booking=instance, order=order, **item)
+        return instance

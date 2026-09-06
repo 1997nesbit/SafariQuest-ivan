@@ -1,10 +1,16 @@
 from rest_framework import mixins, viewsets
+from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from accounts.permissions import IsBookingStaffRole
 
 from .models import Booking
-from .serializers import BookingDetailSerializer, BookingListSerializer, BookingUpdateSerializer
+from .serializers import (
+    BookingDetailSerializer,
+    BookingListSerializer,
+    BookingUpdateSerializer,
+    QuoteUpdateSerializer,
+)
 
 
 class BookingViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
@@ -39,3 +45,11 @@ class BookingViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(BookingDetailSerializer(instance).data)
+
+    @action(detail=True, methods=["patch"], url_path="quote")
+    def quote(self, request, pk=None):
+        booking = self.get_object()
+        serializer = QuoteUpdateSerializer(booking, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(BookingDetailSerializer(booking).data)

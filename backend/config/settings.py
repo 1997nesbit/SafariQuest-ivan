@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "safaris",
     "pricing",
     "guides",
+    "bookings",
 ]
 
 MIDDLEWARE = [

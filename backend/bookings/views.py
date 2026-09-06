@@ -1,9 +1,10 @@
 from rest_framework import mixins, viewsets
+from rest_framework.response import Response
 
 from accounts.permissions import IsBookingStaffRole
 
 from .models import Booking
-from .serializers import BookingDetailSerializer, BookingListSerializer
+from .serializers import BookingDetailSerializer, BookingListSerializer, BookingUpdateSerializer
 
 
 class BookingViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
@@ -31,3 +32,10 @@ class BookingViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.
         elif guide:
             queryset = queryset.filter(assigned_guide_id=guide)
         return queryset
+
+    def partial_update(self, request, pk=None):
+        instance = self.get_object()
+        serializer = BookingUpdateSerializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(BookingDetailSerializer(instance).data)

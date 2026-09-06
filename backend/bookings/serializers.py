@@ -57,3 +57,25 @@ class BookingDetailSerializer(BookingListSerializer):
 
     class Meta(BookingListSerializer.Meta):
         fields = BookingListSerializer.Meta.fields + ["message", "created_at", "line_items", "notes"]
+
+
+class BookingUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Booking
+        fields = ["assigned_guide", "stage"]
+
+    def validate_stage(self, value):
+        if value == Booking.STAGE_QUOTED:
+            raise serializers.ValidationError(
+                "Use POST /api/bookings/{id}/quote/send/ to move a booking to the Quoted stage."
+            )
+        order = Booking.STAGE_ORDER
+        if value not in order:
+            raise serializers.ValidationError("Unknown stage.")
+        current_index = order.index(self.instance.stage)
+        target_index = order.index(value)
+        if target_index != current_index + 1:
+            raise serializers.ValidationError(
+                f"Cannot move from '{self.instance.stage}' directly to '{value}'."
+            )
+        return value

@@ -1,13 +1,14 @@
-from rest_framework import mixins, viewsets
+from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from accounts.permissions import IsBookingStaffRole
 
-from .models import Booking
+from .models import Booking, BookingNote
 from .serializers import (
     BookingDetailSerializer,
     BookingListSerializer,
+    BookingNoteInputSerializer,
     BookingUpdateSerializer,
     QuoteUpdateSerializer,
 )
@@ -53,3 +54,12 @@ class BookingViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(BookingDetailSerializer(booking).data)
+
+    @action(detail=True, methods=["post"], url_path="notes")
+    def notes(self, request, pk=None):
+        booking = self.get_object()
+        serializer = BookingNoteInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        BookingNote.objects.create(booking=booking, author=request.user, text=serializer.validated_data["text"])
+        booking.refresh_from_db()
+        return Response(BookingDetailSerializer(booking).data, status=status.HTTP_201_CREATED)

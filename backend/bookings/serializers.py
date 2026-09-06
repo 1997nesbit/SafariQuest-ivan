@@ -95,3 +95,7 @@ class QuoteUpdateSerializer(serializers.Serializer):
         for order, item in enumerate(validated_data["line_items"]):
             QuoteLineItem.objects.create(booking=instance, order=order, **item)
         return instance
+
+
+class BookingNoteInputSerializer(serializers.Serializer):
+    text = serializers.CharField(allow_blank=False)

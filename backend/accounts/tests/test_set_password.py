@@ -39,3 +39,8 @@ class SetPasswordViewTests(APITestCase):
         self.client.post(self.url, {"uid": self.uid, "token": self.token, "password": "brand-new-pw-123"})
         response = self.client.post(self.url, {"uid": self.uid, "token": self.token, "password": "second-attempt-pw"})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_weak_password_returns_password_validation_message(self):
+        response = self.client.post(self.url, {"uid": self.uid, "token": self.token, "password": "123"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertNotEqual(response.data["detail"], "Invalid or expired link.")

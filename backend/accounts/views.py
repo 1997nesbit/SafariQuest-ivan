@@ -164,6 +164,11 @@ class SetPasswordView(APIView):
     def post(self, request):
         serializer = SetPasswordSerializer(data=request.data)
         if not serializer.is_valid():
+            if "password" in serializer.errors:
+                return Response(
+                    {"detail": str(serializer.errors["password"][0])},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             return Response({"detail": "Invalid or expired link."}, status=status.HTTP_400_BAD_REQUEST)
         user = serializer.validated_data["user"]
         user.set_password(serializer.validated_data["password"])

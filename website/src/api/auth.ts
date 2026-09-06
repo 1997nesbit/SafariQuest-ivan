@@ -6,6 +6,12 @@ interface RoleResponse {
   role: Role
 }
 
+export interface MeResponse {
+  role: Role
+  name: string
+  email: string
+}
+
 export function login(email: string, password: string): Promise<RoleResponse> {
   return apiPost<RoleResponse>('/api/auth/login/', { email, password })
 }
@@ -14,8 +20,8 @@ export function logout(): Promise<void> {
   return apiPost<void>('/api/auth/logout/')
 }
 
-export function fetchMe(): Promise<RoleResponse> {
-  return apiGet<RoleResponse>('/api/auth/me/')
+export function fetchMe(): Promise<MeResponse> {
+  return apiGet<MeResponse>('/api/auth/me/')
 }
 
 interface RegisterInput {

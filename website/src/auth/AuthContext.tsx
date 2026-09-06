@@ -5,12 +5,14 @@ import {
   logout as apiLogout,
   register as apiRegister,
   setPassword as apiSetPassword,
+  type MeResponse,
   type Role,
 } from '../api/auth'
 import { ApiError } from '../lib/api'
 
 interface AuthContextValue {
   role: Role | null
+  user: MeResponse | null
   isLoading: boolean
   login: (email: string, password: string) => Promise<Role>
   logout: () => Promise<void>
@@ -21,14 +23,14 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [role, setRole] = useState<Role | null>(null)
+  const [user, setUser] = useState<MeResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
     fetchMe()
       .then((res) => {
-        if (!cancelled) setRole(res.role)
+        if (!cancelled) setUser(res)
       })
       .catch((err: unknown) => {
         if (!cancelled && !(err instanceof ApiError && err.status === 401)) {
@@ -47,12 +49,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function login(email: string, password: string): Promise<Role> {
     const res = await apiLogin(email, password)
-    setRole(res.role)
+    const me = await fetchMe()
+    setUser(me)
     return res.role
   }
 
   async function logout(): Promise<void> {
-    setRole(null)
+    setUser(null)
     try {
       await apiLogout()
     } catch (err) {
@@ -62,18 +65,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function register(email: string, name: string, password: string): Promise<Role> {
     const res = await apiRegister({ email, name, password })
-    setRole(res.role)
+    const me = await fetchMe()
+    setUser(me)
     return res.role
   }
 
   async function setPassword(uid: string, token: string, password: string): Promise<Role> {
     const res = await apiSetPassword(uid, token, password)
-    setRole(res.role)
+    const me = await fetchMe()
+    setUser(me)
     return res.role
   }
 
   return (
-    <AuthContext.Provider value={{ role, isLoading, login, logout, register, setPassword }}>
+    <AuthContext.Provider value={{ role: user?.role ?? null, user, isLoading, login, logout, register, setPassword }}>
       {children}
     </AuthContext.Provider>
   )

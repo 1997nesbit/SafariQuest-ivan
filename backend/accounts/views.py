@@ -137,7 +137,11 @@ class MeView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return Response({"role": request.user.role}, status=status.HTTP_200_OK)
+        user = request.user
+        return Response(
+            {"role": user.role, "name": user.name, "email": user.email},
+            status=status.HTTP_200_OK,
+        )
 
 
 class RegisterView(APIView):

@@ -9,6 +9,12 @@ import { useAuth } from '../../auth/AuthContext'
 const AVAILABILITY_OPTIONS = ['Available', 'On Trip', 'Off-Duty'] as const
 type Availability = (typeof AVAILABILITY_OPTIONS)[number]
 
+function initials(nameOrEmail: string) {
+  const parts = nameOrEmail.trim().split(/\s+/)
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return (parts[0][0] + parts[1][0]).toUpperCase()
+}
+
 const LANGUAGES = ['Swahili', 'English', 'French', 'German']
 const SPECIALTIES = ['Big Cat Tracking', 'Bird Watching', 'Photography Safaris', 'Cultural Visits']
 const CERTIFICATIONS = [
@@ -18,8 +24,9 @@ const CERTIFICATIONS = [
 
 export function GuideProfile() {
   const [availability, setAvailability] = useState<Availability>('On Trip')
-  const { logout } = useAuth()
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const displayName = user?.name || user?.email || 'Guide'
 
   async function handleSignOut() {
     await logout()
@@ -40,14 +47,13 @@ export function GuideProfile() {
       <main className="pt-20 pb-28 px-5 max-w-lg mx-auto min-h-screen">
         <div className="flex flex-col items-center text-center mb-6">
           <div className="w-24 h-24 rounded-full bg-surface-container flex items-center justify-center text-3xl font-headline-md text-on-surface-variant border-4 border-surface-container-lowest shadow-sm">
-            JM
+            {initials(displayName)}
           </div>
-          <h2 className="font-headline-md text-[22px] text-on-surface mt-4">Juma Mdoe</h2>
+          <h2 className="font-headline-md text-[22px] text-on-surface mt-4">{displayName}</h2>
           <div className="flex items-center gap-2 mt-1">
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-surface-container text-on-surface font-label-sm text-label-sm">
               Senior Guide
             </span>
-            <span className="font-label-sm text-label-sm text-on-surface-variant">ID: SH-G-101</span>
           </div>
           <Link to="/guide/reviews" className="flex items-center gap-1 mt-2 text-golden-sun">
             <Star size={18} weight="fill" />

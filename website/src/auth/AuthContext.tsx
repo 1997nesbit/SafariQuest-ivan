@@ -8,7 +8,7 @@ import {
   type MeResponse,
   type Role,
 } from '../api/auth'
-import { ApiError } from '../lib/api'
+import { ApiError, setUnauthorizedHandler } from '../lib/api'
 
 interface AuthContextValue {
   role: Role | null
@@ -45,6 +45,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true
     }
+  }, [])
+
+  useEffect(() => {
+    setUnauthorizedHandler(() => setUser(null))
+    return () => setUnauthorizedHandler(null)
   }, [])
 
   async function login(email: string, password: string): Promise<Role> {

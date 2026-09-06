@@ -9,6 +9,12 @@ export class ApiError extends Error {
   }
 }
 
+let onUnauthorized: (() => void) | null = null
+
+export function setUnauthorizedHandler(fn: (() => void) | null) {
+  onUnauthorized = fn
+}
+
 let refreshInFlight: Promise<boolean> | null = null
 
 function attemptRefresh(): Promise<boolean> {
@@ -30,6 +36,13 @@ async function parseErrorMessage(response: Response): Promise<string> {
   try {
     const body = await response.json()
     if (typeof body?.detail === 'string') return body.detail
+    if (body && typeof body === 'object') {
+      const firstKey = Object.keys(body)[0]
+      const firstValue = firstKey ? body[firstKey] : undefined
+      if (Array.isArray(firstValue) && typeof firstValue[0] === 'string') {
+        return firstValue[0]
+      }
+    }
   } catch {
     // no JSON body — fall through
   }
@@ -55,6 +68,9 @@ async function request<T>(path: string, init: RequestInit = {}, isRetry = false)
   }
 
   if (!response.ok) {
+    if (response.status === 401) {
+      onUnauthorized?.()
+    }
     throw new ApiError(response.status, await parseErrorMessage(response))
   }
 

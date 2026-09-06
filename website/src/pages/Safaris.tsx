@@ -138,16 +138,8 @@ export function Safaris() {
       {/* Safari Grid */}
       <section className="py-20 md:py-section-gap px-5 md:px-margin-desktop w-full max-w-container-max mx-auto">
         {loading && <p className="text-center text-on-surface-variant py-20">Loading safaris…</p>}
-        {error && <p className="text-center text-error py-20">{error}</p>}
-        {!loading && !error && filtered.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-gutter gap-y-16">
-            {filtered.map((safari, i) => (
-              <Reveal key={safari.id} delay={(i % 3) * 80}>
-                <SafariCard safari={safari} />
-              </Reveal>
-            ))}
-          </div>
-        ) : (
+        {!loading && error && <p className="text-center text-error py-20">{error}</p>}
+        {!loading && !error && filtered.length === 0 && (
           <p className="text-center text-on-surface-variant py-20">
             No safaris match those filters yet — try widening your search, or{' '}
             <Link to="/about#contact" className="text-savanna-green underline">
@@ -155,6 +147,15 @@ export function Safaris() {
             </Link>
             .
           </p>
+        )}
+        {!loading && !error && filtered.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-gutter gap-y-16">
+            {filtered.map((safari, i) => (
+              <Reveal key={safari.id} delay={(i % 3) * 80}>
+                <SafariCard safari={safari} />
+              </Reveal>
+            ))}
+          </div>
         )}
       </section>
 

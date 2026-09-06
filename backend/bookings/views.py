@@ -1,3 +1,4 @@
+from django.core.mail import send_mail
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -63,3 +64,30 @@ class BookingViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.
         BookingNote.objects.create(booking=booking, author=request.user, text=serializer.validated_data["text"])
         booking.refresh_from_db()
         return Response(BookingDetailSerializer(booking).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["post"], url_path="quote/send", url_name="quote-send")
+    def send_quote(self, request, pk=None):
+        booking = self.get_object()
+        if booking.stage not in (Booking.STAGE_NEW_INQUIRY, Booking.STAGE_QUOTED):
+            return Response(
+                {"detail": "This booking has already moved past the quoting stage."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not booking.line_items.exists():
+            return Response(
+                {"detail": "Add at least one line item before sending a quote."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        booking.stage = Booking.STAGE_QUOTED
+        booking.save(update_fields=["stage"])
+        send_mail(
+            subject=f"Your SafariQuest quote — {booking.safari.title}",
+            message=(
+                f"Hi {booking.customer.name or booking.customer.email},\n\n"
+                f"Your quote for {booking.safari.title} is ready: ${booking.subtotal:,}. "
+                "Please reply to confirm or ask any questions."
+            ),
+            from_email=None,
+            recipient_list=[booking.customer.email],
+        )
+        return Response(BookingDetailSerializer(booking).data)

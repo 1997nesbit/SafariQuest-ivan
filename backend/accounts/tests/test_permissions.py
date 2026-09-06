@@ -44,3 +44,41 @@ class IsAdminOrReadOnlyTests(TestCase):
         request = self.factory.post("/")
         request.user = self.admin
         self.assertTrue(IsAdminOrReadOnly().has_permission(request, None))
+
+
+from accounts.permissions import IsBookingStaffRole
+
+
+class IsBookingStaffRoleTests(TestCase):
+    def setUp(self):
+        self.factory = APIRequestFactory()
+        self.sales = User.objects.create_user(email="sales@example.com", password="pw12345", role="sales")
+        self.operations = User.objects.create_user(email="ops@example.com", password="pw12345", role="operations")
+        self.admin = User.objects.create_user(email="admin3@example.com", password="pw12345", role="admin")
+        self.guide = User.objects.create_user(email="guide@example.com", password="pw12345", role="guide")
+        self.tourist = User.objects.create_user(email="tourist3@example.com", password="pw12345", role="tourist")
+
+    def test_sales_has_permission(self):
+        request = self.factory.get("/")
+        request.user = self.sales
+        self.assertTrue(IsBookingStaffRole().has_permission(request, None))
+
+    def test_operations_has_permission(self):
+        request = self.factory.get("/")
+        request.user = self.operations
+        self.assertTrue(IsBookingStaffRole().has_permission(request, None))
+
+    def test_admin_has_permission(self):
+        request = self.factory.get("/")
+        request.user = self.admin
+        self.assertTrue(IsBookingStaffRole().has_permission(request, None))
+
+    def test_guide_denied(self):
+        request = self.factory.get("/")
+        request.user = self.guide
+        self.assertFalse(IsBookingStaffRole().has_permission(request, None))
+
+    def test_tourist_denied(self):
+        request = self.factory.get("/")
+        request.user = self.tourist
+        self.assertFalse(IsBookingStaffRole().has_permission(request, None))

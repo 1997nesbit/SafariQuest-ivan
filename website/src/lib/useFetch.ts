@@ -18,6 +18,10 @@ export function useFetch<T>(fetcher: () => Promise<T>, deps: unknown[]): UseFetc
 
   useEffect(() => {
     let cancelled = false
+    // Resetting loading/error at the start of each fetch is intentional here,
+    // not a synchronization bug — this hook's whole job is running an async
+    // fetch on dependency change and tracking its lifecycle.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
     setError(null)
     fetcher()

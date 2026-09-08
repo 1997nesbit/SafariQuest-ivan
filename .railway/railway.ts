@@ -24,6 +24,10 @@ export default defineRailway((ctx) => {
       CORS_ALLOWED_ORIGINS: "https://pandewildernesstravels.com",
       CSRF_TRUSTED_ORIGINS: "https://pandewildernesstravels.com",
       FRONTEND_URL: "https://pandewildernesstravels.com",
+      // Frontend and backend are on different domains, so the auth cookies
+      // need SameSite=None (with Secure, already forced by AUTH_COOKIE_SECURE
+      // when DEBUG=False) to be sent on cross-site fetch requests.
+      AUTH_COOKIE_SAMESITE: "None",
     },
   });
 

@@ -18,8 +18,13 @@ import { InquiryReceived } from './pages/InquiryReceived'
 import { PlanLayout } from './components/plan/PlanLayout'
 import { PlanDestinations } from './pages/plan/PlanDestinations'
 import { PlanExperiences } from './pages/plan/PlanExperiences'
+import { PlanDetails } from './pages/plan/PlanDetails'
 import { PlanReview } from './pages/plan/PlanReview'
+import { AccountLayout } from './components/account/AccountLayout'
 import { MyTrips } from './pages/account/MyTrips'
+import { AccountInvoices } from './pages/account/AccountInvoices'
+import { AccountComplaints } from './pages/account/AccountComplaints'
+import { AccountProfile } from './pages/account/AccountProfile'
 import { TripProgress } from './pages/account/TripProgress'
 import { RateExperience } from './pages/account/RateExperience'
 import { ReportIssue } from './pages/account/ReportIssue'
@@ -39,7 +44,9 @@ import { AdminStaffGuides } from './pages/admin/AdminStaffGuides'
 import { AdminGuideDetail } from './pages/admin/AdminGuideDetail'
 import { AdminPricing } from './pages/admin/AdminPricing'
 import { AdminContent } from './pages/admin/AdminContent'
-import { AdminContentNew } from './pages/admin/AdminContentNew'
+import { AdminDestinationForm } from './pages/admin/AdminDestinationForm'
+import { AdminParkForm } from './pages/admin/AdminParkForm'
+import { AdminSafariForm } from './pages/admin/AdminSafariForm'
 import { AdminFinance } from './pages/admin/AdminFinance'
 import { AdminInvoices } from './pages/admin/AdminInvoices'
 import { AdminInvoiceDocument } from './pages/admin/AdminInvoiceDocument'
@@ -90,9 +97,17 @@ function App() {
           <Route element={<PlanLayout />}>
             <Route path="/plan" element={<PlanDestinations />} />
             <Route path="/plan/experiences" element={<PlanExperiences />} />
+            <Route path="/plan/details" element={<PlanDetails />} />
             <Route path="/plan/review" element={<PlanReview />} />
           </Route>
+        </Route>
+
+        <Route element={<AccountLayout />}>
           <Route path="/account" element={<MyTrips />} />
+          <Route path="/account/invoices" element={<AccountInvoices />} />
+          <Route path="/account/complaints" element={<AccountComplaints />} />
+          <Route path="/account/profile" element={<AccountProfile />} />
+          <Route path="/account/trips" element={<TripProgress />} />
           <Route path="/account/trips/:tripId" element={<TripProgress />} />
           <Route path="/account/trips/:tripId/rate" element={<RateExperience />} />
           <Route path="/account/trips/:tripId/report-issue" element={<ReportIssue />} />
@@ -122,7 +137,12 @@ function App() {
             <Route path="guides/:id" element={<AdminGuideDetail />} />
             <Route path="complaints" element={<AdminComplaints />} />
             <Route path="content" element={<AdminContent />} />
-            <Route path="content/new" element={<AdminContentNew />} />
+            <Route path="content/destinations/new" element={<AdminDestinationForm />} />
+            <Route path="content/destinations/:slug/edit" element={<AdminDestinationForm />} />
+            <Route path="content/safaris/new" element={<AdminSafariForm />} />
+            <Route path="content/safaris/:slug/edit" element={<AdminSafariForm />} />
+            <Route path="content/parks/new" element={<AdminParkForm />} />
+            <Route path="content/parks/:slug/edit" element={<AdminParkForm />} />
             <Route path="analytics" element={<AdminAnalytics />} />
             <Route path="users" element={<AdminUsers />} />
           </Route>

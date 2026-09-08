@@ -1,7 +1,8 @@
 import { Link, useParams } from 'react-router-dom'
-import { Airplane, CalendarBlank, PawPrint, Star } from '@phosphor-icons/react'
+import { Airplane, CalendarBlank, PawPrint, SealCheck } from '@phosphor-icons/react'
 import { Reveal } from '../components/Reveal'
 import { getDestination, type Destination } from '../api/destinations'
+import { getParks, type Park } from '../api/parks'
 import { getSafaris, type SafariPackage } from '../api/safaris'
 import { useFetch } from '../lib/useFetch'
 
@@ -9,6 +10,7 @@ export function DestinationDetail() {
   const { id } = useParams<{ id: string }>()
   const { data: destination, loading, error } = useFetch<Destination>(() => getDestination(id!), [id])
   const { data: safariPackages } = useFetch<SafariPackage[]>(getSafaris, [])
+  const { data: parks } = useFetch<Park[]>(getParks, [])
 
   if (loading) {
     return <div className="min-h-[60vh] flex items-center justify-center text-on-surface-variant">Loading…</div>
@@ -30,8 +32,9 @@ export function DestinationDetail() {
     )
   }
 
-  const relatedPackages = (safariPackages ?? []).filter((p) =>
-    p.destination.toLowerCase().includes(destination.name.toLowerCase()),
+  const regionParks = (parks ?? []).filter((p) => p.region === destination.id)
+  const safarisByPark = new Map<string, SafariPackage[]>(
+    regionParks.map((park) => [park.id, (safariPackages ?? []).filter((s) => s.parks.includes(park.id))]),
   )
 
   return (
@@ -78,76 +81,99 @@ export function DestinationDetail() {
         </section>
       </Reveal>
 
-      {/* Experiences */}
+      {/* Parks & Wonders */}
       <section className="py-section-gap px-5 md:px-margin-desktop max-w-container-max mx-auto">
         <Reveal className="mb-16 text-center">
-          <h2 className="font-headline-lg text-headline-lg text-on-surface mb-4">Experiences in {destination.name}</h2>
+          <h2 className="font-headline-lg text-headline-lg text-on-surface mb-4">
+            Parks &amp; Wonders in {destination.name}
+          </h2>
           <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto">
-            Curated activities designed to immerse you in the heart of the region with expert local guidance.
+            Curated journeys designed to immerse you in the heart of the wild with uncompromising luxury and expert
+            guidance.
           </p>
         </Reveal>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter">
-          {destination.experiences.map((exp, i) => (
-            <Reveal
-              key={exp.name}
-              delay={i * 100}
-              className="bg-ivory-base rounded-xl overflow-hidden shadow-[0_4px_20px_-2px_rgba(45,45,45,0.06)] hover:shadow-[0_8px_30px_-4px_rgba(45,45,45,0.1)] hover:-translate-y-0.5 transition-all duration-300 flex flex-col"
-            >
-              <div className="h-64 overflow-hidden">
-                <img
-                  src={destination.images[i % destination.images.length]}
-                  alt={exp.name}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="font-headline-md text-xl mb-3">{exp.name}</h3>
-                <p className="font-body-md text-on-surface-variant">{exp.description}</p>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </section>
+        {regionParks.length > 0 ? (
+          <div className="flex flex-col gap-16">
+            {regionParks.map((park, i) => {
+              const safaris = safarisByPark.get(park.id) ?? []
+              return (
+                <Reveal key={park.id} delay={i * 100}>
+                  <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
+                    <div className="lg:col-span-2 rounded-xl overflow-hidden h-64 lg:h-full lg:sticky lg:top-24">
+                      <img
+                        src={park.images[0]}
+                        alt={park.imageAlt}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="lg:col-span-3">
+                      {park.badge && (
+                        <span className="inline-block bg-savanna-green/10 text-savanna-green px-3 py-1 rounded-full font-label-sm text-label-sm mb-3">
+                          {park.badge}
+                        </span>
+                      )}
+                      <h3 className="font-headline-md text-headline-md text-on-surface mb-2">{park.name}</h3>
+                      <p className="font-body-md text-on-surface-variant mb-6">{park.highlight}</p>
 
-      {/* Related safaris */}
-      {relatedPackages.length > 0 && (
-        <section className="pb-section-gap px-5 md:px-margin-desktop max-w-container-max mx-auto">
-          <Reveal>
-            <h2 className="font-headline-lg text-headline-lg text-on-surface mb-10">Safaris to {destination.name}</h2>
-          </Reveal>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter">
-            {relatedPackages.map((pkg, i) => (
-              <Reveal key={pkg.id} delay={i * 80}>
-                <Link
-                  to={`/safaris/${pkg.id}`}
-                  className="group bg-ivory-base rounded-xl overflow-hidden shadow-[0_4px_20px_-2px_rgba(45,45,45,0.06)] hover:shadow-[0_8px_30px_-4px_rgba(45,45,45,0.1)] hover:-translate-y-0.5 transition-all duration-300 flex flex-col h-full"
-                >
-                  <div className="h-48 overflow-hidden relative">
-                    <img
-                      src={pkg.image}
-                      alt={pkg.imageAlt}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute top-4 right-4 bg-surface/90 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-1">
-                      <Star size={14} weight="fill" className="text-golden-sun" />
-                      <span className="font-label-sm text-label-sm font-bold">{pkg.rating.toFixed(1)}</span>
+                      {safaris.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {safaris.map((safari) => (
+                            <Link
+                              key={safari.id}
+                              to={`/safaris/${safari.id}`}
+                              className="group bg-ivory-base rounded-xl overflow-hidden shadow-[0_4px_20px_-2px_rgba(45,45,45,0.06)] hover:shadow-[0_8px_30px_-4px_rgba(45,45,45,0.1)] hover:-translate-y-0.5 transition-all duration-300 flex flex-col border border-sand-stone/50"
+                            >
+                              <div className="h-32 overflow-hidden">
+                                <img src={safari.image} alt={safari.imageAlt} className="w-full h-full object-cover" />
+                              </div>
+                              <div className="p-4 flex-1 flex flex-col">
+                                <h4 className="font-headline-md text-base text-on-surface mb-2">{safari.title}</h4>
+                                <div className="mt-auto flex items-center justify-between pt-2">
+                                  <span className="flex items-center gap-1.5 text-savanna-green">
+                                    <SealCheck size={14} weight="fill" />
+                                    <span className="font-label-sm text-[11px]">Certified</span>
+                                  </span>
+                                  <span className="font-label-md text-label-sm text-terracotta group-hover:text-secondary transition-colors font-bold uppercase tracking-wider text-xs">
+                                    View Details
+                                  </span>
+                                </div>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-on-surface-variant text-sm">No safari packages visit this park yet.</p>
+                      )}
                     </div>
                   </div>
-                  <div className="p-6 flex-1 flex flex-col">
-                    <h3 className="font-headline-md text-[20px] text-on-surface mb-1">{pkg.title}</h3>
-                    <p className="text-on-surface-variant text-sm mb-4">
-                      {pkg.days} days · from ${pkg.price.toLocaleString()}
-                    </p>
-                    <span className="mt-auto font-label-md text-label-sm text-terracotta group-hover:text-secondary transition-colors font-bold uppercase tracking-wider">
-                      View Details
-                    </span>
-                  </div>
-                </Link>
+                </Reveal>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+            {destination.experiences.map((exp, i) => (
+              <Reveal
+                key={exp.name}
+                delay={i * 100}
+                className="bg-ivory-base rounded-xl overflow-hidden shadow-[0_4px_20px_-2px_rgba(45,45,45,0.06)] hover:shadow-[0_8px_30px_-4px_rgba(45,45,45,0.1)] hover:-translate-y-0.5 transition-all duration-300 flex flex-col"
+              >
+                <div className="h-64 overflow-hidden">
+                  <img
+                    src={destination.images[i % destination.images.length]}
+                    alt={exp.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="p-6">
+                  <h3 className="font-headline-md text-xl mb-3">{exp.name}</h3>
+                  <p className="font-body-md text-on-surface-variant">{exp.description}</p>
+                </div>
               </Reveal>
             ))}
           </div>
-        </section>
-      )}
+        )}
+      </section>
 
       {/* CTA Banner */}
       <section className="relative overflow-hidden bg-surface-container py-24">

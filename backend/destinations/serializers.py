@@ -1,7 +1,7 @@
 from django.db import transaction
 from rest_framework import serializers
 
-from .models import Destination, DestinationExperience
+from .models import Destination, DestinationExperience, Park
 
 
 class DestinationExperienceSerializer(serializers.ModelSerializer):
@@ -40,3 +40,14 @@ class DestinationSerializer(serializers.ModelSerializer):
                 for order, experience in enumerate(experiences_data):
                     DestinationExperience.objects.create(destination=instance, order=order, **experience)
         return instance
+
+
+class ParkSerializer(serializers.ModelSerializer):
+    region = serializers.PrimaryKeyRelatedField(queryset=Destination.objects.all())
+
+    class Meta:
+        model = Park
+        fields = [
+            "slug", "region", "name", "images", "image_alt", "badge", "tags",
+            "best_time_to_visit", "highlight", "about", "wildlife", "getting_there",
+        ]

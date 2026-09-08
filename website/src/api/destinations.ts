@@ -1,4 +1,4 @@
-import { apiGet } from '../lib/api'
+import { apiDelete, apiGet, apiPatch, apiPost } from '../lib/api'
 
 export interface DestinationExperience {
   name: string
@@ -63,4 +63,52 @@ export async function getDestinations(): Promise<Destination[]> {
 export async function getDestination(id: string): Promise<Destination> {
   const raw = await apiGet<DestinationApiShape>(`/api/destinations/${id}/`)
   return mapDestination(raw)
+}
+
+export interface DestinationInput {
+  slug: string
+  name: string
+  images: string[]
+  imageAlt: string
+  badge: string
+  tags: string[]
+  bestTimeToVisit: string
+  highlight: string
+  linkLabel: string
+  about: string
+  wildlife: string
+  gettingThere: string
+  experiences: DestinationExperience[]
+}
+
+function toApiShape(input: DestinationInput): DestinationApiShape {
+  return {
+    slug: input.slug,
+    name: input.name,
+    images: input.images,
+    image_alt: input.imageAlt,
+    badge: input.badge,
+    tags: input.tags,
+    best_time_to_visit: input.bestTimeToVisit,
+    highlight: input.highlight,
+    link_label: input.linkLabel,
+    about: input.about,
+    wildlife: input.wildlife,
+    getting_there: input.gettingThere,
+    experiences: input.experiences,
+  }
+}
+
+export async function createDestination(input: DestinationInput): Promise<Destination> {
+  const raw = await apiPost<DestinationApiShape>('/api/destinations/', toApiShape(input))
+  return mapDestination(raw)
+}
+
+export async function updateDestination(slug: string, input: DestinationInput): Promise<Destination> {
+  const raw = await apiPatch<DestinationApiShape>(`/api/destinations/${slug}/`, toApiShape(input))
+  return mapDestination(raw)
+}
+
+export async function deleteDestination(slug: string): Promise<void> {
+  await apiDelete(`/api/destinations/${slug}/`)
 }

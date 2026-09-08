@@ -30,3 +30,23 @@ class DestinationExperience(models.Model):
 
     def __str__(self):
         return f"{self.destination_id}: {self.name}"
+
+
+class Park(models.Model):
+    """A specific park or wonder a tourist visits, scoped to one region (Destination)."""
+
+    slug = models.CharField(max_length=64, primary_key=True)
+    region = models.ForeignKey(Destination, related_name="parks", on_delete=models.CASCADE)
+    name = models.CharField(max_length=120)
+    images = models.JSONField(default=list, blank=True)
+    image_alt = models.CharField(max_length=255, blank=True)
+    badge = models.CharField(max_length=64, blank=True)
+    tags = models.JSONField(default=list, blank=True)
+    best_time_to_visit = models.CharField(max_length=120, blank=True)
+    highlight = models.CharField(max_length=255, blank=True)
+    about = models.TextField(blank=True)
+    wildlife = models.TextField(blank=True)
+    getting_there = models.TextField(blank=True)
+
+    def __str__(self):
+        return self.name

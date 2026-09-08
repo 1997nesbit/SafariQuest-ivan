@@ -1,5 +1,16 @@
 import { Link, useParams } from 'react-router-dom'
-import { Bed, CalendarBlank, CheckCircle, Clock, MapPin, SealCheck, Star, XCircle } from '@phosphor-icons/react'
+import {
+  Bed,
+  CalendarBlank,
+  CheckCircle,
+  Clock,
+  MapPin,
+  SealCheck,
+  Star,
+  XCircle,
+  ArrowRight,
+  ChatCircleText,
+} from '@phosphor-icons/react'
 import { Reveal } from '../components/Reveal'
 import { getSafari, type SafariPackage } from '../api/safaris'
 import { useFetch } from '../lib/useFetch'
@@ -29,42 +40,46 @@ export function SafariDetail() {
   }
 
   return (
-    <>
+    <section className="pt-28 md:pt-32 pb-16 md:pb-section-gap px-5 md:px-margin-desktop max-w-container-max mx-auto">
       {/* Hero */}
-      <section className="relative h-[460px] md:h-[600px] flex items-end overflow-hidden">
-        <img
-          src={safari.image}
-          alt={safari.imageAlt}
-          fetchPriority="high"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-        <div className="relative z-10 px-5 md:px-margin-desktop w-full max-w-container-max mx-auto pb-10 md:pb-14">
+      <div className="w-full aspect-[16/9] md:aspect-[21/9] rounded-xl overflow-hidden mb-4">
+        <img src={safari.image} alt={safari.imageAlt} fetchPriority="high" className="w-full h-full object-cover" />
+      </div>
+      {safari.galleryImages.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 h-24 md:h-32 mb-12">
+          {safari.galleryImages.map((src, i) => (
+            <img key={src + i} src={src} alt="" loading="lazy" className="w-full h-full object-cover rounded-lg" />
+          ))}
+        </div>
+      )}
+
+      {/* Title & Badges */}
+      <div className="mb-12">
+        <h1 className="font-display-lg text-[32px] md:text-display-lg text-on-surface mb-6">{safari.title}</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="inline-flex items-center gap-2 bg-ivory-base border border-outline-variant text-on-surface px-4 py-2 rounded-full font-label-md text-label-md">
+            <CalendarBlank size={16} weight="fill" className="text-savanna-green" />
+            {safari.days} Days / {safari.days - 1} Nights
+          </span>
           {safari.badge && (
-            <span className="inline-block bg-golden-sun text-deep-earth px-3 py-1 rounded-full text-label-sm font-semibold mb-4">
+            <span className="inline-flex items-center gap-2 bg-savanna-green/10 text-savanna-green px-4 py-2 rounded-full font-label-md text-label-md font-bold">
+              <Star size={16} weight="fill" />
               {safari.badge}
             </span>
           )}
-          <h1 className="font-display-lg text-[32px] md:text-display-lg text-ivory-base mb-5">{safari.title}</h1>
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="inline-flex items-center gap-2 bg-white/90 backdrop-blur text-on-surface px-4 py-2 rounded-full font-label-md text-label-sm">
-              <CalendarBlank size={16} weight="fill" className="text-savanna-green" />
-              {safari.days} Days / {safari.days - 1} Nights
-            </span>
-            <span className="inline-flex items-center gap-2 bg-white/90 backdrop-blur text-savanna-green px-4 py-2 rounded-full font-label-md text-label-sm font-bold">
-              <Star size={16} weight="fill" className="text-golden-sun" />
-              {safari.rating.toFixed(1)} Rated
-            </span>
-            <span className="inline-flex items-center gap-2 bg-white/90 backdrop-blur text-on-surface px-4 py-2 rounded-full font-label-md text-label-sm">
-              <MapPin size={16} weight="fill" className="text-terracotta" />
-              {safari.destination}
-            </span>
-          </div>
+          <span className="inline-flex items-center gap-2 bg-ivory-base border border-outline-variant text-on-surface px-4 py-2 rounded-full font-label-md text-label-md">
+            <Bed size={16} weight="fill" className="text-savanna-green" />
+            {safari.accommodation}
+          </span>
+          <span className="inline-flex items-center gap-2 bg-ivory-base border border-outline-variant text-on-surface px-4 py-2 rounded-full font-label-md text-label-md">
+            <MapPin size={16} weight="fill" className="text-terracotta" />
+            {safari.destination}
+          </span>
         </div>
-      </section>
+      </div>
 
-      <section className="py-16 md:py-section-gap px-5 md:px-margin-desktop max-w-container-max mx-auto flex flex-col lg:flex-row gap-gutter">
-        {/* Main column */}
+      {/* Two-column layout */}
+      <div className="flex flex-col lg:flex-row gap-gutter">
         <div className="w-full lg:w-2/3 flex flex-col gap-12">
           <Reveal className="bg-ivory-base rounded-xl p-6 md:p-8 shadow-[0_4px_20px_-2px_rgba(45,45,45,0.06)] border border-sand-stone/60">
             <h2 className="font-headline-md text-headline-md text-on-surface mb-4">Overview</h2>
@@ -134,34 +149,43 @@ export function SafariDetail() {
 
         {/* Sticky sidebar */}
         <div className="w-full lg:w-1/3">
-          <Reveal delay={60} className="sticky top-24 bg-ivory-base border border-sand-stone rounded-2xl p-6 md:p-8 shadow-[0_8px_30px_-8px_rgba(45,45,45,0.15)] space-y-6">
+          <Reveal delay={60} className="sticky top-24 bg-ivory-base border border-sand-stone rounded-xl p-6 shadow-[0_4px_20px_-2px_rgba(45,45,45,0.06)] flex flex-col gap-6">
             <div>
-              <h2 className="font-headline-md text-[22px] text-on-surface mb-1">Plan Your Safari</h2>
+              <h2 className="font-headline-md text-headline-md text-on-surface mb-2">Inquire About This Safari</h2>
               <p className="font-body-md text-body-md text-on-surface-variant mb-4">
                 Start planning your dream adventure today.
               </p>
-              <div className="flex items-baseline gap-2">
-                <span className="font-display-lg text-[32px] text-savanna-green font-bold">
-                  From ${safari.price.toLocaleString()}
-                </span>
-                <span className="font-body-md text-body-md text-on-surface-variant">pp</span>
+              <div className="font-display-lg text-[32px] text-savanna-green font-bold">
+                From ${safari.price.toLocaleString()}{' '}
+                <span className="font-body-md text-body-md font-normal text-on-surface-variant">pp</span>
               </div>
             </div>
 
-            <div className="space-y-3">
-              <div className="flex items-center justify-between py-3 border-b border-sand-stone">
+            <div className="flex flex-col gap-3">
+              <Link
+                to={`/safaris/${safari.id}/book`}
+                className="w-full min-h-[44px] flex items-center justify-center gap-2 bg-golden-sun text-on-surface font-label-md text-label-md py-4 rounded-lg hover:opacity-90 transition-opacity font-bold"
+              >
+                Enquire Now
+                <ArrowRight size={20} weight="bold" />
+              </Link>
+              <Link
+                to="/about#contact"
+                className="w-full min-h-[44px] flex items-center justify-center gap-2 bg-transparent border-2 border-savanna-green text-savanna-green font-label-md text-label-md py-4 rounded-lg hover:bg-savanna-green/5 transition-colors font-bold"
+              >
+                <ChatCircleText size={20} weight="fill" />
+                Talk to a Tour Helper
+              </Link>
+            </div>
+
+            <div className="pt-4 border-t border-sand-stone space-y-3">
+              <div className="flex items-center justify-between">
                 <span className="font-label-md text-label-sm text-on-surface-variant flex items-center gap-2">
                   <Clock size={18} /> Duration
                 </span>
                 <span className="font-label-md text-label-sm text-on-surface">{safari.days} Days</span>
               </div>
-              <div className="flex items-center justify-between py-3 border-b border-sand-stone">
-                <span className="font-label-md text-label-sm text-on-surface-variant flex items-center gap-2">
-                  <Bed size={18} /> Accommodation
-                </span>
-                <span className="font-label-md text-label-sm text-on-surface">{safari.accommodation}</span>
-              </div>
-              <div className="flex items-center justify-between py-3">
+              <div className="flex items-center justify-between">
                 <span className="font-label-md text-label-sm text-on-surface-variant flex items-center gap-2">
                   <MapPin size={18} /> Destination
                 </span>
@@ -169,22 +193,7 @@ export function SafariDetail() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-3">
-              <Link
-                to={`/safaris/${safari.id}/book`}
-                className="w-full min-h-[44px] flex items-center justify-center bg-savanna-green text-on-primary px-6 py-3.5 rounded-full font-label-md hover:opacity-90 transition-opacity"
-              >
-                Book This Safari
-              </Link>
-              <Link
-                to="/about#contact"
-                className="w-full min-h-[44px] flex items-center justify-center border border-savanna-green text-savanna-green px-6 py-3.5 rounded-full font-label-md hover:bg-savanna-green hover:text-on-primary transition-colors"
-              >
-                Ask a Question
-              </Link>
-            </div>
-
-            <div className="flex items-center gap-3 pt-4 border-t border-sand-stone">
+            <div className="pt-4 border-t border-sand-stone flex items-center gap-4">
               <SealCheck size={32} weight="fill" className="text-golden-sun shrink-0" />
               <div>
                 <p className="font-label-md text-label-sm text-on-surface">Certified Operator</p>
@@ -193,7 +202,7 @@ export function SafariDetail() {
             </div>
           </Reveal>
         </div>
-      </section>
-    </>
+      </div>
+    </section>
   )
 }

@@ -54,7 +54,7 @@ async function request<T>(path: string, init: RequestInit = {}, isRetry = false)
     ...init,
     credentials: 'include',
     headers: {
-      ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(init.body && !(init.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
       ...init.headers,
     },
   })
@@ -95,4 +95,8 @@ export function apiPatch<T>(path: string, body: unknown): Promise<T> {
 
 export function apiDelete(path: string): Promise<void> {
   return request<void>(path, { method: 'DELETE' })
+}
+
+export function apiUpload<T>(path: string, formData: FormData): Promise<T> {
+  return request<T>(path, { method: 'POST', body: formData })
 }

@@ -100,9 +100,9 @@ DESTINATIONS = [
         "slug": "zanzibar",
         "name": "Zanzibar",
         "images": [
-            "https://lh3.googleusercontent.com/aida-public/AB6AXuAzWaW1mOT0Rmwr8duuuG0x544AeRKj6SLEXQRZSVOqNi-56OFrLnTE59aBS5PKSlCulgYMVgCKfiLcCarXpk23HGdgEaQMlHji8sTC0i7HgRGZl9jy_DXreiXt-dV6pd5pSgxLgkPmnEu-5E0enfsmU7EP8NLGJg1SndX554PkSAL4bpr1nZu69ttNlEct-zER_-gMe9qff-97HrUfH5BTSG_Zdcqpac0EdKGNR1eotkNZ07jbnRn5",
+            "https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Pongwe_Beach_Zanzibar.jpg/1280px-Pongwe_Beach_Zanzibar.jpg",
         ],
-        "image_alt": "Zanzibar beach with turquoise water and white sand.",
+        "image_alt": "A lone palm tree leaning over Pongwe Beach's white sand and turquoise water in Zanzibar.",
         "badge": "Spice Island",
         "tags": ["Stone Town"],
         "best_time_to_visit": "June – October",

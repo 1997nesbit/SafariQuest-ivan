@@ -8,13 +8,13 @@ SAFARIS = [
     {
         "slug": "great-migration-path",
         "title": "Great Migration Path",
-        "image": "https://lh3.googleusercontent.com/aida-public/AB6AXuBuI5OyQjW9raHxyRlAbmvWHJi3CybTwaIrZuOmdpOgYYprthtS9ZwcpmEqIMljBx2sE8EpTzeocODs8eFM_rSTODzFdumC6ReI8DGe_7YN_bNY1Iku4UI9jRSPbqae1c-0eyMCclcWtGbaWCuSawyKsgFvCkxyZAYrkoS_OOguukwZLw8gGQde_ASEnF1RODE0F65cNP3sNUOCncd4pKg7jHZVQMyDiHKdjlNlMSsZ8-3IQLToQXoD",
-        "image_alt": "A pride of lions resting in golden tall grass under a clear Serengeti morning sky.",
+        "image": "https://lh3.googleusercontent.com/aida-public/AB6AXuDvpt0sB4fIepsYnCj01tH1CNYSAo3OTqn45IxSe7ibRrnbiPynX7Cv6BbNb-5-cACzTAMhYE43sq8pHJfQwCi1iV8N0wVMawGaU2fjvMOISbWsAGa8S7FzU89kZARip_j6lvVLVGrdsExxcCgzOD0Nusnz0ulLmmZ_xGR_PfrrisF07kiudWaMHf4e5utL1c0EcN3dWV_1-xi9ZBdSkhS4JeCoTnFerPcJvNOpBFGdZUZjpibjaTKj",
+        "image_alt": "Thousands of wildebeest crashing through the Mara River in a dramatic Great Migration crossing.",
         "gallery_images": [
             "https://lh3.googleusercontent.com/aida-public/AB6AXuD-wjF0W6UMvi4RHy31BP3ezYIAmQog0bZY9m1YwA8PR2OtKS_Kym3eQooYRZh-tWcc2VtVeNP00s3viO_hzkGM_pnR4LXhsZ_AG30QnZRnJGWXa2EUFseucQINgTJ0GLcQjtgwlnFPjgluPc1mSI9N3iw6e3nLjpvV3a27ghzAlHsDFBjngJgDbYbhU-qZaao9OW-TvZyGMsdbewQTqyM_CIz0WP-ySzLQvR8DAWUbi1-WiN4OIazL",
             "https://lh3.googleusercontent.com/aida-public/AB6AXuDzbvVNGZaLmyzJ3qXIIXC9UShYa_YJfycwg7WOTA-UUFocjeIys6eeQpMkNX-dtNsHrUedt4NE2oVxSJQYC4wFFYQWnRqJICXS22atfzh4tg8lPZ60eRz1JTWIZWzdWH9DaBWrP0CUwOMUGT1h0NnhnVRepZCYX7qY2M-RZEmudpj39iawA7ygfphhxbYjzZCnX_S2re-Rr5Ynr7aKm2TY8ks3SvFLUoFSvMf9lJSm9bUk4tUSnNxJ",
             "https://lh3.googleusercontent.com/aida-public/AB6AXuDExgfP9nd6jU7FkFmXqhRbhn6rF7JV9sMiiL-Ory9hBwzMtjxS0muhBKihBGaO0ZDU_-wYDhrt9dwKTmN2rTB2t7OdomCuUqtraNgkckFKS-NFFCawNf6Qon8n55dUMxyTsQjRSH2oMgJ2SZaTdcixNU7gRKKmucL0BzMy90e9IBSqhcJpTJjGRqI8OZ2G83Vb7vdQ37AMNrwKAHNUhsuopWlvmgqjNUvNSDygl7maWZY2EVGHlr2-",
-            "https://lh3.googleusercontent.com/aida-public/AB6AXuDvpt0sB4fIepsYnCj01tH1CNYSAo3OTqn45IxSe7ibRrnbiPynX7Cv6BbNb-5-cACzTAMhYE43sq8pHJfQwCi1iV8N0wVMawGaU2fjvMOISbWsAGa8S7FzU89kZARip_j6lvVLVGrdsExxcCgzOD0Nusnz0ulLmmZ_xGR_PfrrisF07kiudWaMHf4e5utL1c0EcN3dWV_1-xi9ZBdSkhS4JeCoTnFerPcJvNOpBFGdZUZjpibjaTKj",
+            "https://lh3.googleusercontent.com/aida-public/AB6AXuBuI5OyQjW9raHxyRlAbmvWHJi3CybTwaIrZuOmdpOgYYprthtS9ZwcpmEqIMljBx2sE8EpTzeocODs8eFM_rSTODzFdumC6ReI8DGe_7YN_bNY1Iku4UI9jRSPbqae1c-0eyMCclcWtGbaWCuSawyKsgFvCkxyZAYrkoS_OOguukwZLw8gGQde_ASEnF1RODE0F65cNP3sNUOCncd4pKg7jHZVQMyDiHKdjlNlMSsZ8-3IQLToQXoD",
         ],
         "rating": "4.9",
         "days": 8,
@@ -207,7 +207,7 @@ SAFARIS = [
     {
         "slug": "bush-to-beach",
         "title": "Bush to Beach",
-        "image": "https://lh3.googleusercontent.com/aida-public/AB6AXuAcXaoVz8IIMFpsGih23HWzS_2AVGtPh5Fl4G4y88UaCgDumBl1U7rW7fmZSeJR6mL0UZZpQ4YWD8tBYpIhJ8AWqwO3XSB0nJsp92BGPTXaX4armd9iZ3eXNMcliKYU1aOMDmKrVXx4aV7xda17uDGKZ9K2QNox99l2hVxGRC6qvFyDrejtB8pEpA-kIHARgKkRNAkxHkaj1WeT4OUFJCU0A2_lVz55wKcR8_gWO53IPZHHLvfsN7qP",
+        "image": "https://lh3.googleusercontent.com/aida-public/AB6AXuBiT4F0xOfh1a_LBJ_WmUFp3fwNPJiIzklS_5ts363dZXe9EhilFlc9YRUaoE064aEPznQ33BTbq8fohHx-aK5Gb3wa_rsz1x6GfCesAR900fukEo-FHEdEmYtHv1egyaHC6xKbYOgJxaygvYjPk9oGM71ldYGtWF381DlVRLvAX_f9kKUdkGJRMTaOaR2QpgukHOOVf6lO0asBTXeIg0DYOtNEDL8zQtUfrq9z8NAWgHnC0vChD-6y",
         "image_alt": "A white sand Zanzibar beach with turquoise water and a traditional wooden dhow sailboat.",
         "rating": "5.0",
         "days": 12,

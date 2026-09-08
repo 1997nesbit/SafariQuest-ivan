@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { FunnelSimple, ShieldCheck, Leaf, Medal } from '@phosphor-icons/react'
 import { Reveal } from '../components/Reveal'
 import { SafariCard } from '../components/SafariCard'
-import { safariPackages } from '../data/safaris'
+import { getSafaris } from '../api/safaris'
+import { useFetch } from '../lib/useFetch'
 
 const DURATION_OPTIONS = [
   { label: 'Duration (Any)', value: '' },
@@ -48,15 +49,17 @@ export function Safaris() {
   const [budget, setBudget] = useState('')
   const [destination, setDestination] = useState('')
 
+  const { data: safariPackages, loading, error } = useFetch(getSafaris, [])
+
   const filtered = useMemo(
     () =>
-      safariPackages.filter(
+      (safariPackages ?? []).filter(
         (safari) =>
           matchesDuration(safari.days, duration) &&
           matchesBudget(safari.price, budget) &&
           (!destination || safari.destination === destination),
       ),
-    [duration, budget, destination],
+    [safariPackages, duration, budget, destination],
   )
 
   const selectClass = (active: boolean) =>
@@ -134,15 +137,9 @@ export function Safaris() {
 
       {/* Safari Grid */}
       <section className="py-20 md:py-section-gap px-5 md:px-margin-desktop w-full max-w-container-max mx-auto">
-        {filtered.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-gutter gap-y-16">
-            {filtered.map((safari, i) => (
-              <Reveal key={safari.id} delay={(i % 3) * 80}>
-                <SafariCard safari={safari} />
-              </Reveal>
-            ))}
-          </div>
-        ) : (
+        {loading && <p className="text-center text-on-surface-variant py-20">Loading safaris…</p>}
+        {!loading && error && <p className="text-center text-error py-20">{error}</p>}
+        {!loading && !error && filtered.length === 0 && (
           <p className="text-center text-on-surface-variant py-20">
             No safaris match those filters yet — try widening your search, or{' '}
             <Link to="/about#contact" className="text-savanna-green underline">
@@ -150,6 +147,15 @@ export function Safaris() {
             </Link>
             .
           </p>
+        )}
+        {!loading && !error && filtered.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-gutter gap-y-16">
+            {filtered.map((safari, i) => (
+              <Reveal key={safari.id} delay={(i % 3) * 80}>
+                <SafariCard safari={safari} />
+              </Reveal>
+            ))}
+          </div>
         )}
       </section>
 

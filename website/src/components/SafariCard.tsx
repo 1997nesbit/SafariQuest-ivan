@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Star, Clock, Bed } from '@phosphor-icons/react'
-import type { SafariPackage } from '../data/safaris'
+import type { SafariPackage } from '../api/safaris'
 
 interface SafariCardProps {
   safari: SafariPackage

@@ -3,6 +3,22 @@ import { defineRailway, github, postgres, preserve, project, service } from "rai
 export default defineRailway((ctx) => {
   const db = postgres("Postgres");
 
+  // NOTE on MinIO: object storage for uploaded images (Bucket + Console
+  // services, "MinIO" group) is provisioned via the
+  // `railwayapp-templates/minio` marketplace template
+  // (`railway deploy -t SMKOEA`), and deliberately NOT declared as a
+  // resource in this file. A first attempt at declaring it here (to match
+  // the template's build/start/healthcheck) still produced a plan that
+  // deleted the group and several Railway-injected variables Console
+  // needs to function (MINIO_PUBLIC_ENDPOINT, CONSOLE_MINIO_SERVER,
+  // USERNAME, PASSWORD, ...) — this beta IaC engine can't yet round-trip
+  // a marketplace template's own generated config losslessly. Manage
+  // Bucket/Console directly (dashboard or `railway variable`/`railway
+  // ssh`/etc, service-scoped with `--service Bucket`), never through
+  // `railway config apply`. Before ever running `apply` on this file,
+  // run `railway config plan` first and check there is no
+  // "Delete service Bucket|Console" or "Delete group MinIO" line.
+
   const Backend = service("Backend", {
     source: github("1997nesbit/SafariQuest-ivan", {
       checkSuites: false,
@@ -28,6 +44,20 @@ export default defineRailway((ctx) => {
       // need SameSite=None (with Secure, already forced by AUTH_COOKIE_SECURE
       // when DEBUG=False) to be sent on cross-site fetch requests.
       AUTH_COOKIE_SAMESITE: "None",
+      // Uploaded images live in the MinIO Bucket service above. These four
+      // were set directly with `railway variable set` (bucket name/endpoint
+      // are non-secret but easiest to keep alongside the credentials; the
+      // access key/secret came from Bucket's MINIO_ROOT_USER/PASSWORD) and
+      // are preserved here on purpose, not inlined — keeps the root
+      // credential out of source control. Values, for reference:
+      //   AWS_STORAGE_BUCKET_NAME = safariquest-media
+      //   AWS_S3_ENDPOINT_URL     = http://bucket.railway.internal:9000
+      //   AWS_S3_CUSTOM_DOMAIN    = bucket-production-1dbe.up.railway.app/safariquest-media
+      AWS_STORAGE_BUCKET_NAME: preserve(),
+      AWS_S3_ENDPOINT_URL: preserve(),
+      AWS_S3_CUSTOM_DOMAIN: preserve(),
+      AWS_ACCESS_KEY_ID: preserve(),
+      AWS_SECRET_ACCESS_KEY: preserve(),
     },
   });
 

@@ -68,6 +68,7 @@ The frontend's `VITE_API_URL` needs to point at the backend
 | How the frontend is structured, routing, portals | `website/README.md` |
 | How everything is deployed on Railway, and why certain settings exist | `.railway/README.md` + the "Deployment" section of each app's README |
 | What changed and when, including production incidents and their fixes | `CHANGELOG.md` |
+| The business model and product flows — why the app is shaped this way, and where the build hasn't caught up to intent yet | `docs/FLOWS.md` |
 
 ## Deployment
 

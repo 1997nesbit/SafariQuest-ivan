@@ -1,0 +1,5 @@
+allowBuilds:
+  # core-js's postinstall only prints a donation/update notice — no actual
+  # build step is needed for it to work as a bundled polyfill, so this is
+  # left off rather than running an unnecessary postinstall script.
+  core-js: false

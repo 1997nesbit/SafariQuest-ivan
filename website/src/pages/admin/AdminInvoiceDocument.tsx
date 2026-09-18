@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, CalendarBlank, Mountains, Printer, Users } from '@phosphor-icons/react'
+import { ArrowLeft, CalendarBlank, DownloadSimple, Mountains, Printer, Users } from '@phosphor-icons/react'
 import {
   getInvoice,
   updateInvoiceStatus,
@@ -13,15 +13,41 @@ import { useFetch } from '../../lib/useFetch'
 import { ApiError } from '../../lib/api'
 import { contact } from '../../config/contact'
 
-// Same 30% figure Checkout.tsx quotes a tourist at booking time — there's no
-// separate deposit-schedule model on Invoice (just one amount + status), so
-// the split shown here is derived from that existing rule rather than a
-// second, disconnected number.
+// Same 30% figure Checkout.tsx quotes a tourist at booking time. Only used as
+// a *fallback* estimate for invoices issued the older way (2.2 send_quote),
+// which never captured a real trip_total/remaining_balance — invoices issued
+// from the mock checkout deposit (1.3) carry the real split instead, see
+// paymentSchedule() below.
 const DEPOSIT_FRACTION = 0.3
 
 function formatInvoiceNumber(invoice: InvoiceDetail) {
   const year = invoice.issuedDate.slice(0, 4)
   return `INV-${year}-${String(invoice.id).padStart(4, '0')}`
+}
+
+/** The invoice total and its deposit/balance split. Real figures
+ * (`tripTotal`/`remainingBalance`) exist only for invoices issued from the
+ * mock checkout deposit (1.3); a quote-sent invoice (2.2) never captured a
+ * trip_total, so it falls back to the same derived 30/70 estimate this page
+ * always showed. */
+function paymentSchedule(invoice: InvoiceDetail) {
+  if (invoice.tripTotal !== null) {
+    const remaining = invoice.remainingBalance ?? 0
+    return {
+      total: invoice.tripTotal,
+      depositLabel: remaining > 0 ? 'Deposit Paid' : 'Deposit',
+      depositAmount: invoice.amount,
+      balanceLabel: remaining > 0 ? `Balance Due (${invoice.dueDate})` : 'Balance Paid',
+      balanceAmount: remaining > 0 ? remaining : invoice.tripTotal - invoice.amount,
+    }
+  }
+  return {
+    total: invoice.amount,
+    depositLabel: `Deposit (${Math.round(DEPOSIT_FRACTION * 100)}%, due ${invoice.dueDate})`,
+    depositAmount: Math.round(invoice.amount * DEPOSIT_FRACTION),
+    balanceLabel: 'Balance (due before departure)',
+    balanceAmount: Math.round(invoice.amount * (1 - DEPOSIT_FRACTION)),
+  }
 }
 
 export function AdminInvoiceDocument() {
@@ -32,6 +58,32 @@ export function AdminInvoiceDocument() {
   )
   const [savingStatus, setSavingStatus] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [downloading, setDownloading] = useState(false)
+  const documentRef = useRef<HTMLDivElement>(null)
+
+  async function handleDownloadPdf() {
+    if (!documentRef.current || !invoice) return
+    setDownloading(true)
+    try {
+      // Dynamically imported — this admin-only action is the only place either
+      // library is used, so the ~600KB they add shouldn't load for every
+      // visitor of the public site. html2canvas-pro, not plain html2canvas:
+      // the latter's CSS color parser doesn't understand oklab/oklch, which
+      // Tailwind v4 generates for every opacity-modified color class (e.g.
+      // `text-on-surface-variant/80`) used throughout this page.
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import('html2canvas-pro'), import('jspdf')])
+      const canvas = await html2canvas(documentRef.current, { scale: 2, backgroundColor: '#ffffff' })
+      const imageData = canvas.toDataURL('image/png')
+      // A4 in mm, matching this document's own max-w-[210mm] print sizing.
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+      const pageWidth = pdf.internal.pageSize.getWidth()
+      const imageHeight = (canvas.height * pageWidth) / canvas.width
+      pdf.addImage(imageData, 'PNG', 0, 0, pageWidth, imageHeight)
+      pdf.save(`${formatInvoiceNumber(invoice)}.pdf`)
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   // Payment status is set by hand — there is no gateway. The endpoint and the
   // API client for this both already existed; nothing in the UI ever called
@@ -50,6 +102,8 @@ export function AdminInvoiceDocument() {
       setSavingStatus(false)
     }
   }
+
+  const schedule = invoice ? paymentSchedule(invoice) : null
 
   return (
     <div>
@@ -82,10 +136,19 @@ export function AdminInvoiceDocument() {
             <button
               type="button"
               onClick={() => window.print()}
-              className="flex items-center gap-2 px-4 py-2 bg-savanna-green text-on-primary rounded-lg font-label-md text-sm hover:opacity-90 transition-opacity"
+              className="flex items-center gap-2 px-4 py-2 border border-sand-stone text-on-surface-variant rounded-lg font-label-md text-sm hover:border-savanna-green hover:text-savanna-green transition-colors"
             >
               <Printer size={16} />
               Print
+            </button>
+            <button
+              type="button"
+              onClick={handleDownloadPdf}
+              disabled={downloading}
+              className="flex items-center gap-2 px-4 py-2 bg-savanna-green text-on-primary rounded-lg font-label-md text-sm hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <DownloadSimple size={16} />
+              {downloading ? 'Preparing…' : 'Download PDF'}
             </button>
           </div>
         )}
@@ -99,7 +162,10 @@ export function AdminInvoiceDocument() {
       {error && <p className="text-center text-error py-10">{error}</p>}
 
       {!loading && !error && invoice && (
-        <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-sand-stone/50 p-12 max-w-[210mm] mx-auto print:shadow-none print:border-none">
+        <div
+          ref={documentRef}
+          className="bg-surface-container-lowest rounded-xl shadow-sm border border-sand-stone/50 p-12 max-w-[210mm] mx-auto print:shadow-none print:border-none"
+        >
           <div className="flex justify-between items-start mb-8 pb-8 border-b border-sand-stone">
             <div>
               <div className="flex items-center gap-2 mb-2">
@@ -177,26 +243,22 @@ export function AdminInvoiceDocument() {
                 Payment Schedule
               </p>
               <div className="flex justify-between text-sm mb-1">
-                <span className="text-on-surface-variant">Deposit ({Math.round(DEPOSIT_FRACTION * 100)}%, due {invoice.dueDate})</span>
-                <span className="text-on-surface font-label-md">
-                  ${Math.round(invoice.amount * DEPOSIT_FRACTION).toLocaleString()}
-                </span>
+                <span className="text-on-surface-variant">{schedule!.depositLabel}</span>
+                <span className="text-on-surface font-label-md">${schedule!.depositAmount.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-on-surface-variant">Balance (due before departure)</span>
-                <span className="text-on-surface font-label-md">
-                  ${Math.round(invoice.amount * (1 - DEPOSIT_FRACTION)).toLocaleString()}
-                </span>
+                <span className="text-on-surface-variant">{schedule!.balanceLabel}</span>
+                <span className="text-on-surface font-label-md">${schedule!.balanceAmount.toLocaleString()}</span>
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-on-surface-variant">Subtotal</span>
-                <span className="text-on-surface">${invoice.amount.toLocaleString()}</span>
+                <span className="text-on-surface">${schedule!.total.toLocaleString()}</span>
               </div>
               <div className="flex justify-between items-center pt-3 border-t border-sand-stone bg-savanna-green text-on-primary rounded-lg px-4 py-3">
-                <span className="font-label-md text-sm">TOTAL DUE</span>
-                <span className="font-headline-md text-[22px]">${invoice.amount.toLocaleString()}</span>
+                <span className="font-label-md text-sm">TOTAL</span>
+                <span className="font-headline-md text-[22px]">${schedule!.total.toLocaleString()}</span>
               </div>
             </div>
           </div>

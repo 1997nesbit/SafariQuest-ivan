@@ -1,3 +1,5 @@
+import secrets
+
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
@@ -7,6 +9,10 @@ from rest_framework.test import APITestCase
 from .views import MAX_UPLOAD_BYTES, detect_image_extension
 
 User = get_user_model()
+
+# Generated per run rather than a literal in the source — these accounts only exist for
+# the duration of a test, so there's no reason for a credential-shaped string to live here.
+TEST_PASSWORD = secrets.token_urlsafe(12)
 
 # The smallest real file of each format — only the leading bytes matter here.
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
@@ -32,8 +38,8 @@ class DetectImageExtensionTests(APITestCase):
 class ImageUploadTests(APITestCase):
     def setUp(self):
         self.url = reverse("image-upload")
-        self.admin = User.objects.create_user(email="admin@example.com", password="pw12345", role="admin")
-        self.tourist = User.objects.create_user(email="tourist@example.com", password="pw12345", role="tourist")
+        self.admin = User.objects.create_user(email="admin@example.com", password=TEST_PASSWORD, role="admin")
+        self.tourist = User.objects.create_user(email="tourist@example.com", password=TEST_PASSWORD, role="tourist")
 
     def _upload(self, content, name="photo.png", content_type="image/png"):
         return self.client.post(
@@ -41,7 +47,7 @@ class ImageUploadTests(APITestCase):
         )
 
     def _login_as(self, user):
-        self.client.post(reverse("login"), {"email": user.email, "password": "pw12345"})
+        self.client.post(reverse("login"), {"email": user.email, "password": TEST_PASSWORD})
 
     def test_anonymous_and_non_admin_cannot_upload(self):
         self.assertEqual(self._upload(PNG).status_code, status.HTTP_401_UNAUTHORIZED)

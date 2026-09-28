@@ -59,6 +59,8 @@
     "editYourDetails": "Edite os seus dados",
     "choosePassword": "Escolha uma palavra-passe",
     "passwordPlaceholder": "Pelo menos 8 carateres",
+    "confirmPassword": "Confirmar palavra-passe",
+    "passwordsDontMatch": "As palavras-passe não coincidem",
     "emailAddress": "Endereço de e-mail",
     "emailPlaceholder": "joao@exemplo.com",
     "password": "Palavra-passe"
@@ -156,6 +158,27 @@
         "body": "Fale connosco agora"
       }
     },
-    "urgentQuestion": "Tem uma questão urgente? A nossa equipa está disponível 24/7."
+    "urgentQuestion": "Tem uma questão urgente? A nossa equipa está disponível 24/7.",
+    "referral": {
+      "eyebrow": "Indique e ganhe",
+      "heading": "Conhece alguém que adoraria esta viagem?",
+      "body": "Partilhe o seu código de indicação: os seus amigos recebem um desconto no safari e ganha uma comissão por cada viagem reservada com ele.",
+      "bodyWithRates": "Partilhe o seu código de indicação: os seus amigos recebem {{discount}}% de desconto no safari e ganha {{commission}}% de comissão por cada viagem reservada com ele, com o mesmo acesso com que acabou de reservar.",
+      "activate": "Obter o meu código de indicação",
+      "activating": "A configurar…",
+      "openDashboard": "Partilhar o meu código de indicação",
+      "learnMore": "Tornar-se agente de indicação",
+      "error": "Algo correu mal. Tente novamente."
+    }
+  },
+  "referralField": {
+    "label": "Código de indicação",
+    "optional": "(opcional)",
+    "placeholder": "ex. TEKLA2X4K",
+    "checking": "A verificar o código…",
+    "applied": "Desconto de {{percent}}% aplicado",
+    "invalid": "Este código não é válido.",
+    "earnAfterBooking": "Depois de reservar, pode obter o seu próprio código de indicação e ganhar uma comissão quando os seus amigos reservarem.",
+    "earnAfterBookingWithRates": "Depois de reservar, pode obter o seu próprio código de indicação: os seus amigos recebem {{discount}}% de desconto e ganha {{commission}}% de comissão."
   }
 }

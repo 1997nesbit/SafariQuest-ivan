@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, Link as PlainLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Bell, Compass, CreditCard, TrendUp, Warning, User, SignOut, List, X } from '@phosphor-icons/react'
+import { Bell, Compass, CreditCard, TrendUp, Warning, User, SignOut, List, X, HandCoins } from '@phosphor-icons/react'
 import { Link, NavLink } from '../../i18n/routing'
-import { useLocalizedNavigate as useNavigate } from '../../i18n/useLocale'
+import { useHomeNavigate, useLocalizedNavigate as useNavigate } from '../../i18n/useLocale'
 import { useAuth } from '../../auth/AuthContext'
 import { useBodyScrollLock } from '../../lib/useBodyScrollLock'
-import { ROLE_HOME } from '../../api/auth'
 
 function initials(nameOrEmail: string) {
   const parts = nameOrEmail.trim().split(/\s+/)
@@ -26,18 +25,20 @@ export function AccountLayout() {
   const { t } = useTranslation('account')
   const { user, role, logout } = useAuth()
   const navigate = useNavigate()
+  const navigateHome = useHomeNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   useBodyScrollLock(mobileMenuOpen)
 
   // This area is tourist-only (bookings/invoices scoped to `customer=request.user`) — a
-  // signed-in guide/admin/referral-agent landing here (e.g. a stale bookmark, or the header's
-  // Dashboard link before role-aware routing existed) would otherwise just see empty panels
-  // with no explanation. Bounce them to their own dashboard instead.
+  // signed-in guide/admin landing here (e.g. a stale bookmark) would otherwise just see
+  // empty panels with no explanation. Bounce them to their own dashboard instead.
+  // (Referral agents are tourists, so they belong here too.)
+  const home = user?.home
   useEffect(() => {
-    if (role && role !== 'tourist') {
-      navigate(ROLE_HOME[role], { replace: true })
+    if (role && role !== 'tourist' && home) {
+      navigateHome(home)
     }
-  }, [role, navigate])
+  }, [role, home, navigateHome])
 
   async function handleSignOut() {
     await logout()
@@ -74,6 +75,29 @@ export function AccountLayout() {
             </NavLink>
           </li>
         ))}
+        {/* Same login, separate data: the agent dashboard lives at the unprefixed /agent
+            portal, so it needs the plain router Link rather than the locale-aware one. */}
+        <li>
+          {user?.isReferralAgent ? (
+            <PlainLink
+              to="/agent"
+              onClick={onNavigate}
+              className="flex items-center gap-4 px-4 py-3 rounded-lg font-label-md text-label-md transition-colors min-h-[44px] text-terracotta hover:bg-terracotta/10"
+            >
+              <HandCoins size={20} />
+              {t('layout.agentDashboard')}
+            </PlainLink>
+          ) : (
+            <Link
+              to="/become-agent"
+              onClick={onNavigate}
+              className="flex items-center gap-4 px-4 py-3 rounded-lg font-label-md text-label-md transition-colors min-h-[44px] text-terracotta hover:bg-terracotta/10"
+            >
+              <HandCoins size={20} />
+              {t('layout.referAndEarn')}
+            </Link>
+          )}
+        </li>
       </ul>
     )
   }

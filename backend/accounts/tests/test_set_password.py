@@ -22,7 +22,7 @@ class SetPasswordViewTests(APITestCase):
     def test_valid_token_sets_password_and_signs_in(self):
         response = self.client.post(self.url, {"uid": self.uid, "token": self.token, "password": "brand-new-pw-123"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {"role": "admin"})
+        self.assertEqual(response.data, {"role": "admin", "is_referral_agent": False, "home": "/admin"})
         self.assertIn(settings.AUTH_COOKIE_ACCESS, response.cookies)
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password("brand-new-pw-123"))

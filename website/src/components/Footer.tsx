@@ -9,6 +9,7 @@ import {
   TiktokLogo,
   LinkedinLogo,
   WhatsappLogo,
+  UserCircle,
 } from '@phosphor-icons/react'
 import { contact } from '../config/contact'
 import { Link } from '../i18n/routing'
@@ -63,6 +64,7 @@ export function Footer() {
             <li><Link className="text-on-surface-variant hover:text-terracotta transition-colors" to="/destinations">{t('nav.destinations')}</Link></li>
             <li><Link className="text-on-surface-variant hover:text-terracotta transition-colors" to="/experiences">{t('nav.experiences')}</Link></li>
             <li><Link className="text-on-surface-variant hover:text-terracotta transition-colors" to="/about">{t('nav.about')}</Link></li>
+            <li><Link className="text-on-surface-variant hover:text-terracotta transition-colors" to="/become-agent">{t('footer.referAndEarn')}</Link></li>
           </ul>
         </div>
 
@@ -91,6 +93,28 @@ export function Footer() {
               <EnvelopeSimple size={18} className="shrink-0" />
               <a className="hover:text-terracotta transition-colors" href={`mailto:${contact.email}`}>{contact.email}</a>
             </li>
+            {contact.secondary.name && (
+              <li className="flex items-center gap-2 text-on-surface pt-3 font-label-md text-label-sm">
+                <UserCircle size={18} className="shrink-0" />
+                <span>{contact.secondary.name}</span>
+              </li>
+            )}
+            {contact.secondary.phone && (
+              <li className="flex items-center gap-2 text-on-surface-variant">
+                <Phone size={18} className="shrink-0" />
+                <a className="hover:text-terracotta transition-colors" href={`tel:${contact.secondary.phone.replace(/\s/g, '')}`}>
+                  {contact.secondary.phone}
+                </a>
+              </li>
+            )}
+            {contact.secondary.email && (
+              <li className="flex items-center gap-2 text-on-surface-variant">
+                <EnvelopeSimple size={18} className="shrink-0" />
+                <a className="hover:text-terracotta transition-colors break-all" href={`mailto:${contact.secondary.email}`}>
+                  {contact.secondary.email}
+                </a>
+              </li>
+            )}
           </ul>
           <form className="flex" onSubmit={(e) => e.preventDefault()}>
             <label htmlFor="newsletter-email" className="sr-only">{t('footer.emailAddress')}</label>

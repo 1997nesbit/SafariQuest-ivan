@@ -14,10 +14,11 @@ interface AuthContextValue {
   role: Role | null
   user: MeResponse | null
   isLoading: boolean
-  login: (email: string, password: string) => Promise<Role>
+  /** Each of these resolves to the user's landing path (AuthResult.home). */
+  login: (email: string, password: string) => Promise<string>
   logout: () => Promise<void>
-  register: (email: string, name: string, password: string) => Promise<Role>
-  setPassword: (uid: string, token: string, password: string) => Promise<Role>
+  register: (email: string, name: string, password: string) => Promise<string>
+  setPassword: (uid: string, token: string, password: string) => Promise<string>
   refreshUser: () => Promise<void>
 }
 
@@ -53,11 +54,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => setUnauthorizedHandler(null)
   }, [])
 
-  const login = useCallback(async (email: string, password: string): Promise<Role> => {
-    const res = await apiLogin(email, password)
+  const login = useCallback(async (email: string, password: string): Promise<string> => {
+    await apiLogin(email, password)
     const me = await fetchMe()
     setUser(me)
-    return res.role
+    return me.home
   }, [])
 
   const logout = useCallback(async (): Promise<void> => {
@@ -69,18 +70,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const register = useCallback(async (email: string, name: string, password: string): Promise<Role> => {
-    const res = await apiRegister({ email, name, password })
+  const register = useCallback(async (email: string, name: string, password: string): Promise<string> => {
+    await apiRegister({ email, name, password })
     const me = await fetchMe()
     setUser(me)
-    return res.role
+    return me.home
   }, [])
 
-  const setPassword = useCallback(async (uid: string, token: string, password: string): Promise<Role> => {
-    const res = await apiSetPassword(uid, token, password)
+  const setPassword = useCallback(async (uid: string, token: string, password: string): Promise<string> => {
+    await apiSetPassword(uid, token, password)
     const me = await fetchMe()
     setUser(me)
-    return res.role
+    return me.home
   }, [])
 
   const refreshUser = useCallback(async (): Promise<void> => {

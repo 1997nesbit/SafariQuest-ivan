@@ -105,5 +105,17 @@
     "emailAddress": "Email address",
     "emailPlaceholder": "Your email address",
     "subscribe": "Subscribe"
+  },
+  "referral": {
+    "eyebrow": "Refer & Earn",
+    "heading": "Become a Pande partner",
+    "body": "Share your referral code and earn a commission on every safari booked with it — your contacts get a discount too.",
+    "bodyWithRates": "Share your referral code and earn {{commission}}% commission on every safari booked with it — your contacts get {{discount}}% off too.",
+    "audiences": {
+      "hotels": "Hotels & lodges",
+      "agents": "Travel agents",
+      "travellers": "Past travellers & friends"
+    },
+    "cta": "Become an Agent"
   }
 }

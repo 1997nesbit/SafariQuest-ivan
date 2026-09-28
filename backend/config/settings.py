@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "destinations",
     "safaris",
     "region_safaris",
+    "team",
     "pricing",
     "guides",
     "bookings",
@@ -103,6 +104,11 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STORAGES = {
+    # Declared explicitly: on Django 5.1+ there is no implicit default any more, so
+    # without this an environment with no bucket configured (local dev) has no file
+    # storage at all and every upload 500s with "Could not find config for
+    # 'default'". The S3 block below replaces it whenever a bucket is set.
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },

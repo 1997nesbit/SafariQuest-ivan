@@ -41,21 +41,26 @@ in that region, and then see which safaris actually stop there — the join is
 ### Accounts and roles (`accounts` app)
 
 A single custom `User` model (`AUTH_USER_MODEL`, email as the username field)
-carries a `role`: `tourist`, `guide`, `admin`, or `referral_agent`. There is
-no separate staff/customer table — the same model and the same JWT login
-flow cover everyone, and the frontend decides which portal shell to render
-based on `role` (see `ROLE_HOME` in the frontend's `api/auth.ts`, imported
-everywhere a role→home redirect is needed rather than re-declared per page —
-a page that kept its own local copy of this map is exactly how the
-`referral_agent` role went briefly unreachable from the sign-in page, see
-`CHANGELOG.md`).
+carries a `role`: `tourist`, `guide`, or `admin`. There is no separate
+staff/customer table — the same model and the same JWT login flow cover
+everyone. A `tourist` can additionally carry `is_referral_agent` — being a
+referral agent is a profile a tourist account switches on
+(`POST /api/referrals/agents/activate/`), not a fourth role; see the
+`referrals` app below. The backend decides where each user lands
+(`User.home_path`, returned as `home` in auth responses) and the frontend
+just follows it — a client-side role→home map is what once left the
+then-separate `referral_agent` role unreachable from the sign-in page, see
+`CHANGELOG.md`.
 
 Auth is **HttpOnly-cookie JWT**, not a bearer token the frontend has to
 manage:
 
 - `POST /api/auth/login/`, `/api/auth/register/` set `access_token` and
   `refresh_token` as HttpOnly cookies (see `AUTH_COOKIE_ACCESS` /
-  `AUTH_COOKIE_REFRESH` in `settings.py`) and return `{"role": "..."}`.
+  `AUTH_COOKIE_REFRESH` in `settings.py`) and return
+  `{"role": ..., "is_referral_agent": ..., "home": ...}` — `home`
+  (`User.home_path`) is what the frontend actually navigates to; `role`
+  alone stopped being enough once a tourist can also be an agent.
 - `POST /api/auth/refresh/` reads the refresh cookie and issues a new access
   cookie. The frontend's `lib/api.ts` calls this automatically on a 401 and
   retries the original request once.
@@ -80,12 +85,13 @@ admins.
 **Guide accounts** are created and activated together in one step by an
 admin, via `POST /api/guides/create-with-account/` (see the `guides` app
 below) — nothing is emailed; a one-time generated password is returned in
-the response for the admin to share directly. **Tourist accounts** and
-**referral agent accounts** are the only fully self-service paths:
-`POST /api/auth/register/` always creates a `tourist`;
-`POST /api/referrals/agents/register/` always creates a `referral_agent`
-(see the `referrals` app below) — separate endpoints rather than a role
-parameter on one, so neither can be tricked into creating the other.
+the response for the admin to share directly. **Tourist accounts** are the
+only fully self-service path: `POST /api/auth/register/`. Becoming a
+referral agent is not account creation at all — `POST
+/api/referrals/agents/register/` is the same self-service tourist signup
+with `is_referral_agent=True` pre-set, for someone who has no account yet;
+`POST /api/referrals/agents/activate/` is the same flag switched on for a
+tourist who's already signed in — see the `referrals` app below.
 
 Only a `tourist` account can be the customer on a booking —
 `BookingCreateSerializer.validate()` rejects checkout from any other
@@ -179,17 +185,44 @@ day:
   highlights, and park links — the simpler counterpart to a multi-park
   `SafariPackage` (see the root README's "core idea" section). Has its own
   admin editor tab and full CRUD at `/api/region-safaris/`.
+- **`team`** — `TeamMember`: the people under "Meet the Experts" on the About
+  page. Deliberately not `guides.Guide` — that's the operational roster
+  (ratings, availability, a login account) and includes people who aren't
+  public-facing. English lives in `title`/`bio`/`photo_alt`; other languages
+  in the `translations` JSON (`{"fr": {"title", "bio", "photo_alt"}}`), validated
+  against `TRANSLATION_LOCALES` and stripped of empty entries, so "not
+  translated" is always the *absence* of a key and the frontend falls back to
+  English field by field. `photo` is a URL from the admin image upload, like
+  safaris. Public read shows published members only — including to a
+  logged-in admin, so previewing the site never shows drafts; admins pass
+  `?all=true` to list them. `python manage.py seed_team` loads the original
+  three members (with their English/French/German/Portuguese text) and never
+  overwrites an existing one, so re-running it is safe after admin edits.
 - **`pricing`** — `Season` records (date range + price multiplier),
   public-read so the checkout page can price a package for whatever trip
   date the tourist picked (`website/src/lib/seasonalPrice.ts`); admin-write
   for the admin pricing page.
-- **`referrals`** — a field-sales referral program. `ReferralSettings` is a
+- **`referrals`** — a field-sales referral program. An agent is a `tourist`
+  account with `User.is_referral_agent` switched on, not a separate role, so
+  one login can both book trips and refer others (the two sets of data stay
+  apart: bookings via `Booking.customer`, codes via `ReferralCode.agent`).
+  Staff and guide accounts can't be agents. `POST /api/referrals/agents/register/`
+  creates a new tourist with the flag pre-set; `POST /api/referrals/agents/activate/`
+  switches it on for an already-signed-in tourist (idempotent, 403 for
+  staff/guides). `ReferralSettings` is a
   singleton row (`get_solo()`) holding the admin-editable discount %
-  (tourist-facing, default 2%) and commission % (agent-facing, default 5%).
+  (tourist-facing, default 2%), commission % (agent-facing, default 5%) and
+  `code_expiry_days` — **default 180 (six months), settable from 1 day to
+  730 (two years)**, enforced in `ReferralSettingsSerializer`. It was 3 days;
+  agents share a code once (a flyer, a screenshot) and expect it to keep
+  working, so a short window silently killed codes people still held.
   `ReferralCode` (`agent` FK, an 8-char code from an unambiguous alphabet —
   no `0`/`O`/`1`/`I` — `contact_name`, `expires_at`) is single-use and
   expires lazily (`status`/`is_expired` are computed properties, not a
-  cron-maintained field): `POST /api/referrals/codes/` generates one,
+  cron-maintained field). An agent's own code is refused on their own
+  booking (both at validate and, as a backstop, at redemption), so a
+  login that can book *and* hold codes can't collect commission on its own
+  trip: `POST /api/referrals/codes/` generates one,
   `GET /api/referrals/codes/mine/` lists an agent's own,
   `POST /api/referrals/codes/validate/` checks one at checkout before
   submit. Redemption happens inside `BookingViewSet.pay` (above), not at
@@ -222,7 +255,12 @@ day:
   admin Users page.
 - **`uploads`** — a single `ImageUploadView` (admin-only, JPEG/PNG/WEBP/GIF,
   8MB max) that all the admin content-editing forms (destinations, parks,
-  safaris, region safaris) use for image fields. Writes go through Django's
+  safaris, region safaris, team) use for image fields. The
+  format is decided from the file's own leading bytes
+  (`detect_image_extension`), never from the request's Content-Type — that's
+  a header the client chooses, so an HTML/SVG file renamed `.png` used to be
+  accepted and then served back from our public bucket; the stored
+  extension follows the bytes too. Writes go through Django's
   `default_storage` — see "Object storage" below for where files actually
   end up.
 
@@ -240,14 +278,16 @@ GET is public unless noted, everything else is role-gated.
 | destinations | `/api/parks/` | parks — full CRUD, admin-write |
 | safaris | `/api/safaris/` | safari packages — full CRUD, admin-write |
 | region_safaris | `/api/region-safaris/` | region-scoped mini safaris — full CRUD, admin-write |
+| team | `/api/team/` | About-page team members — public-read (published only), admin-write; `?all=true` includes drafts for admins |
 | pricing | `/api/pricing/seasons/` | public-read, admin-write |
 | guides | `/api/guides/` | admin-only CRUD, plus `create-with-account/`, `me/`, `me/certifications/` |
 | bookings | `/api/bookings/` | staff-role CRUD + pipeline actions above, paginated. `{id}/pay/` and `{id}/pay-balance/` are tourist-only (own booking) |
 | bookings | `/api/invoices/` | admin-only list/detail + `{id}/remind/`, paginated — except `mine/`, any authenticated tourist's own (unpaginated) |
 | bookings | `/api/finance/summary/` | admin-only revenue/collections snapshot |
-| referrals | `/api/referrals/agents/register/` | public — self-serve referral agent signup |
-| referrals | `/api/referrals/codes/` | referral-agent-only `POST` (generate) + `mine/` (their own codes); `validate/` is any authenticated user, checkout-side |
-| referrals | `/api/referrals/settings/` | `public/` is public-read (discount % only); the admin-only base route also reads/writes commission % |
+| referrals | `/api/referrals/agents/register/` | public — self-serve signup: a new tourist account with the agent profile on |
+| referrals | `/api/referrals/agents/activate/` | any signed-in tourist — switches their agent profile on (idempotent; 403 for staff/guides) |
+| referrals | `/api/referrals/codes/` | agent-only `POST` (generate) + `mine/` (their own codes); `validate/` is any authenticated user, checkout-side (refuses your own code) |
+| referrals | `/api/referrals/settings/` | `public/` is public-read (discount %, commission % and code lifetime — the signup page shows them); the admin-only base route reads/writes all three |
 | referrals | `/api/referrals/admin/redemptions/` | admin-only list + `{id}/mark-paid/` |
 | support | `/api/support/tickets/` | admin-only inbox (paginated) + `mine/`, `{id}/notes/` |
 | analytics | `/api/analytics/events/` | public, throttled — funnel-step recording |

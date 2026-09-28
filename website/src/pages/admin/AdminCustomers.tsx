@@ -14,8 +14,12 @@ function initials(name: string) {
     .toUpperCase()
 }
 
+const FILTERS = ['All', 'Travellers', 'Agents'] as const
+type Filter = (typeof FILTERS)[number]
+
 export function AdminCustomers() {
   const [search, setSearch] = useState('')
+  const [filter, setFilter] = useState<Filter>('All')
   const { data: customers, loading, error } = useFetch(getCustomers, [])
 
   if (loading) {
@@ -27,13 +31,21 @@ export function AdminCustomers() {
   }
 
   const allCustomers = customers ?? []
+  // Agents who have never booked (hotels, travel agents) joined to refer, not to travel.
+  // Counting them as "new customers with no bookings" would fill the outreach list and
+  // drag down the repeat rate with people who were never prospects.
+  const isAgentOnly = (c: (typeof allCustomers)[number]) => c.isReferralAgent && c.tripCount === 0
+  const travellers = allCustomers.filter((c) => !isAgentOnly(c))
+  const query = search.toLowerCase()
   const filtered = allCustomers.filter(
-    (c) => c.name.toLowerCase().includes(search.toLowerCase()) || c.email.toLowerCase().includes(search.toLowerCase()),
+    (c) =>
+      (filter === 'All' || (filter === 'Agents' ? c.isReferralAgent : !isAgentOnly(c))) &&
+      (c.name.toLowerCase().includes(query) || c.email.toLowerCase().includes(query)),
   )
 
-  const newCustomers = allCustomers.filter((c) => c.tripCount === 0).length
-  const repeatCustomers = allCustomers.filter((c) => c.tripCount > 1).length
-  const repeatRate = allCustomers.length ? Math.round((repeatCustomers / allCustomers.length) * 100) : 0
+  const newCustomers = travellers.filter((c) => c.tripCount === 0).length
+  const repeatCustomers = travellers.filter((c) => c.tripCount > 1).length
+  const repeatRate = travellers.length ? Math.round((repeatCustomers / travellers.length) * 100) : 0
   const totalRevenue = allCustomers.reduce((sum, c) => sum + c.totalSpend, 0)
 
   return (
@@ -90,6 +102,23 @@ export function AdminCustomers() {
               className="w-full bg-surface border border-sand-stone rounded-lg pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-savanna-green"
             />
           </div>
+          <div className="flex items-center gap-2">
+            {FILTERS.map((f) => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setFilter(f)}
+                aria-pressed={filter === f}
+                className={`px-3 py-1.5 rounded-full font-label-sm text-xs transition-colors ${
+                  filter === f
+                    ? 'bg-savanna-green/10 text-savanna-green font-semibold'
+                    : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -110,7 +139,14 @@ export function AdminCustomers() {
                         {initials(c.name)}
                       </div>
                       <div>
-                        <p className="font-label-md text-sm text-on-surface group-hover:text-savanna-green">{c.name}</p>
+                        <p className="font-label-md text-sm text-on-surface group-hover:text-savanna-green flex items-center gap-2">
+                          {c.name}
+                          {c.isReferralAgent && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-terracotta/10 text-terracotta text-[10px] font-semibold uppercase tracking-wider">
+                              Agent
+                            </span>
+                          )}
+                        </p>
                         <p className="text-xs text-on-surface-variant/70">{c.email}</p>
                       </div>
                     </Link>
@@ -125,7 +161,7 @@ export function AdminCustomers() {
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={4} className="px-6 py-8 text-center text-on-surface-variant text-sm">
-                    {allCustomers.length === 0 ? 'No customers yet.' : 'No customers match your search.'}
+                    {allCustomers.length === 0 ? 'No customers yet.' : 'No customers match your search or filter.'}
                   </td>
                 </tr>
               )}

@@ -56,7 +56,7 @@ class CustomerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "name", "email", "date_joined", "trip_count", "total_spend", "booking_ids"]
+        fields = ["id", "name", "email", "date_joined", "is_referral_agent", "trip_count", "total_spend", "booking_ids"]
 
     def get_trip_count(self, obj):
         return len(obj.bookings.all())

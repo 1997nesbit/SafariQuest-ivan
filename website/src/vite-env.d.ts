@@ -17,6 +17,12 @@ interface ImportMetaEnv {
   readonly VITE_SOCIAL_WHATSAPP?: string
   readonly VITE_SOCIAL_LINKEDIN?: string
   readonly VITE_SOCIAL_TIKTOK?: string
+
+  // Optional second person listed under Contact in the footer (e.g. the field
+  // operations contact). Each line only renders when its value is set.
+  readonly VITE_CONTACT_SECONDARY_NAME?: string
+  readonly VITE_CONTACT_SECONDARY_EMAIL?: string
+  readonly VITE_CONTACT_SECONDARY_PHONE?: string
 }
 
 interface ImportMeta {

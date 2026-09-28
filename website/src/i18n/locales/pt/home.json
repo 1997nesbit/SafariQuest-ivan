@@ -105,5 +105,17 @@
     "emailAddress": "Endereço de e-mail",
     "emailPlaceholder": "O seu endereço de e-mail",
     "subscribe": "Subscrever"
+  },
+  "referral": {
+    "eyebrow": "Indique e ganhe",
+    "heading": "Torne-se parceiro Pande",
+    "body": "Partilhe o seu código de indicação e ganhe uma comissão por cada safari reservado com ele — os seus contactos também recebem um desconto.",
+    "bodyWithRates": "Partilhe o seu código de indicação e ganhe {{commission}}% de comissão por cada safari reservado com ele — os seus contactos também recebem {{discount}}% de desconto.",
+    "audiences": {
+      "hotels": "Hotéis e lodges",
+      "agents": "Agentes de viagens",
+      "travellers": "Antigos viajantes e amigos"
+    },
+    "cta": "Tornar-se agente"
   }
 }

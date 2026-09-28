@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from 'react'
-import { ArrowSquareOut, Copy, HandCoins, SignOut } from '@phosphor-icons/react'
+import { Link } from 'react-router-dom'
+import { ArrowSquareOut, Compass, Copy, HandCoins, SignOut } from '@phosphor-icons/react'
 import { generateReferralCode, getMyReferralCodes, type ReferralCode } from '../../api/referrals'
 import { useFetch } from '../../lib/useFetch'
 import { useAuth } from '../../auth/AuthContext'
 import { ApiError } from '../../lib/api'
+import { DEFAULT_LOCALE } from '../../i18n/locales'
 
 const STATUS_BADGE: Record<ReferralCode['status'], string> = {
   active: 'bg-savanna-green/10 text-savanna-green border border-savanna-green/20',
@@ -70,14 +72,25 @@ export function AgentDashboard() {
           <span className="font-headline-md text-[20px] font-bold text-savanna-green">Pande Wilderness Safari</span>
           <p className="font-label-sm text-label-sm text-on-surface-variant -mt-0.5">Referral Agent Portal</p>
         </div>
-        <button
-          type="button"
-          onClick={() => logout()}
-          className="inline-flex items-center gap-2 text-on-surface-variant hover:text-terracotta transition-colors font-label-md text-label-md"
-        >
-          <SignOut size={18} />
-          Sign Out
-        </button>
+        <div className="flex items-center gap-5">
+          {/* The same login is also a traveller account — trips live in the (localized)
+              tourist area. The agent portal itself is unprefixed and English-only. */}
+          <Link
+            to={`/${DEFAULT_LOCALE}/account`}
+            className="inline-flex items-center gap-2 text-on-surface-variant hover:text-savanna-green transition-colors font-label-md text-label-md"
+          >
+            <Compass size={18} />
+            My Trips
+          </Link>
+          <button
+            type="button"
+            onClick={() => logout()}
+            className="inline-flex items-center gap-2 text-on-surface-variant hover:text-terracotta transition-colors font-label-md text-label-md"
+          >
+            <SignOut size={18} />
+            Sign Out
+          </button>
+        </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-5 md:px-margin-desktop py-10 space-y-8">

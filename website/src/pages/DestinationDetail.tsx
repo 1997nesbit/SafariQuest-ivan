@@ -87,17 +87,53 @@ export function DestinationDetail() {
         </section>
       </Reveal>
 
-      {/* Parks & Wonders */}
-      <section className="py-section-gap px-5 md:px-margin-desktop max-w-container-max mx-auto">
-        <Reveal className="mb-16 text-center">
-          <h2 className="font-headline-lg text-headline-lg text-on-surface mb-4">
-            {t('detail.parksAndWondersIn', { name: destination.name })}
-          </h2>
-          <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto">
-            {t('detail.parksSubtitle')}
-          </p>
-        </Reveal>
-        {regionParks.length > 0 ? (
+      {/* Experiences — shown for every region regardless of packages. Previously these only
+          appeared when a region had no parks, so package-heavy regions (e.g. Arusha) hid them. */}
+      {destination.experiences.length > 0 && (
+        <section className="pt-section-gap px-5 md:px-margin-desktop max-w-container-max mx-auto">
+          <Reveal className="mb-16 text-center">
+            <h2 className="font-headline-lg text-headline-lg text-on-surface mb-4">
+              {t('detail.experiencesIn', { name: destination.name })}
+            </h2>
+            <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto">
+              {t('detail.experiencesSubtitle')}
+            </p>
+          </Reveal>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+            {destination.experiences.map((exp, i) => (
+              <Reveal
+                key={exp.name}
+                delay={i * 100}
+                className="bg-ivory-base rounded-xl overflow-hidden shadow-[0_4px_20px_-2px_rgba(45,45,45,0.06)] hover:shadow-[0_8px_30px_-4px_rgba(45,45,45,0.1)] hover:-translate-y-0.5 transition-all duration-300 flex flex-col"
+              >
+                <div className="h-64 overflow-hidden">
+                  <img
+                    src={destination.images[i % destination.images.length]}
+                    alt={exp.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="p-6">
+                  <h3 className="font-headline-md text-xl mb-3">{exp.name}</h3>
+                  <p className="font-body-md text-on-surface-variant">{exp.description}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Parks & Wonders — the packages that visit each park in this region */}
+      {regionParks.length > 0 && (
+        <section className="pt-section-gap px-5 md:px-margin-desktop max-w-container-max mx-auto">
+          <Reveal className="mb-16 text-center">
+            <h2 className="font-headline-lg text-headline-lg text-on-surface mb-4">
+              {t('detail.parksAndWondersIn', { name: destination.name })}
+            </h2>
+            <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto">
+              {t('detail.parksSubtitle')}
+            </p>
+          </Reveal>
           <div className="flex flex-col gap-16">
             {regionParks.map((park, i) => {
               const safaris = safarisByPark.get(park.id) ?? []
@@ -155,34 +191,12 @@ export function DestinationDetail() {
               )
             })}
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter">
-            {destination.experiences.map((exp, i) => (
-              <Reveal
-                key={exp.name}
-                delay={i * 100}
-                className="bg-ivory-base rounded-xl overflow-hidden shadow-[0_4px_20px_-2px_rgba(45,45,45,0.06)] hover:shadow-[0_8px_30px_-4px_rgba(45,45,45,0.1)] hover:-translate-y-0.5 transition-all duration-300 flex flex-col"
-              >
-                <div className="h-64 overflow-hidden">
-                  <img
-                    src={destination.images[i % destination.images.length]}
-                    alt={exp.name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="p-6">
-                  <h3 className="font-headline-md text-xl mb-3">{exp.name}</h3>
-                  <p className="font-body-md text-on-surface-variant">{exp.description}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        )}
-      </section>
+        </section>
+      )}
 
       {/* Mini Safaris — shorter, region-scoped trips (no cross-region itinerary) */}
       {regionOnlySafaris.length > 0 && (
-        <section className="pb-section-gap px-5 md:px-margin-desktop max-w-container-max mx-auto">
+        <section className="pt-section-gap px-5 md:px-margin-desktop max-w-container-max mx-auto">
           <Reveal className="mb-10 text-center">
             <h2 className="font-headline-lg text-headline-lg text-on-surface mb-4">
               {t('detail.miniSafarisIn', { name: destination.name })}
@@ -221,6 +235,8 @@ export function DestinationDetail() {
           </div>
         </section>
       )}
+
+      <div className="pb-section-gap" />
 
       {/* CTA Banner */}
       <section className="relative overflow-hidden bg-surface-container py-24">

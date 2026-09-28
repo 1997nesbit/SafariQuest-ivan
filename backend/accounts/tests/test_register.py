@@ -16,7 +16,7 @@ class RegisterViewTests(APITestCase):
             self.url, {"email": "new@example.com", "name": "New Tourist", "password": "correct-horse-battery"}
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data, {"role": "tourist"})
+        self.assertEqual(response.data, {"role": "tourist", "is_referral_agent": False, "home": "/account"})
         self.assertIn(settings.AUTH_COOKIE_ACCESS, response.cookies)
         self.assertIn(settings.AUTH_COOKIE_REFRESH, response.cookies)
         user = User.objects.get(email="new@example.com")

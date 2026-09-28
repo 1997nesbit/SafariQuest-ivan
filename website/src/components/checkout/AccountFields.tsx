@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { UserCircle } from '@phosphor-icons/react'
+import { PasswordInput } from '../PasswordInput'
 
 export type AccountMode = 'register' | 'signin'
 
@@ -26,6 +28,10 @@ export function AccountFields({
   onEditDetails: () => void
 }) {
   const { t } = useTranslation('booking')
+  // Confirmation only matters for this form's validity, so it stays local — the pages
+  // only ever need the one password. The custom validity message blocks native form submit.
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const passwordsMismatch = confirmPassword !== '' && confirmPassword !== password
   return (
     <div>
       <div className="flex flex-col sm:flex-row gap-2 mb-6 p-1 bg-surface-container-low rounded-lg w-full sm:w-fit">
@@ -62,16 +68,35 @@ export function AccountFields({
             <label htmlFor="account-password" className="font-label-md text-label-sm text-on-surface-variant">
               {t('account.choosePassword')}
             </label>
-            <input
+            <PasswordInput
               id="account-password"
               required
-              type="password"
               minLength={8}
+              autoComplete="new-password"
               value={password}
               onChange={(e) => onPasswordChange(e.target.value)}
               placeholder={t('account.passwordPlaceholder')}
-              className="min-h-[44px] bg-ivory-base border border-sand-stone rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-savanna-green"
             />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label htmlFor="account-password-confirm" className="font-label-md text-label-sm text-on-surface-variant">
+              {t('account.confirmPassword')}
+            </label>
+            <PasswordInput
+              id="account-password-confirm"
+              required
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              customValidity={confirmPassword !== password ? t('account.passwordsDontMatch') : ''}
+              aria-invalid={passwordsMismatch}
+              aria-describedby={passwordsMismatch ? 'account-password-confirm-error' : undefined}
+            />
+            {passwordsMismatch && (
+              <p id="account-password-confirm-error" role="alert" className="text-error font-label-sm text-label-sm">
+                {t('account.passwordsDontMatch')}
+              </p>
+            )}
           </div>
         </div>
       ) : (
@@ -94,13 +119,12 @@ export function AccountFields({
             <label htmlFor="account-signin-password" className="font-label-md text-label-sm text-on-surface-variant">
               {t('account.password')}
             </label>
-            <input
+            <PasswordInput
               id="account-signin-password"
               required
-              type="password"
+              autoComplete="current-password"
               value={password}
               onChange={(e) => onPasswordChange(e.target.value)}
-              className="min-h-[44px] bg-ivory-base border border-sand-stone rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-savanna-green"
             />
           </div>
         </div>

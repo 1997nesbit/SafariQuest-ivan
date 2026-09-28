@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 
 from .views import (
     AdminReferralRedemptionViewSet,
+    ReferralAgentActivateView,
     ReferralAgentRegisterView,
     ReferralCodeValidateView,
     ReferralCodeViewSet,
@@ -16,6 +17,7 @@ router.register("admin/redemptions", AdminReferralRedemptionViewSet, basename="a
 
 urlpatterns = [
     path("agents/register/", ReferralAgentRegisterView.as_view(), name="referral-agent-register"),
+    path("agents/activate/", ReferralAgentActivateView.as_view(), name="referral-agent-activate"),
     path("codes/validate/", ReferralCodeValidateView.as_view(), name="referral-code-validate"),
     path("settings/public/", ReferralSettingsPublicView.as_view(), name="referral-settings-public"),
     path("settings/", ReferralSettingsAdminView.as_view(), name="referral-settings-admin"),

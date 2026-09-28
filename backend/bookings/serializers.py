@@ -239,7 +239,7 @@ class BookingCreateSerializer(serializers.Serializer):
         request = self.context["request"]
         if not request.user.is_authenticated and not attrs.get("email"):
             raise serializers.ValidationError({"email": "This field is required."})
-        # A signed-in staff/guide/referral-agent account must not become a booking's
+        # A signed-in staff/guide account must not become a booking's
         # customer — BookingViewSet.get_queryset() only scopes bookings to tourist/guide
         # (own)/admin, so any other role's "own" booking would be silently invisible to it
         # afterward (e.g. the /pay/ action 404ing instead of ever finding it).

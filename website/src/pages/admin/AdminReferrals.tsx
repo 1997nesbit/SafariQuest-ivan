@@ -19,6 +19,7 @@ function SettingsCard() {
   const { data: settings, loading, refetch } = useFetch(getReferralSettings, [])
   const [discount, setDiscount] = useState('')
   const [commission, setCommission] = useState('')
+  const [expiryDays, setExpiryDays] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
@@ -33,13 +34,18 @@ function SettingsCard() {
 
   const discountValue = discount === '' ? settings.discountPercent : Number(discount)
   const commissionValue = commission === '' ? settings.commissionPercent : Number(commission)
+  const expiryDaysValue = expiryDays === '' ? settings.codeExpiryDays : Number(expiryDays)
 
   async function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
     setSaving(true)
     try {
-      await updateReferralSettings({ discountPercent: discountValue, commissionPercent: commissionValue })
+      await updateReferralSettings({
+        discountPercent: discountValue,
+        commissionPercent: commissionValue,
+        codeExpiryDays: expiryDaysValue,
+      })
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
       refetch()
@@ -53,7 +59,7 @@ function SettingsCard() {
   return (
     <section className="bg-surface-container-lowest rounded-xl p-6 md:p-8 shadow-sm border border-sand-stone mb-8">
       <h2 className="font-headline-md text-[20px] text-on-surface mb-5">Referral Settings</h2>
-      <form onSubmit={handleSave} className="flex flex-col sm:flex-row items-end gap-4">
+      <form onSubmit={handleSave} className="flex flex-wrap items-end gap-4">
         <div>
           <label htmlFor="discount-percent" className="block font-label-sm text-label-sm text-on-surface mb-2">
             Tourist Discount (%)
@@ -84,6 +90,21 @@ function SettingsCard() {
             className="w-32 min-h-[44px] bg-ivory-base border border-sand-stone rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-savanna-green"
           />
         </div>
+        <div>
+          <label htmlFor="code-expiry-days" className="block font-label-sm text-label-sm text-on-surface mb-2">
+            Code Valid For (days)
+          </label>
+          <input
+            id="code-expiry-days"
+            type="number"
+            min={1}
+            max={730}
+            step={1}
+            value={expiryDaysValue}
+            onChange={(e) => setExpiryDays(e.target.value)}
+            className="w-32 min-h-[44px] bg-ivory-base border border-sand-stone rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-savanna-green"
+          />
+        </div>
         <button
           type="submit"
           disabled={saving}
@@ -98,6 +119,9 @@ function SettingsCard() {
           {error}
         </p>
       )}
+      <p className="text-on-surface-variant text-xs mt-3">
+        Code validity applies to newly generated codes; existing codes keep the expiry they were created with.
+      </p>
     </section>
   )
 }

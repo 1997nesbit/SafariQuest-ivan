@@ -1,4 +1,5 @@
-import { useLocation } from 'react-router-dom'
+import { useState } from 'react'
+import { useLocation, useNavigate, Link as PlainLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Link } from '../i18n/routing'
 import {
@@ -13,8 +14,13 @@ import {
   Envelope,
   CreditCard,
   WhatsappLogo,
+  HandCoins,
 } from '@phosphor-icons/react'
 import { contact } from '../config/contact'
+import { activateReferralAgent, getPublicReferralSettings } from '../api/referrals'
+import { useAuth } from '../auth/AuthContext'
+import { useFetch } from '../lib/useFetch'
+import { ApiError } from '../lib/api'
 
 const NEXT_STEPS = [
   { icon: CalendarPlus, borderColor: 'border-savanna-green', iconColor: 'text-savanna-green', key: 'itineraryPrep' },
@@ -28,6 +34,85 @@ const BENTO_LARGE_IMAGE =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuCrN7f-31QBo6HA8nmmSsbZ9ZyLEsBm-vJSD8B0tFwsxYCSPAgQKOwjVXDIa1pVFTaTFbEhXI_eR6LXa0Q6g6Bz1l0LOUiuH4FEIrjGdjgjn-qJoRZB8TazdW6oY-UPPy9kjeH3kb7q1eUfhBpQBTRFzyieWQUUWtUo66qS93eDQ5JGSobxmP2iqY7GSA-1jAOrW4RmbsVktB2MoMAqNPADvuzS73fRqWLmCydWeLYQGlABf3_P1MDL'
 const BENTO_SMALL_IMAGE =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuDfb3LhZ4Grm0EXswuE5zBp3bZPKCMbytAJpHpmDfYSNUSTDLm5vYbftZAZwdux5Q10iL-7nfKMQg9gzB74EyU-dMsejXRcEUVnSl1i8FV0bk8wqKQ500OvVgY7bwTHOYEizBHy9AhLKpsW63GHbJJQq8CMeqP282vuua5vMOMe6owsDuN6sHYWzZPNy9azvAOs0qxaDVkvRNXpkYde_jb-9PtOXTFePInwlQemsHJgYLxKoAmZB8BKSA2j_iAC9JqqYQ'
+
+/**
+ * Invites a traveller who has just booked to refer friends, at the moment they're most
+ * enthusiastic. Referral agent is a profile on the same tourist login
+ * (see User.is_referral_agent), so a signed-in traveller activates it in one click.
+ */
+function ReferAndEarnCard() {
+  const { t } = useTranslation('booking')
+  const navigate = useNavigate()
+  const { user, refreshUser } = useAuth()
+  const { data: rates } = useFetch(getPublicReferralSettings, [])
+  const [activating, setActivating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Guide and admin accounts can't book, so they never reach this page as a customer.
+  if (user && user.role !== 'tourist') return null
+
+  async function handleActivate() {
+    setError(null)
+    setActivating(true)
+    try {
+      await activateReferralAgent()
+      await refreshUser()
+      navigate('/agent')
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('confirmed.referral.error'))
+      setActivating(false)
+    }
+  }
+
+  const buttonClass =
+    'min-h-[44px] inline-flex items-center justify-center gap-2 bg-golden-sun text-savanna-green font-label-md text-label-md px-8 py-4 rounded-full hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed shrink-0'
+
+  return (
+    <section className="w-full px-5 md:px-margin-desktop pb-16 md:pb-24">
+      <div className="max-w-container-max mx-auto bg-savanna-green text-on-primary rounded-3xl p-8 md:p-12 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+        <div className="max-w-2xl">
+          <span className="inline-flex items-center gap-2 text-golden-sun font-label-md tracking-widest uppercase mb-3">
+            <HandCoins size={20} weight="bold" />
+            {t('confirmed.referral.eyebrow')}
+          </span>
+          <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg mb-3">
+            {t('confirmed.referral.heading')}
+          </h2>
+          <p className="opacity-90">
+            {rates
+              ? t('confirmed.referral.bodyWithRates', {
+                  discount: rates.discountPercent,
+                  commission: rates.commissionPercent,
+                })
+              : t('confirmed.referral.body')}
+          </p>
+          {error && (
+            <p role="alert" className="mt-3 text-golden-sun font-label-sm text-label-sm">
+              {error}
+            </p>
+          )}
+        </div>
+        {user?.isReferralAgent ? (
+          // /agent is an unprefixed portal, so the plain router Link, not the locale-aware one.
+          <PlainLink to="/agent" className={buttonClass}>
+            {t('confirmed.referral.openDashboard')}
+            <ArrowRight size={18} weight="bold" />
+          </PlainLink>
+        ) : user ? (
+          <button type="button" onClick={handleActivate} disabled={activating} className={buttonClass}>
+            {activating ? t('confirmed.referral.activating') : t('confirmed.referral.activate')}
+            <ArrowRight size={18} weight="bold" />
+          </button>
+        ) : (
+          <Link to="/become-agent" className={buttonClass}>
+            {t('confirmed.referral.learnMore')}
+            <ArrowRight size={18} weight="bold" />
+          </Link>
+        )}
+      </div>
+    </section>
+  )
+}
 
 export function BookingConfirmed() {
   const { t, i18n } = useTranslation('booking')
@@ -127,6 +212,8 @@ export function BookingConfirmed() {
           </div>
         </div>
       </section>
+
+      <ReferAndEarnCard />
 
       <section className="w-full bg-surface-container-low px-5 md:px-margin-desktop py-16 md:py-24">
         <div className="max-w-container-max mx-auto">

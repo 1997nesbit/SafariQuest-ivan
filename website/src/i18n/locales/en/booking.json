@@ -59,6 +59,8 @@
     "editYourDetails": "Edit your details",
     "choosePassword": "Choose a Password",
     "passwordPlaceholder": "At least 8 characters",
+    "confirmPassword": "Confirm Password",
+    "passwordsDontMatch": "Passwords don't match",
     "emailAddress": "Email Address",
     "emailPlaceholder": "john@example.com",
     "password": "Password"
@@ -156,6 +158,27 @@
         "body": "Talk to us now"
       }
     },
-    "urgentQuestion": "Have an urgent question? Our team is available 24/7."
+    "urgentQuestion": "Have an urgent question? Our team is available 24/7.",
+    "referral": {
+      "eyebrow": "Refer & Earn",
+      "heading": "Know someone who'd love this trip?",
+      "body": "Share your own referral code: your friends get a discount on their safari, and you earn a commission on every trip booked with it.",
+      "bodyWithRates": "Share your own referral code: your friends get {{discount}}% off their safari, and you earn {{commission}}% commission on every trip booked with it, using the same login you just booked with.",
+      "activate": "Get My Referral Code",
+      "activating": "Setting up…",
+      "openDashboard": "Share My Referral Code",
+      "learnMore": "Become a Referral Agent",
+      "error": "Something went wrong. Please try again."
+    }
+  },
+  "referralField": {
+    "label": "Referral Code",
+    "optional": "(optional)",
+    "placeholder": "e.g. TEKLA2X4K",
+    "checking": "Checking code…",
+    "applied": "{{percent}}% discount applied",
+    "invalid": "This code isn't valid.",
+    "earnAfterBooking": "Once you've booked, you can get your own referral code and earn a commission when friends book.",
+    "earnAfterBookingWithRates": "Once you've booked, you can get your own referral code: friends get {{discount}}% off and you earn {{commission}}% commission."
   }
 }

@@ -1,5 +1,4 @@
 import { apiGet, apiPatch, apiPost } from '../lib/api'
-import type { Role } from './auth'
 
 export interface ReferralRedemptionSummary {
   bookingId: number
@@ -55,8 +54,15 @@ function normalizeCode(raw: ReferralCodeApiShape): ReferralCode {
   }
 }
 
-export async function registerAgent(input: { email: string; name: string; password: string }): Promise<{ role: Role }> {
-  return apiPost<{ role: Role }>('/api/referrals/agents/register/', input)
+/** New visitors only: creates a tourist account with the agent profile already on,
+ * and signs them in. Refuses an email that already has an account. */
+export async function registerAgent(input: { email: string; name: string; password: string }): Promise<void> {
+  await apiPost<unknown>('/api/referrals/agents/register/', input)
+}
+
+/** Switches the agent profile on for the signed-in tourist. Safe to call twice. */
+export async function activateReferralAgent(): Promise<void> {
+  await apiPost<unknown>('/api/referrals/agents/activate/')
 }
 
 export async function generateReferralCode(contactName?: string): Promise<ReferralCode> {
@@ -74,11 +80,6 @@ export async function validateReferralCode(code: string): Promise<{ discountPerc
   return { discountPercent: Number(raw.discountPercent) }
 }
 
-export async function getPublicReferralDiscount(): Promise<number> {
-  const raw = await apiGet<{ discount_percent: string }>('/api/referrals/settings/public/')
-  return Number(raw.discount_percent)
-}
-
 export interface ReferralSettings {
   discountPercent: number
   commissionPercent: number
@@ -91,8 +92,7 @@ interface ReferralSettingsApiShape {
   code_expiry_days: number
 }
 
-export async function getReferralSettings(): Promise<ReferralSettings> {
-  const raw = await apiGet<ReferralSettingsApiShape>('/api/referrals/settings/')
+function toReferralSettings(raw: ReferralSettingsApiShape): ReferralSettings {
   return {
     discountPercent: Number(raw.discount_percent),
     commissionPercent: Number(raw.commission_percent),
@@ -100,19 +100,26 @@ export async function getReferralSettings(): Promise<ReferralSettings> {
   }
 }
 
+/** Rates shown to visitors on the Refer & Earn pages — no auth required. */
+export async function getPublicReferralSettings(): Promise<ReferralSettings> {
+  return toReferralSettings(await apiGet<ReferralSettingsApiShape>('/api/referrals/settings/public/'))
+}
+
+export async function getReferralSettings(): Promise<ReferralSettings> {
+  return toReferralSettings(await apiGet<ReferralSettingsApiShape>('/api/referrals/settings/'))
+}
+
 export async function updateReferralSettings(input: {
   discountPercent: number
   commissionPercent: number
+  codeExpiryDays: number
 }): Promise<ReferralSettings> {
   const raw = await apiPatch<ReferralSettingsApiShape>('/api/referrals/settings/', {
     discount_percent: input.discountPercent,
     commission_percent: input.commissionPercent,
+    code_expiry_days: input.codeExpiryDays,
   })
-  return {
-    discountPercent: Number(raw.discount_percent),
-    commissionPercent: Number(raw.commission_percent),
-    codeExpiryDays: raw.code_expiry_days,
-  }
+  return toReferralSettings(raw)
 }
 
 export interface ReferralRedemption {

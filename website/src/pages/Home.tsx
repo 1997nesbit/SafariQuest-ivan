@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from '../i18n/routing'
 import {
@@ -13,13 +12,25 @@ import {
   Airplane,
   Medal,
   Headset,
+  HandCoins,
+  Buildings,
+  Suitcase,
+  UsersThree,
 } from '@phosphor-icons/react'
 import { Reveal } from '../components/Reveal'
 import { SafariCard } from '../components/SafariCard'
 import { DestinationSlideshow } from '../components/DestinationSlideshow'
 import { getSafaris } from '../api/safaris'
 import { getDestinations } from '../api/destinations'
+import { getPublicReferralSettings } from '../api/referrals'
 import { useFetch } from '../lib/useFetch'
+import { usePrefersReducedMotion } from '../lib/usePrefersReducedMotion'
+
+const REFERRAL_AUDIENCES = [
+  { icon: Buildings, key: 'hotels' },
+  { icon: Suitcase, key: 'agents' },
+  { icon: UsersThree, key: 'travellers' },
+] as const
 
 const JOURNEY_STEPS = [
   { icon: Compass, key: 'curate' },
@@ -84,19 +95,12 @@ export function Home() {
   const { data: safaris } = useFetch(getSafaris, [])
   const signaturePackages = (safaris ?? []).filter((s) => s.signature)
   const { data: destinations } = useFetch(getDestinations, [])
+  const { data: referralRates } = useFetch(getPublicReferralSettings, [])
   const featuredDestinations = (destinations ?? []).slice(0, 4)
 
   // <video autoPlay> ignores the global prefers-reduced-motion CSS (it only
   // covers CSS animations/transitions), so it's gated here in JS instead.
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(
-    () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-  )
-  useEffect(() => {
-    const query = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const handleChange = (event: MediaQueryListEvent) => setPrefersReducedMotion(event.matches)
-    query.addEventListener('change', handleChange)
-    return () => query.removeEventListener('change', handleChange)
-  }, [])
+  const prefersReducedMotion = usePrefersReducedMotion()
 
   return (
     <>
@@ -427,6 +431,45 @@ export function Home() {
               {t('newsletter.subscribe')}
             </button>
           </form>
+        </Reveal>
+      </section>
+
+      {/* Refer & Earn — lives down here rather than in the header so it doesn't compete
+          with "Plan Your Journey", the site's primary call to action. */}
+      <section className="pb-20 md:pb-section-gap px-5 md:px-margin-desktop max-w-container-max mx-auto">
+        <Reveal className="bg-savanna-green text-on-primary rounded-3xl p-10 md:p-16 flex flex-col lg:flex-row lg:items-center justify-between gap-10">
+          <div className="max-w-xl">
+            <span className="inline-flex items-center gap-2 text-golden-sun font-label-md tracking-widest uppercase mb-4">
+              <HandCoins size={20} weight="bold" />
+              {t('referral.eyebrow')}
+            </span>
+            <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg mb-4">
+              {t('referral.heading')}
+            </h2>
+            <p className="opacity-90 mb-6">
+              {referralRates
+                ? t('referral.bodyWithRates', {
+                    commission: referralRates.commissionPercent,
+                    discount: referralRates.discountPercent,
+                  })
+                : t('referral.body')}
+            </p>
+            <ul className="flex flex-wrap gap-x-6 gap-y-3">
+              {REFERRAL_AUDIENCES.map(({ icon: Icon, key }) => (
+                <li key={key} className="flex items-center gap-2 text-sm opacity-90">
+                  <Icon size={18} className="text-golden-sun shrink-0" />
+                  {t(`referral.audiences.${key}`)}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <Link
+            to="/become-agent"
+            className="min-h-[44px] inline-flex items-center justify-center gap-2 bg-golden-sun text-savanna-green font-label-md text-label-md px-8 py-4 rounded-lg hover:opacity-90 transition-opacity shrink-0 self-start lg:self-center"
+          >
+            {t('referral.cta')}
+            <ArrowRight size={18} />
+          </Link>
         </Reveal>
       </section>
     </>

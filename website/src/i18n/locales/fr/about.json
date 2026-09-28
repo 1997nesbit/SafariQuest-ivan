@@ -28,24 +28,7 @@
   "team": {
     "heading": "Rencontrez nos experts",
     "subtitle": "Notre équipe chevronnée de naturalistes, pisteurs et experts en hospitalité garantit un voyage sans faille.",
-    "contactOnWhatsApp": "Contacter sur WhatsApp",
-    "members": {
-      "juma": {
-        "role": "Guide de terrain senior et pisteur",
-        "bio": "Fort de plus d'une décennie d'expérience de pistage dans le Serengeti, la connaissance intime de Juma du comportement des prédateurs vous garantit d'être toujours au bon endroit, au bon moment.",
-        "imageAlt": "Portrait professionnel de Juma Mdoe, guide de safari tanzanien, se tenant devant une forêt d'acacias floue."
-      },
-      "amina": {
-        "role": "Directrice de l'expérience client",
-        "bio": "Amina supervise chaque détail de votre séjour, des besoins alimentaires spécifiques à l'organisation de sundowners surprises dans la brousse.",
-        "imageAlt": "Portrait d'une responsable de lodge de safari tanzanien devant une tente en toile haut de gamme."
-      },
-      "elias": {
-        "role": "Architecte en chef des itinéraires",
-        "bio": "Elias conçoit nos itinéraires uniques, vous permettant d'éviter les foules pour découvrir les coins les plus authentiques et les plus époustouflants des parcs.",
-        "imageAlt": "Portrait d'un conservationniste tanzanien senior et planificateur d'itinéraires regardant la savane."
-      }
-    }
+    "contactOnWhatsApp": "Contacter sur WhatsApp"
   },
   "interests": {
     "greatMigration": "La Grande Migration",

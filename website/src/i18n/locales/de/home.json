@@ -105,5 +105,17 @@
     "emailAddress": "E-Mail-Adresse",
     "emailPlaceholder": "Ihre E-Mail-Adresse",
     "subscribe": "Abonnieren"
+  },
+  "referral": {
+    "eyebrow": "Empfehlen & verdienen",
+    "heading": "Werden Sie Pande-Partner",
+    "body": "Teilen Sie Ihren Empfehlungscode und verdienen Sie eine Provision für jede damit gebuchte Safari — Ihre Kontakte erhalten ebenfalls einen Rabatt.",
+    "bodyWithRates": "Teilen Sie Ihren Empfehlungscode und verdienen Sie {{commission}} % Provision für jede damit gebuchte Safari — Ihre Kontakte erhalten außerdem {{discount}} % Rabatt.",
+    "audiences": {
+      "hotels": "Hotels & Lodges",
+      "agents": "Reisebüros",
+      "travellers": "Ehemalige Reisende & Freunde"
+    },
+    "cta": "Agent werden"
   }
 }

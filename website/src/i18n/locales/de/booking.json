@@ -59,6 +59,8 @@
     "editYourDetails": "Ihre Angaben bearbeiten",
     "choosePassword": "Passwort wählen",
     "passwordPlaceholder": "Mindestens 8 Zeichen",
+    "confirmPassword": "Passwort bestätigen",
+    "passwordsDontMatch": "Die Passwörter stimmen nicht überein",
     "emailAddress": "E-Mail-Adresse",
     "emailPlaceholder": "hans@beispiel.de",
     "password": "Passwort"
@@ -156,6 +158,27 @@
         "body": "Sprechen Sie jetzt mit uns"
       }
     },
-    "urgentQuestion": "Haben Sie eine dringende Frage? Unser Team ist rund um die Uhr erreichbar."
+    "urgentQuestion": "Haben Sie eine dringende Frage? Unser Team ist rund um die Uhr erreichbar.",
+    "referral": {
+      "eyebrow": "Empfehlen & verdienen",
+      "heading": "Kennen Sie jemanden, dem diese Reise gefallen würde?",
+      "body": "Teilen Sie Ihren persönlichen Empfehlungscode: Ihre Freunde erhalten einen Rabatt auf ihre Safari, und Sie verdienen eine Provision für jede damit gebuchte Reise.",
+      "bodyWithRates": "Teilen Sie Ihren persönlichen Empfehlungscode: Ihre Freunde erhalten {{discount}} % Rabatt auf ihre Safari, und Sie verdienen {{commission}} % Provision für jede damit gebuchte Reise, mit demselben Login, mit dem Sie gerade gebucht haben.",
+      "activate": "Meinen Empfehlungscode erhalten",
+      "activating": "Wird eingerichtet…",
+      "openDashboard": "Meinen Empfehlungscode teilen",
+      "learnMore": "Empfehlungsagent werden",
+      "error": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut."
+    }
+  },
+  "referralField": {
+    "label": "Empfehlungscode",
+    "optional": "(optional)",
+    "placeholder": "z. B. TEKLA2X4K",
+    "checking": "Code wird geprüft…",
+    "applied": "{{percent}} % Rabatt angewendet",
+    "invalid": "Dieser Code ist ungültig.",
+    "earnAfterBooking": "Nach Ihrer Buchung können Sie Ihren eigenen Empfehlungscode erhalten und eine Provision verdienen, wenn Freunde buchen.",
+    "earnAfterBookingWithRates": "Nach Ihrer Buchung können Sie Ihren eigenen Empfehlungscode erhalten: Freunde erhalten {{discount}} % Rabatt und Sie verdienen {{commission}} % Provision."
   }
 }

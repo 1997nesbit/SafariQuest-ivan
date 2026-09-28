@@ -59,6 +59,8 @@
     "editYourDetails": "Modifiez vos informations",
     "choosePassword": "Choisissez un mot de passe",
     "passwordPlaceholder": "Au moins 8 caractères",
+    "confirmPassword": "Confirmer le mot de passe",
+    "passwordsDontMatch": "Les mots de passe ne correspondent pas",
     "emailAddress": "Adresse e-mail",
     "emailPlaceholder": "jean@exemple.com",
     "password": "Mot de passe"
@@ -156,6 +158,27 @@
         "body": "Parlez-nous dès maintenant"
       }
     },
-    "urgentQuestion": "Une question urgente ? Notre équipe est disponible 24h/24 et 7j/7."
+    "urgentQuestion": "Une question urgente ? Notre équipe est disponible 24h/24 et 7j/7.",
+    "referral": {
+      "eyebrow": "Parrainez et gagnez",
+      "heading": "Vous connaissez quelqu'un qui adorerait ce voyage ?",
+      "body": "Partagez votre code de parrainage : vos amis bénéficient d'une réduction sur leur safari, et vous touchez une commission sur chaque voyage réservé avec ce code.",
+      "bodyWithRates": "Partagez votre code de parrainage : vos amis bénéficient de {{discount}} % de réduction sur leur safari, et vous touchez {{commission}} % de commission sur chaque voyage réservé avec ce code, avec le même identifiant que pour votre réservation.",
+      "activate": "Obtenir mon code de parrainage",
+      "activating": "Configuration…",
+      "openDashboard": "Partager mon code de parrainage",
+      "learnMore": "Devenir agent de parrainage",
+      "error": "Une erreur s'est produite. Veuillez réessayer."
+    }
+  },
+  "referralField": {
+    "label": "Code de parrainage",
+    "optional": "(facultatif)",
+    "placeholder": "ex. TEKLA2X4K",
+    "checking": "Vérification du code…",
+    "applied": "Réduction de {{percent}} % appliquée",
+    "invalid": "Ce code n'est pas valide.",
+    "earnAfterBooking": "Une fois votre réservation effectuée, vous pourrez obtenir votre propre code de parrainage et toucher une commission quand vos amis réservent.",
+    "earnAfterBookingWithRates": "Une fois votre réservation effectuée, vous pourrez obtenir votre propre code de parrainage : vos amis bénéficient de {{discount}} % de réduction et vous touchez {{commission}} % de commission."
   }
 }

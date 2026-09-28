@@ -3,6 +3,11 @@ export const contact = {
   phoneHref: import.meta.env.VITE_CONTACT_PHONE_HREF,
   email: import.meta.env.VITE_CONTACT_EMAIL,
   address: import.meta.env.VITE_CONTACT_ADDRESS,
+  secondary: {
+    name: import.meta.env.VITE_CONTACT_SECONDARY_NAME,
+    email: import.meta.env.VITE_CONTACT_SECONDARY_EMAIL,
+    phone: import.meta.env.VITE_CONTACT_SECONDARY_PHONE,
+  },
   social: {
     instagram: import.meta.env.VITE_SOCIAL_INSTAGRAM,
     facebook: import.meta.env.VITE_SOCIAL_FACEBOOK,

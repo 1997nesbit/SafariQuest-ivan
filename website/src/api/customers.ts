@@ -8,6 +8,8 @@ export interface Customer {
   name: string
   email: string
   joinedDate: string
+  /** Has the referral agent profile switched on (may or may not also travel). */
+  isReferralAgent: boolean
   tripCount: number
   totalSpend: number
   bookingIds: number[]
@@ -23,6 +25,7 @@ interface CustomerApiShape {
   name: string
   email: string
   date_joined: string
+  is_referral_agent: boolean
   trip_count: number
   total_spend: number
   booking_ids: number[]

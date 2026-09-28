@@ -8,6 +8,155 @@ entries below note which side(s) each change touched.
 See `backend/README.md` and `website/README.md` for the current-state
 architecture overview; this file is the story of how it got there.
 
+## 2026-09-27 — Confirm-password and a show/hide toggle on every password form
+
+Every form in the app that sets a password now has a confirm field and a
+show/hide toggle. Before this, the pattern existed only on `SignIn.tsx`'s
+Sign In tab (a local, hand-rolled toggle, copy-pasted nowhere else) and
+nowhere had a confirm field at all — including the Sign Up tab on that same
+page, which used a bare, uncontrolled `<input type="password">`.
+
+- New shared `components/PasswordInput.tsx`: the toggle, plus an optional
+  `customValidity` prop that feeds the browser's native form validation — a
+  non-empty message blocks submit without the parent page wiring anything
+  up, which is what a live "passwords don't match" check needs.
+- Applied to `AccountFields.tsx` (shared by Checkout and the Trip Curator),
+  `ReferralSignup.tsx`, `SetPassword.tsx` (replacing its own local toggle
+  and gaining a confirm field it never had), and last, the Sign Up tab on
+  `SignIn.tsx` — the one form the audit for this found still missing both.
+- Added `confirmPassword` / `confirmPasswordPlaceholder` /
+  `passwordsDontMatch` to the `auth` locale namespace (all four languages),
+  matching the phrasing `booking.account.*` already used elsewhere.
+- Frontend only — no backend change.
+
+## 2026-09-26 to 2026-09-27 — Referral agent becomes a profile on a tourist account, not a separate one
+
+Six client-reported issues, the largest being that a customer who wanted to
+refer friends had to register an entirely separate account to do it — the
+same person, two logins, two sets of trips-vs-codes they could never see
+together. `referral_agent` was a `User.role` value, mutually exclusive with
+`tourist`.
+
+**Backend (`accounts`, `referrals`, `bookings`)**
+- `referral_agent` is gone from `User.ROLE_CHOICES`; being an agent is now
+  `User.is_referral_agent`, a flag any `tourist` account can carry. A data
+  migration (`accounts/0004_referral_agent_profile.py`) moves every existing
+  `referral_agent` to `role="tourist"` with the flag set, keeping their
+  login and codes intact; reversible, though a tourist who'd since also
+  booked a trip loses that on the way back down (the old model had no way
+  to express both).
+- New `POST /api/referrals/agents/activate/` — turns the flag on for the
+  signed-in tourist, idempotent, 403 for staff/guide accounts. Alongside
+  the existing `POST /api/referrals/agents/register/` (now creates a
+  tourist with the flag pre-set, for someone with no account yet).
+- Login/register/set-password responses changed from `{"role": "..."}` to
+  including `home` (`User.home_path`) directly — role alone no longer
+  determines landing page: an agent who has never booked (a hotel, a
+  travel agent — someone who joined only to refer) lands on `/agent`; an
+  agent who also has trips lands on `/account` and switches over from
+  there, since seeing their own trips first is more useful.
+  `AuthContext`'s `login`/`register`/`setPassword` now resolve to that
+  path instead of a bare role; `useRoleHomeNavigate` became
+  `useHomeNavigate`.
+- Booking creation now excludes the agent's own code from working on their
+  own booking (`.exclude(agent=request.user)`) — a backstop alongside the
+  validate endpoint, now that the same login can book *and* hold codes.
+
+**Frontend**
+- `AgentDashboard.tsx` gained a "My Trips" link into the (localized)
+  tourist account area — the same login now has both.
+- `BookingConfirmed.tsx`: a "Refer & Earn" card inviting a traveller who
+  just booked to become an agent in one click (`activateReferralAgent()`),
+  right when they're most enthusiastic — no new account, no new login.
+- `AdminCustomers.tsx` gained Travellers/Agents filter tabs. Agents who
+  joined to refer, not to travel, would otherwise inflate the "new
+  customers with no bookings" outreach list and drag down the repeat rate.
+- `ReferralCodeField.tsx` (checkout) now shows the live discount rate and
+  mentions, in one line, that the traveller can get their own code.
+
+**Referral code lifetime — a direct client complaint**
+- The default was 3 days. An agent who shares a code once (a flyer, a
+  screenshot in someone's gallery) needs it to still work weeks or months
+  later, not just within the first few days. Default raised to 180 days;
+  an admin can set anywhere from 1 day to 2 years
+  (`MIN_CODE_EXPIRY_DAYS`/`MAX_CODE_EXPIRY_DAYS`, enforced server-side).
+  `AdminReferrals.tsx`'s settings form gained the field — it wasn't
+  editable from the UI at all before.
+- `referrals/migrations/0002_longer_code_expiry.py` also re-dates every
+  *unused* code already issued under the old 3-day default, counted from
+  when it was originally created — an agent holding an old screenshot
+  isn't left with a code that already lapsed before this shipped.
+- Shown on the signup page itself: "Each code stays valid for 6 months."
+
+**Other fixes in this batch**
+- `DestinationDetail.tsx`: the Experiences section only rendered when a
+  region had *no* parks, so a region with both (e.g. Arusha) silently
+  never showed its experiences. Both sections now render independently,
+  each gated on having content rather than on the other being absent.
+- Footer gained an optional secondary contact (name/phone/email, all
+  `VITE_CONTACT_SECONDARY_*`) and a "Refer & Earn" link.
+- Header nav was already cleaned up in an earlier pass — see the 2026-09-17
+  entry below.
+
+## 2026-09-26 — About-page team moves to the database, with per-language text
+
+The "Meet the Experts" section was three people hardcoded in `About.tsx`
+(names and photos) and the four locale files (titles, bios, photo
+descriptions), so changing anyone meant a code change and a deploy. It now
+reads from the backend and is editable from the admin.
+
+**Backend**
+- New `team` app: `TeamMember` (name, title, bio, photo URL, photo alt text,
+  display order, published flag) with a `translations` JSON field for
+  French, German and Portuguese. English stays in the plain fields and is the
+  fallback. Public `GET /api/team/` (published only), admin write.
+- Chosen over reusing `guides.Guide` because that's the operational roster —
+  ratings, availability, a login account — and includes people who aren't
+  public-facing; two of the three people on the page (a guest experience
+  director, an itinerary planner) aren't guides at all.
+- Translations are validated on save (known languages and fields only, text
+  only) and empty entries are dropped, so a missing translation is always the
+  absence of a key. Unknown languages are rejected loudly rather than
+  silently dropped.
+- Drafts are hidden from the public list even for a logged-in admin, so
+  previewing the About page shows what visitors see; the content manager asks
+  for `?all=true`.
+- `seed_team` carries over the original three members with all four
+  languages' existing text, and never overwrites a member that already exists.
+- Field limits enforced server-side: bio capped at 2,000 characters, the same
+  caps applied to every translated title/bio/photo description (translations
+  used to be unbounded), and photo URLs restricted to http/https.
+- **Image uploads now check the file itself, not the browser's claim.**
+  `ImageUploadView` trusted the request's Content-Type, so an HTML or SVG file
+  renamed `.png` was accepted and, with the bucket public-read, served back
+  from our own storage. It now reads the file's leading bytes (JPEG, PNG, GIF,
+  WebP) and stores it under the extension that matches. This applies to every
+  admin image upload — safaris and destinations as well as team photos.
+- Fixed local uploads failing with `Could not find config for 'default' in
+  settings.STORAGES`: `STORAGES` only gained a `default` when a bucket was
+  configured, and Django 5.1+ no longer supplies one, so an environment without
+  a bucket (local dev) had no file storage at all. Local disk is now declared
+  explicitly. Production, which always has a bucket, was never affected.
+
+**Frontend**
+- `About.tsx` fetches the team and picks the text for the current site
+  language, falling back to English field by field. With no published
+  members the section hides instead of showing a heading over nothing; a
+  member with no photo gets an initials avatar.
+- Admin: new **Team** tab in the Content Manager, and an add/edit form with
+  one tab per language (a dot shows which have text) and photo upload
+  through the existing image uploader.
+- Removed the now-unused `team.members` keys from the four `about.json`
+  locale files; the section heading and subtitle stay there, being UI text.
+
+**Deploying this**
+- Railway runs the migration on deploy, but the production table starts
+  empty and the About section stays hidden until it has members: run
+  `python manage.py seed_team` there (or add people in the admin).
+- The seeded photos are the design-mockup placeholder URLs the page shipped
+  with; replace them with real uploads. Photos uploaded through a local
+  admin point at `localhost`, so upload them through the production admin.
+
 ## 2026-09-17 — Unified header dashboard, a sign-in/out audit, and paying off the remaining balance
 
 **Sign-in/out audit, at the user's request**
@@ -55,6 +204,13 @@ architecture overview; this file is the story of how it got there.
   code happens to be present (previously the only reason it was ever sent).
 
 ## 2026-09-14 — Referral agent program
+
+> **Superseded 2026-09-26/27** — `referral_agent` here is a `User.role`
+> value, a separate account from a tourist's. It was replaced with
+> `User.is_referral_agent`, a flag any tourist account can carry, and the
+> default code lifetime (3 days below) was raised to 180. See the
+> 2026-09-26 → 2026-09-27 entry above. The rest of this entry (the model,
+> the commission/discount mechanics, redemption) is still accurate.
 
 A field-sales referral system: an agent signs up, generates single-use
 referral codes for prospects, and earns a commission when a code converts

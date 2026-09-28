@@ -17,7 +17,7 @@ class LoginViewTests(APITestCase):
     def test_valid_credentials_returns_role_and_sets_cookies(self):
         response = self.client.post(self.url, {"email": "guide@example.com", "password": "correct-pw"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {"role": "guide"})
+        self.assertEqual(response.data, {"role": "guide", "is_referral_agent": False, "home": "/guide"})
         self.assertIn(settings.AUTH_COOKIE_ACCESS, response.cookies)
         self.assertIn(settings.AUTH_COOKIE_REFRESH, response.cookies)
         self.assertTrue(response.cookies[settings.AUTH_COOKIE_ACCESS]["httponly"])

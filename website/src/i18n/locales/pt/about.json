@@ -28,24 +28,7 @@
   "team": {
     "heading": "Conheça os especialistas",
     "subtitle": "A nossa experiente equipa de naturalistas, rastreadores e especialistas em hospitalidade garante que a sua viagem seja impecável.",
-    "contactOnWhatsApp": "Contactar via WhatsApp",
-    "members": {
-      "juma": {
-        "role": "Guia de campo sénior e rastreador",
-        "bio": "Com mais de uma década de experiência em rastreamento no Serengeti, o conhecimento profundo de Juma sobre o comportamento dos predadores garante que está sempre no lugar certo, na hora certa.",
-        "imageAlt": "Retrato profissional de Juma Mdoe, guia de safári tanzaniano, junto a um bosque de acácias desfocado."
-      },
-      "amina": {
-        "role": "Diretora de experiência do hóspede",
-        "bio": "Amina supervisiona cada detalhe da sua estadia, desde requisitos alimentares específicos até à organização de experiências surpresa ao pôr do sol no mato.",
-        "imageAlt": "Retrato de uma gestora de um lodge de safári tanzaniano em frente a uma tenda de lona sofisticada."
-      },
-      "elias": {
-        "role": "Arquiteto-chefe de itinerários",
-        "bio": "Elias cria os nossos percursos únicos, garantindo que evite as multidões para descobrir os cantos mais autênticos e deslumbrantes dos parques.",
-        "imageAlt": "Retrato de um conservacionista tanzaniano sénior e planeador de rotas a olhar para uma paisagem de savana."
-      }
-    }
+    "contactOnWhatsApp": "Contactar via WhatsApp"
   },
   "interests": {
     "greatMigration": "A Grande Migração",

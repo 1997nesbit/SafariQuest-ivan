@@ -28,24 +28,7 @@
   "team": {
     "heading": "Meet the Experts",
     "subtitle": "Our seasoned team of naturalists, trackers, and hospitality experts ensure your journey is flawless.",
-    "contactOnWhatsApp": "Contact on WhatsApp",
-    "members": {
-      "juma": {
-        "role": "Senior Field Guide & Tracker",
-        "bio": "With over a decade of tracking experience in the Serengeti, Juma's intimate knowledge of predator behavior ensures you're always in the right place at the right time.",
-        "imageAlt": "A professional portrait of Juma Mdoe, a Tanzanian safari field guide, standing against a blurred acacia woodland."
-      },
-      "amina": {
-        "role": "Guest Experience Director",
-        "bio": "Amina oversees every detail of your stay, from specialized dietary requirements to orchestrating surprise sundowner experiences in the bush.",
-        "imageAlt": "A portrait of a Tanzanian safari lodge manager standing in front of an upscale canvas tent."
-      },
-      "elias": {
-        "role": "Head Itinerary Architect",
-        "bio": "Elias crafts our unique routes, ensuring you bypass the crowds to discover the most authentic and breathtaking corners of the parks.",
-        "imageAlt": "A portrait of a senior Tanzanian conservationist and route planner looking across a savanna landscape."
-      }
-    }
+    "contactOnWhatsApp": "Contact on WhatsApp"
   },
   "interests": {
     "greatMigration": "The Great Migration",

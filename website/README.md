@@ -59,23 +59,28 @@ src/
 | Auth | `/sign-in`, `/set-password` | anyone |
 | Tourist account | `/account`, `/account/trips`, `/account/trips/:tripId`, `/account/invoices`, `/account/complaints`, `/account/profile` | `tourist` |
 | Guide portal | `/guide`, `/guide/trips/:tripId`, `/guide/trips/:tripId/progress`, `/guide/reviews`, `/guide/support`, `/guide/profile` | `guide` |
-| Referral agent portal | `/agent` | `referral_agent` |
-| Admin portal | `/admin`, `/admin/inquiries`, `/admin/clients`, `/admin/invoices`, `/admin/invoices/:invoiceId`, `/admin/finance`, `/admin/pricing`, `/admin/guides`, `/admin/complaints`, `/admin/referrals`, `/admin/content` (Safaris / Region Safaris / Regions / Parks tabs, each with its own `Admin*Form`), `/admin/analytics`, `/admin/users` (includes the audit-log widget) | `admin` |
+| Referral agent portal | `/agent` | a `tourist` with the agent profile on (`isReferralAgent`) |
+| Admin portal | `/admin`, `/admin/inquiries`, `/admin/clients`, `/admin/invoices`, `/admin/invoices/:invoiceId`, `/admin/finance`, `/admin/pricing`, `/admin/guides`, `/admin/complaints`, `/admin/referrals`, `/admin/content` (Safaris / Region Safaris / Regions / Parks / Team tabs, each with its own `Admin*Form`), `/admin/analytics`, `/admin/users` (includes the audit-log widget) | `admin` |
 
-`auth/RequireRole` wraps the account/guide/agent/admin route trees and
-redirects to `/sign-in` (or the correct portal home, via the shared
-`ROLE_HOME` map in `api/auth.ts`) if the signed-in user's role doesn't
-match. `/account` additionally self-redirects any signed-in non-tourist
-role to their own `ROLE_HOME` — it isn't wrapped in `RequireRole` like the
-others (a tourist can also reach it signed *out*, mid-checkout), so the
-guard lives inside `AccountLayout` instead.
+`auth/RequireRole` wraps the guide and admin route trees and redirects to
+`/sign-in` if the signed-in user's role doesn't match. `/agent` uses
+`auth/RequireAgent` instead: being a referral agent is a profile on a
+tourist account (`user.isReferralAgent`), not a role, so `RequireRole` can't
+express it. A signed-out visitor goes to `/sign-in?next=/agent`; a
+signed-in tourist without the profile goes to `/become-agent`, where one
+click activates it. `/account` additionally self-redirects any signed-in
+non-tourist role to their own dashboard — it isn't wrapped in `RequireRole`
+(a tourist can also reach it signed *out*, mid-checkout), so the guard lives
+inside `AccountLayout` instead.
 
-The header's post-sign-in **Dashboard** button (and every other role→home
-redirect — `SignIn.tsx`, `AccountLayout.tsx`) reads this same `ROLE_HOME`
-map rather than keeping its own copy. A page that used to keep a local
-duplicate is exactly how signing in as a `referral_agent` from the generic
-`/sign-in` page once landed on the tourist `/account` dashboard instead of
-`/agent` — see `CHANGELOG.md`.
+**Where a user lands is decided by the backend**, not a client-side map:
+login, register and set-password responses carry `home` (`User.home_path`),
+which `AuthContext` returns and `useHomeNavigate` (`i18n/useLocale.ts`)
+follows; the header's Dashboard button uses `localizeHome(locale,
+user.home)`. `SignIn.tsx` honours a same-site `?next=` over `home`. There's
+deliberately no `ROLE_HOME` table any more — a role alone no longer
+determines the landing page (an agent who has never booked lands on
+`/agent`, everyone else on `/account`). See `CHANGELOG.md`.
 
 ### Region → Park → Safari, mirrored from the backend
 
@@ -120,7 +125,7 @@ paidToEmail}`) rather than each having their own.
 Only a signed-in `tourist` (or nobody, i.e. checkout will create the
 account) can reach the payment step — `Checkout.tsx` and `PlanReview.tsx`
 both check `user.role` and show a "Sign In Required" screen with a sign-out
-button if a guide/admin/referral-agent account is signed in, instead of
+button if a guide/admin account is signed in, instead of
 letting them fill out the whole form and hit a 400 at the very end (the
 backend rejects it too — see `backend/README.md`'s accounts section).
 
@@ -133,27 +138,33 @@ cookie session, no re-entered credentials or card details.
 ### Referral program
 
 A field-sales referral system, backed by the `referrals` Django app (see
-`backend/README.md` for the full model). An agent signs up self-serve at
-`/become-agent` (`pages/ReferralSignup.tsx`), then from their own dashboard
-(`pages/agent/AgentDashboard.tsx`, `/agent`) generates single-use codes —
-each shown once with its expiry, plus a running list of their own codes
-with a status badge (active/used/expired) and, once redeemed, the
-resulting booking and commission owed/paid.
+`backend/README.md` for the full model). Being an agent is a profile on an
+ordinary tourist account, so one login can both book trips and refer others.
+A visitor joins at `/become-agent` (`pages/ReferralSignup.tsx`, which adapts
+to signed-out / tourist / already-agent states and shows the commission rate
+and validity up front); a traveller who just booked gets a one-click
+"Refer & Earn" card on `/booking-confirmed` (`activateReferralAgent()`).
+From `pages/agent/AgentDashboard.tsx` (`/agent`, with a "My Trips" link back
+to the tourist area) they generate single-use codes — each shown once with
+its expiry (180 days by default, admin-configurable), plus a running list of
+their own codes with a status badge (active/used/expired) and, once
+redeemed, the resulting booking and commission owed/paid.
 
-At checkout, `components/checkout/ReferralCodeField.tsx` validates a code
-on blur (`POST /api/referrals/codes/validate/`) before submit, discounting
-the deposit live if it's active. `pages/admin/AdminReferrals.tsx` is the
-admin side: a settings card to edit the discount/commission percentages,
-and a table of every redemption with a "Mark Paid" action — same
-`useFetch` + table + status-badge pattern as the rest of the admin portal
-(e.g. `AdminStaffGuides.tsx`).
+At checkout, `components/checkout/ReferralCodeField.tsx` shows the live
+discount rate, validates a code on blur
+(`POST /api/referrals/codes/validate/`) and discounts the deposit if it's
+active. `pages/admin/AdminReferrals.tsx` is the admin side: a settings card
+for the discount/commission percentages and code lifetime, and a table of
+every redemption with a "Mark Paid" action. `AdminCustomers.tsx` has
+Travellers / Agents filter tabs so agents who never travel don't skew the
+customer stats.
 
 ### Admin content editing
 
-`pages/admin/AdminContent.tsx` is the CMS-style hub with four tabs
-(Safaris, Region Safaris, Regions, Parks), each backed by a matching
-`Admin*Form.tsx` (`AdminSafariForm`, `AdminRegionSafariForm`,
-`AdminDestinationForm`, `AdminParkForm`) that reuses
+`pages/admin/AdminContent.tsx` is the CMS-style hub with five tabs
+(Safaris, Region Safaris, Regions, Parks, Team), each backed by a
+matching `Admin*Form.tsx` (`AdminSafariForm`, `AdminRegionSafariForm`,
+`AdminDestinationForm`, `AdminParkForm`, `AdminTeamMemberForm`) that reuses
 `components/admin/ImageDropzone.tsx` to upload images through the backend's
 `/api/uploads/` endpoint before saving the record. The admin bookings
 pipeline (`AdminBookingsPipeline` / `AdminBookingDetail`) is a kanban over
@@ -267,6 +278,7 @@ same artifact.
 |---|---|
 | `VITE_API_URL` | Base URL of the backend API. **Required for `vite build`** — the build itself fails without it (`vite.config.ts`), rather than silently shipping a bundle hardcoded to `http://localhost:8000`, which is what caused production to show "Something went wrong" the first time (see root `CHANGELOG.md`). Falls back to `http://localhost:8000` for `vite dev` only. |
 | `VITE_CONTACT_ADDRESS`, `VITE_CONTACT_EMAIL`, `VITE_CONTACT_PHONE`, `VITE_CONTACT_PHONE_HREF` | Footer/contact info. |
+| `VITE_CONTACT_SECONDARY_NAME`, `VITE_CONTACT_SECONDARY_EMAIL`, `VITE_CONTACT_SECONDARY_PHONE` | Optional second contact shown in the footer. |
 | `VITE_SOCIAL_FACEBOOK`, `VITE_SOCIAL_INSTAGRAM`, `VITE_SOCIAL_WHATSAPP` | Footer social links, genuinely optional — empty in `.env`/`.env.example` today. Typed `string \| undefined`, not `string`; the footer only renders each icon when its value is set (`components/Footer.tsx`), rather than the `href="#"` dead links an unconditional render used to produce. |
 
 ## Deployment (Railway)

@@ -270,3 +270,20 @@ export function apiDelete(path: string): Promise<void> {
 export function apiUpload<T>(path: string, formData: FormData): Promise<T> {
   return request<T>(path, { method: 'POST', body: formData }, {}, UPLOAD_TIMEOUT_MS)
 }
+
+/**
+ * Fire-and-forget POST that survives the page navigating away — for counters
+ * recorded as the visitor leaves (an ad click opening another site). Sent with
+ * no body, so the browser treats it as a simple CORS request with no preflight,
+ * which `sendBeacon` couldn't perform. Failures are deliberately ignored: a
+ * lost count must never get in the way of the click itself.
+ */
+export function apiBeacon(path: string): void {
+  const url = `${API_BASE}${path}`
+  try {
+    if (typeof navigator !== 'undefined' && navigator.sendBeacon?.(url)) return
+    void fetch(url, { method: 'POST', keepalive: true, credentials: 'omit' }).catch(() => {})
+  } catch {
+    // Counting is best-effort.
+  }
+}

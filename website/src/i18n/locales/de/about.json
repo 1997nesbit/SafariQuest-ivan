@@ -28,24 +28,7 @@
   "team": {
     "heading": "Lernen Sie unsere Experten kennen",
     "subtitle": "Unser erfahrenes Team aus Naturkundlern, Fährtenlesern und Gastgewerbeexperten sorgt für eine makellose Reise.",
-    "contactOnWhatsApp": "Über WhatsApp kontaktieren",
-    "members": {
-      "juma": {
-        "role": "Leitender Feldguide & Fährtenleser",
-        "bio": "Mit über einem Jahrzehnt Tracking-Erfahrung in der Serengeti sorgt Jumas intime Kenntnis des Raubtierverhaltens dafür, dass Sie immer zur richtigen Zeit am richtigen Ort sind.",
-        "imageAlt": "Professionelles Porträt von Juma Mdoe, einem tansanischen Safari-Feldguide, vor einem unscharfen Akazienwald."
-      },
-      "amina": {
-        "role": "Direktorin für Gästeerlebnis",
-        "bio": "Amina überwacht jedes Detail Ihres Aufenthalts, von speziellen Ernährungsanforderungen bis zur Organisation überraschender Sundowner-Erlebnisse im Busch.",
-        "imageAlt": "Porträt einer tansanischen Safari-Lodge-Managerin vor einem gehobenen Zeltbau."
-      },
-      "elias": {
-        "role": "Leitender Reiserouten-Architekt",
-        "bio": "Elias entwirft unsere einzigartigen Routen, damit Sie den Menschenmassen ausweichen und die authentischsten und atemberaubendsten Ecken der Parks entdecken.",
-        "imageAlt": "Porträt eines erfahrenen tansanischen Naturschützers und Routenplaners, der über eine Savannenlandschaft blickt."
-      }
-    }
+    "contactOnWhatsApp": "Über WhatsApp kontaktieren"
   },
   "interests": {
     "greatMigration": "Die Große Migration",

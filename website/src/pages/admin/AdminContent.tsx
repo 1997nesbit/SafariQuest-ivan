@@ -6,9 +6,10 @@ import { deleteDestination, getDestinations } from '../../api/destinations'
 import { deletePark, getParks } from '../../api/parks'
 import { deleteRegionSafari, getRegionSafaris } from '../../api/regionSafaris'
 import { useFetch } from '../../lib/useFetch'
+import { AdminTeamTab } from './AdminTeamTab'
 import { ApiError } from '../../lib/api'
 
-const TABS = ['Safaris', 'Region Safaris', 'Regions', 'Parks'] as const
+const TABS = ['Safaris', 'Region Safaris', 'Regions', 'Parks', 'Team'] as const
 type Tab = (typeof TABS)[number]
 
 const STATUS_FILTERS = ['All Packages', 'Published', 'Drafts'] as const
@@ -116,7 +117,9 @@ export function AdminContent() {
           type="button"
           onClick={() =>
             navigate(
-              tab === 'Regions'
+              tab === 'Team'
+                ? '/admin/content/team/new'
+                : tab === 'Regions'
                 ? '/admin/content/destinations/new'
                 : tab === 'Parks'
                   ? '/admin/content/parks/new'
@@ -128,7 +131,9 @@ export function AdminContent() {
           className="flex items-center gap-2 bg-savanna-green text-on-primary py-2.5 px-6 rounded-lg font-label-md text-sm hover:opacity-90 transition-opacity w-fit shrink-0 shadow-sm"
         >
           <Plus size={18} />
-          {tab === 'Regions'
+          {tab === 'Team'
+            ? 'Add Team Member'
+            : tab === 'Regions'
             ? 'Add New Destination'
             : tab === 'Parks'
               ? 'Add New Park'
@@ -138,13 +143,13 @@ export function AdminContent() {
         </button>
       </div>
 
-      <div className="border-b border-sand-stone mb-8 flex gap-8">
+      <div className="border-b border-sand-stone mb-8 flex gap-6 md:gap-8 overflow-x-auto">
         {TABS.map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => setTab(t)}
-            className={`font-label-md text-sm py-4 border-b-2 transition-all ${
+            className={`font-label-md text-sm py-4 border-b-2 transition-all shrink-0 whitespace-nowrap ${
               tab === t ? 'text-savanna-green font-bold border-savanna-green' : 'border-transparent text-on-surface-variant hover:text-savanna-green'
             }`}
           >
@@ -153,7 +158,9 @@ export function AdminContent() {
         ))}
       </div>
 
-      {tab === 'Safaris' ? (
+      {tab === 'Team' ? (
+        <AdminTeamTab />
+      ) : tab === 'Safaris' ? (
         <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-sand-stone/50 overflow-hidden">
           <div className="p-4 border-b border-sand-stone bg-surface/50 flex items-center gap-2">
             {STATUS_FILTERS.map((f) => (

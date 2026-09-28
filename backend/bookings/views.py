@@ -285,9 +285,14 @@ class BookingViewSet(
             if referral_code_value and trip_total:
                 # select_for_update + is_used=False in the same atomic block is what makes
                 # "once one person uses it, others can't" race-safe under concurrent redeems.
+                # exclude(agent=...): an agent can also book now, and must not collect
+                # commission on their own trip. The validate endpoint already refuses the
+                # code at checkout; this is the backstop, dropped silently like any other
+                # unusable code.
                 referral_code = (
                     ReferralCode.objects.select_for_update()
                     .filter(code=referral_code_value.strip().upper(), is_used=False)
+                    .exclude(agent=request.user)
                     .first()
                 )
                 if referral_code and not referral_code.is_expired:

@@ -9,6 +9,12 @@ from django.utils import timezone
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 CODE_LENGTH = 8
 
+# Agents share codes long after generating them (a screenshot in a gallery, a post that stays
+# up for months), so the default lifetime is six months rather than days.
+DEFAULT_CODE_EXPIRY_DAYS = 180
+MIN_CODE_EXPIRY_DAYS = 1
+MAX_CODE_EXPIRY_DAYS = 730
+
 
 def generate_referral_code() -> str:
     while True:
@@ -22,7 +28,7 @@ class ReferralSettings(models.Model):
 
     discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=2)
     commission_percent = models.DecimalField(max_digits=5, decimal_places=2, default=5)
-    code_expiry_days = models.PositiveIntegerField(default=3)
+    code_expiry_days = models.PositiveIntegerField(default=DEFAULT_CODE_EXPIRY_DAYS)
 
     @classmethod
     def get_solo(cls) -> "ReferralSettings":

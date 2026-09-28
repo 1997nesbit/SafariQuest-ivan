@@ -1,11 +1,13 @@
+from django.contrib.auth import get_user_model
 from rest_framework import generics, mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from accounts.permissions import IsAdminRole
-from accounts.views import _set_auth_cookies
+from accounts.views import _set_auth_cookies, auth_payload
 
 from .models import ReferralCode, ReferralRedemption, ReferralSettings
 from .permissions import IsReferralAgentRole
@@ -19,9 +21,16 @@ from .serializers import (
     ReferralSettingsSerializer,
 )
 
+User = get_user_model()
+
 
 class ReferralAgentRegisterView(APIView):
+    """Creates a new tourist account with the agent profile already on. For people who
+    don't have an account yet — existing users use ReferralAgentActivateView."""
+
     permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "signup"
 
     def post(self, request):
         serializer = ReferralAgentRegisterSerializer(data=request.data)
@@ -29,9 +38,28 @@ class ReferralAgentRegisterView(APIView):
             first_error = str(next(iter(serializer.errors.values()))[0])
             return Response({"detail": first_error}, status=status.HTTP_400_BAD_REQUEST)
         user = serializer.save()
-        response = Response({"role": user.role}, status=status.HTTP_201_CREATED)
+        response = Response(auth_payload(user), status=status.HTTP_201_CREATED)
         _set_auth_cookies(response, user)
         return response
+
+
+class ReferralAgentActivateView(APIView):
+    """Switches the agent profile on for the signed-in tourist, so a traveller can refer
+    friends with the same login they booked with. Calling it again is harmless."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        if user.role != User.ROLE_TOURIST:
+            return Response(
+                {"detail": "Staff and guide accounts can't become referral agents."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if not user.is_referral_agent:
+            user.is_referral_agent = True
+            user.save(update_fields=["is_referral_agent"])
+        return Response(auth_payload(user), status=status.HTTP_200_OK)
 
 
 class ReferralCodeViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
@@ -65,7 +93,7 @@ class ReferralCodeValidateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        serializer = ReferralCodeValidateSerializer(data=request.data)
+        serializer = ReferralCodeValidateSerializer(data=request.data, context={"request": request})
         if not serializer.is_valid():
             first_error = str(next(iter(serializer.errors.values()))[0])
             return Response({"detail": first_error}, status=status.HTTP_400_BAD_REQUEST)

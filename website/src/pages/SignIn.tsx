@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, ArrowRight, Eye, EyeSlash, GoogleLogo } from '@phosphor-icons/react'
 import { Link } from '../i18n/routing'
-import { useRoleHomeNavigate } from '../i18n/useLocale'
+import { useHomeNavigate } from '../i18n/useLocale'
 import { useAuth } from '../auth/AuthContext'
 import { ApiError } from '../lib/api'
+import { PasswordInput } from '../components/PasswordInput'
 
 type Tab = 'signin' | 'signup'
 
@@ -12,10 +14,26 @@ export function SignIn() {
   const { t } = useTranslation('auth')
   const [tab, setTab] = useState<Tab>('signin')
   const [showPassword, setShowPassword] = useState(false)
+  const [signUpPassword, setSignUpPassword] = useState('')
+  const [signUpConfirmPassword, setSignUpConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const navigate = useRoleHomeNavigate()
+  const navigateHome = useHomeNavigate()
+  const [searchParams] = useSearchParams()
   const { login, register } = useAuth()
+
+  // ?next= brings people back to where they were headed (e.g. "sign in to activate your
+  // agent profile" on /become-agent). Only same-site paths: an absolute or
+  // protocol-relative URL here would turn the sign-in page into an open redirect.
+  const nextParam = searchParams.get('next')
+  const next =
+    nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//') && !nextParam.includes('\\')
+      ? nextParam
+      : null
+
+  function goOnward(home: string) {
+    navigateHome(next ?? home)
+  }
 
   async function handleSignInSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -25,8 +43,7 @@ export function SignIn() {
     const password = String(form.get('password') ?? '')
     setSubmitting(true)
     try {
-      const role = await login(email, password)
-      navigate(role)
+      goOnward(await login(email, password))
     } catch (err) {
       setError(err instanceof ApiError && err.status === 401 ? t('signIn.incorrectCredentials') : t('signIn.somethingWentWrong'))
     } finally {
@@ -41,11 +58,9 @@ export function SignIn() {
     const firstName = String(form.get('firstName') ?? '')
     const lastName = String(form.get('lastName') ?? '')
     const email = String(form.get('email') ?? '')
-    const password = String(form.get('password') ?? '')
     setSubmitting(true)
     try {
-      const role = await register(email, `${firstName} ${lastName}`.trim(), password)
-      navigate(role)
+      goOnward(await register(email, `${firstName} ${lastName}`.trim(), signUpPassword))
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('signIn.somethingWentWrong'))
     } finally {
@@ -215,15 +230,42 @@ export function SignIn() {
                 <label htmlFor="signup-password" className="block font-label-sm text-label-sm text-on-surface mb-2">
                   {t('signIn.createPassword')}
                 </label>
-                <input
+                <PasswordInput
                   id="signup-password"
                   name="password"
-                  type="password"
                   placeholder={t('signIn.createPasswordPlaceholder')}
                   required
+                  minLength={8}
                   autoComplete="new-password"
-                  className="w-full min-h-[44px] bg-ivory-base border border-sand-stone rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-savanna-green"
+                  value={signUpPassword}
+                  onChange={(e) => setSignUpPassword(e.target.value)}
                 />
+              </div>
+              <div>
+                <label htmlFor="signup-password-confirm" className="block font-label-sm text-label-sm text-on-surface mb-2">
+                  {t('signIn.confirmPassword')}
+                </label>
+                <PasswordInput
+                  id="signup-password-confirm"
+                  name="confirmPassword"
+                  placeholder={t('signIn.confirmPasswordPlaceholder')}
+                  required
+                  autoComplete="new-password"
+                  value={signUpConfirmPassword}
+                  onChange={(e) => setSignUpConfirmPassword(e.target.value)}
+                  customValidity={signUpConfirmPassword !== signUpPassword ? t('signIn.passwordsDontMatch') : ''}
+                  aria-invalid={signUpConfirmPassword !== '' && signUpConfirmPassword !== signUpPassword}
+                  aria-describedby={
+                    signUpConfirmPassword !== '' && signUpConfirmPassword !== signUpPassword
+                      ? 'signup-password-confirm-error'
+                      : undefined
+                  }
+                />
+                {signUpConfirmPassword !== '' && signUpConfirmPassword !== signUpPassword && (
+                  <p id="signup-password-confirm-error" role="alert" className="text-error font-label-sm text-label-sm mt-2">
+                    {t('signIn.passwordsDontMatch')}
+                  </p>
+                )}
               </div>
               {error && (
                 <p role="alert" className="text-error font-label-sm text-label-sm">

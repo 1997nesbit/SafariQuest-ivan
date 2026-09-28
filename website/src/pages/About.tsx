@@ -4,6 +4,10 @@ import { Link } from '../i18n/routing'
 import { Leaf, Handshake, SealCheck, WhatsappLogo, ChatCircleText, ArrowRight } from '@phosphor-icons/react'
 import { Reveal } from '../components/Reveal'
 import { contact } from '../config/contact'
+import { getTeam, localizedTeamTexts } from '../api/team'
+import { useFetch } from '../lib/useFetch'
+import { initials } from '../lib/initials'
+import { useCurrentLocale } from '../i18n/useLocale'
 
 const VALUES = [
   { icon: Leaf, key: 'conservation' },
@@ -16,31 +20,14 @@ const STATS = [
   { value: '100%', key: 'localGuides' },
 ] as const
 
-const TEAM = [
-  {
-    name: 'Juma Mdoe',
-    key: 'juma',
-    image:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuD5enwguDy8qXqtZMfIG-73aAyI3euBWo3x4EDN22HTYzaDoMv2IhkJU6U6Z_r-Y3ERrwjnLaUH-Y6MZMbc7pfFrwtQVAM2aZTlZUBsqiaspB8IHAphQS5SRDKZ6XLzF5LWiByVNX8B4ckHipg5hBn8AHeRxGOw-8TQ31tD2pnv8w9n6eSjWZ-QnZAyFxS4AGzf03dyLGKySf3GbBoRsmRC_c5Tedm35c4NGC9r9iemG2YBZyna-0KM',
-  },
-  {
-    name: 'Amina Salim',
-    key: 'amina',
-    image:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuB2gSq25f8PaKDrWwPErwUxswVJxrabBHpTwXuuqocSWMNhkUpFMXFIzgptK2_xYsBVXN0dZmAx-meHSEbUVy7qvGbqJfeRnI-m-M1JeMau5vmUAOkVYXfxny0nemPfj0ElZAbK2fEW7uDlUbXyW5F6eQi7ouDD_V4eCyax5kTEiZBIl5lQCKxIIYzAWcXYmQByA4sU0nA7AMPqR-p7uEtSOKS5qqto0DQvV-ON6LPH1oYTioFFR2Ns',
-  },
-  {
-    name: 'Elias Nyerere',
-    key: 'elias',
-    image:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuA9vfiPiRJgglE7Ui7OQsQ2_LbiHxT_UIEqyiXlDS5ttwg9tyJY-6X58OFp0aNIp7_ZZRZGKivgQZ2YGDwYtWbGc_Wl0M1e5GxRLxdQoVykc6TiHAaiTvWDesbSEX-0-GngyIPlkZkk8iWkgyQaX6gMW2GyOT7q2KOkJzLvp3lvVYp--L3EjlkVia8fi94yMyA3CH8tXf6_kxrp76vMxdCOzpu_GKDS-3Ly4LqM9C7G67SW06dUiQbs',
-  },
-] as const
-
 const INTEREST_KEYS = ['greatMigration', 'luxuryHoneymoon', 'familyAdventure', 'photographicSafari'] as const
 
 export function About() {
   const { t } = useTranslation('about')
+  const locale = useCurrentLocale()
+  // Team members come from the API. A failed fetch or an empty team hides the
+  // section entirely rather than leaving a heading over nothing.
+  const { data: team } = useFetch(getTeam, [])
   // This section used to be a name/email/interest form that showed "Inquiry
   // sent" and then threw the lead away — it had no endpoint, and its three
   // fields cannot satisfy POST /api/bookings/, which needs dates, guests and a
@@ -124,52 +111,67 @@ export function About() {
       </section>
 
       {/* Meet the Experts */}
-      <section className="py-20 md:py-section-gap px-5 md:px-margin-desktop max-w-container-max mx-auto">
-        <Reveal className="text-center mb-16">
-          <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-4">
-            {t('team.heading')}
-          </h2>
-          <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto">
-            {t('team.subtitle')}
-          </p>
-        </Reveal>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter">
-          {TEAM.map((member, i) => (
-            <Reveal
-              key={member.key}
-              delay={i * 100}
-              className="bg-surface-container-lowest rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(45,45,45,0.06)] group"
-            >
-              <div className="h-80 overflow-hidden">
-                <img
-                  src={member.image}
-                  alt={t(`team.members.${member.key}.imageAlt`)}
-                  loading="lazy"
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                />
-              </div>
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-2 gap-3">
-                  <div>
-                    <h3 className="font-headline-md text-[24px] text-on-surface">{member.name}</h3>
-                    <p className="font-body-md text-terracotta">{t(`team.members.${member.key}.role`)}</p>
+      {team && team.length > 0 && (
+        <section className="py-20 md:py-section-gap px-5 md:px-margin-desktop max-w-container-max mx-auto">
+          <Reveal className="text-center mb-16">
+            <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-4">
+              {t('team.heading')}
+            </h2>
+            <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto">
+              {t('team.subtitle')}
+            </p>
+          </Reveal>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter">
+            {team.map((member, i) => {
+              const texts = localizedTeamTexts(member, locale)
+              return (
+                <Reveal
+                  key={member.id}
+                  delay={i * 100}
+                  className="bg-surface-container-lowest rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(45,45,45,0.06)] group"
+                >
+                  <div className="h-80 overflow-hidden">
+                    {member.photo ? (
+                      <img
+                        src={member.photo}
+                        alt={texts.photoAlt}
+                        loading="lazy"
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div
+                        role="img"
+                        aria-label={texts.photoAlt}
+                        className="w-full h-full bg-surface-container flex items-center justify-center font-headline-lg text-[64px] text-on-surface-variant/60"
+                      >
+                        {initials(member.name)}
+                      </div>
+                    )}
                   </div>
-                  {contact.social.whatsapp && (
-                    <a
-                      href={contact.social.whatsapp}
-                      title={t('team.contactOnWhatsApp')}
-                      className="text-savanna-green hover:text-primary-container transition-colors flex items-center justify-center bg-surface-container-low p-2 rounded-full shrink-0"
-                    >
-                      <ChatCircleText size={22} weight="fill" />
-                    </a>
-                  )}
-                </div>
-                <p className="font-body-md text-on-surface-variant mt-4 line-clamp-3">{t(`team.members.${member.key}.bio`)}</p>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </section>
+                  <div className="p-6">
+                    <div className="flex justify-between items-start mb-2 gap-3">
+                      <div className="min-w-0">
+                        <h3 className="font-headline-md text-[24px] text-on-surface">{member.name}</h3>
+                        <p className="font-body-md text-terracotta">{texts.title}</p>
+                      </div>
+                      {contact.social.whatsapp && (
+                        <a
+                          href={contact.social.whatsapp}
+                          title={t('team.contactOnWhatsApp')}
+                          className="text-savanna-green hover:text-primary-container transition-colors flex items-center justify-center bg-surface-container-low p-2 rounded-full shrink-0"
+                        >
+                          <ChatCircleText size={22} weight="fill" />
+                        </a>
+                      )}
+                    </div>
+                    <p className="font-body-md text-on-surface-variant mt-4 line-clamp-3">{texts.bio}</p>
+                  </div>
+                </Reveal>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Integrated Inquiry Section */}
       <section id="contact" className="bg-surface-container-low py-20 md:py-section-gap scroll-mt-24">

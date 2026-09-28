@@ -3,7 +3,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.utils import timezone
 from rest_framework import serializers
 
-from .models import ReferralCode, ReferralRedemption, ReferralSettings
+from .models import MAX_CODE_EXPIRY_DAYS, MIN_CODE_EXPIRY_DAYS, ReferralCode, ReferralRedemption, ReferralSettings
 
 User = get_user_model()
 
@@ -17,8 +17,13 @@ class ReferralAgentRegisterSerializer(serializers.ModelSerializer):
 
     def validate_email(self, value):
         value = User.objects.normalize_email(value)
+        # Never attach an agent profile to an existing account from here: this endpoint is
+        # anonymous, so doing so would let anyone who knows an email address change that
+        # person's account. Existing users sign in and use the activate endpoint instead.
         if User.objects.filter(email__iexact=value).exists():
-            raise serializers.ValidationError("An account with this email already exists.")
+            raise serializers.ValidationError(
+                "You already have a Pande account with this email. Sign in to activate your agent profile."
+            )
         return value
 
     def validate_password(self, value):
@@ -30,7 +35,8 @@ class ReferralAgentRegisterSerializer(serializers.ModelSerializer):
             email=validated_data["email"],
             password=validated_data["password"],
             name=validated_data.get("name", ""),
-            role=User.ROLE_REFERRAL_AGENT,
+            role=User.ROLE_TOURIST,
+            is_referral_agent=True,
         )
 
 
@@ -89,19 +95,31 @@ class ReferralCodeValidateSerializer(serializers.Serializer):
             raise serializers.ValidationError("This referral code has already been used.")
         if referral_code.is_expired:
             raise serializers.ValidationError("This referral code has expired.")
+        # One account can now both book and refer; using your own code would pay you
+        # commission on your own discounted trip.
+        request = self.context.get("request")
+        if request and referral_code.agent_id == request.user.id:
+            raise serializers.ValidationError("You can't use your own referral code.")
         return referral_code
 
 
 class ReferralSettingsPublicSerializer(serializers.ModelSerializer):
     class Meta:
         model = ReferralSettings
-        fields = ["discount_percent"]
+        fields = ["discount_percent", "commission_percent", "code_expiry_days"]
 
 
 class ReferralSettingsSerializer(serializers.ModelSerializer):
     class Meta:
         model = ReferralSettings
         fields = ["discount_percent", "commission_percent", "code_expiry_days"]
+
+    def validate_code_expiry_days(self, value):
+        if not MIN_CODE_EXPIRY_DAYS <= value <= MAX_CODE_EXPIRY_DAYS:
+            raise serializers.ValidationError(
+                f"Expiry must be between {MIN_CODE_EXPIRY_DAYS} and {MAX_CODE_EXPIRY_DAYS} days."
+            )
+        return value
 
 
 class AdminReferralRedemptionSerializer(serializers.ModelSerializer):

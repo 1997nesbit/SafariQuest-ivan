@@ -19,7 +19,7 @@ class MeViewTests(APITestCase):
         self.client.post(reverse("login"), {"email": "guide@example.com", "password": "pw12345"})
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {"role": "guide", "name": "Guide Person", "email": "guide@example.com"})
+        self.assertEqual(response.data, {"role": "guide", "is_referral_agent": False, "home": "/guide", "name": "Guide Person", "email": "guide@example.com"})
 
     def test_works_after_silent_refresh(self):
         self.client.post(reverse("login"), {"email": "guide@example.com", "password": "pw12345"})
@@ -28,4 +28,4 @@ class MeViewTests(APITestCase):
         self.assertEqual(refresh_response.status_code, status.HTTP_200_OK)
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {"role": "guide", "name": "Guide Person", "email": "guide@example.com"})
+        self.assertEqual(response.data, {"role": "guide", "is_referral_agent": False, "home": "/guide", "name": "Guide Person", "email": "guide@example.com"})

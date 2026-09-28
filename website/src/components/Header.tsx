@@ -1,23 +1,22 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink as PlainNavLink } from 'react-router-dom'
-import { List, X, UserCircle, SignOut, HandCoins } from '@phosphor-icons/react'
+import { List, X, UserCircle, SignOut } from '@phosphor-icons/react'
 import { useAuth } from '../auth/AuthContext'
 import { NavLink } from '../i18n/routing'
 import { useCurrentLocale, useLocalizedNavigate as useNavigate } from '../i18n/useLocale'
-import { localize } from '../i18n/localize'
+import { localizeHome } from '../i18n/localize'
 import { LanguageSwitcher } from './LanguageSwitcher'
-import { ROLE_HOME } from '../api/auth'
 
 export function Header() {
   const { t } = useTranslation('common')
   const [menuOpen, setMenuOpen] = useState(false)
-  const { role, logout } = useAuth()
+  const { user, role, logout } = useAuth()
   const navigate = useNavigate()
   const locale = useCurrentLocale()
-  // Only the tourist portal (/account) lives inside the locale-prefixed route tree — /guide,
-  // /agent, /admin are plain, unlocalized routes (see App.tsx and useRoleHomeNavigate).
-  const dashboardHref = role ? (role === 'tourist' ? localize(locale, ROLE_HOME.tourist) : ROLE_HOME[role]) : null
+  // The server decides where each user lands (trips first, or the agent dashboard for
+  // agents who've never booked); localizeHome only prefixes the tourist area.
+  const dashboardHref = user ? localizeHome(locale, user.home) : null
 
   const NAV_LINKS = [
     { label: t('nav.destinations'), to: '/destinations' },
@@ -62,13 +61,6 @@ export function Header() {
         <div className="flex-1" />
 
         <div className="flex items-center gap-1.5 xl:gap-2 shrink-0">
-          <NavLink
-            to="/become-agent"
-            className="hidden lg:flex items-center gap-1.5 text-terracotta font-label-sm text-label-sm px-3 py-2 rounded-full border border-terracotta/30 hover:bg-terracotta/10 transition-colors shrink-0 mr-1 whitespace-nowrap"
-          >
-            <HandCoins size={15} weight="bold" />
-            Refer &amp; Earn
-          </NavLink>
           <NavLink
             to="/plan"
             className="hidden lg:flex items-center bg-savanna-green text-on-primary font-label-md text-label-md px-4 xl:px-6 py-3 rounded hover:opacity-90 transition-opacity shrink-0 mr-1 xl:mr-2 whitespace-nowrap"
@@ -140,14 +132,6 @@ export function Header() {
             className="bg-savanna-green text-on-primary font-label-md text-label-md py-3 px-2 rounded-lg min-h-[44px] flex items-center justify-center mt-1"
           >
             {t('planYourJourney')}
-          </NavLink>
-          <NavLink
-            to="/become-agent"
-            onClick={() => setMenuOpen(false)}
-            className="font-label-md text-label-md py-3 px-2 rounded-lg min-h-[44px] flex items-center gap-1.5 text-terracotta hover:bg-terracotta/10"
-          >
-            <HandCoins size={20} />
-            Become a Referral Agent
           </NavLink>
           {role && dashboardHref ? (
             <>

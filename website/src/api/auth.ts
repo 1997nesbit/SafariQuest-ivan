@@ -1,27 +1,49 @@
 import { apiGet, apiPost } from '../lib/api'
 
-export type Role = 'tourist' | 'guide' | 'admin' | 'referral_agent'
+/** Which part of the site an account belongs to. Referral agent is not a role: it's a
+ * profile a tourist account can switch on (see `isReferralAgent`). */
+export type Role = 'tourist' | 'guide' | 'admin'
 
-interface RoleResponse {
+/** What every sign-in-shaped response says about the user. */
+export interface AuthResult {
   role: Role
+  isReferralAgent: boolean
+  /** Where to land after signing in, decided by the server (it depends on whether the
+   * user has bookings). Unprefixed: pass through localizeHome() before navigating. */
+  home: string
 }
 
-export interface MeResponse {
+interface AuthResultApiShape {
   role: Role
+  is_referral_agent: boolean
+  home: string
+}
+
+export interface MeResponse extends AuthResult {
   name: string
   email: string
 }
 
-export function login(email: string, password: string): Promise<RoleResponse> {
-  return apiPost<RoleResponse>('/api/auth/login/', { email, password })
+interface MeApiShape extends AuthResultApiShape {
+  name: string
+  email: string
+}
+
+function mapAuthResult(raw: AuthResultApiShape): AuthResult {
+  return { role: raw.role, isReferralAgent: raw.is_referral_agent, home: raw.home }
+}
+
+export async function login(email: string, password: string): Promise<AuthResult> {
+  return mapAuthResult(await apiPost<AuthResultApiShape>('/api/auth/login/', { email, password }))
 }
 
 export function logout(): Promise<void> {
   return apiPost<void>('/api/auth/logout/')
 }
 
-export function fetchMe(): Promise<MeResponse> {
-  return apiGet<MeResponse>('/api/auth/me/')
+export async function fetchMe(): Promise<MeResponse> {
+  const raw = await apiGet<MeApiShape>('/api/auth/me/')
+  return { ...mapAuthResult(raw), name: raw.name, email: raw.email }
 }
 
 interface RegisterInput {
@@ -30,12 +52,12 @@ interface RegisterInput {
   password: string
 }
 
-export function register(input: RegisterInput): Promise<RoleResponse> {
-  return apiPost<RoleResponse>('/api/auth/register/', input)
+export async function register(input: RegisterInput): Promise<AuthResult> {
+  return mapAuthResult(await apiPost<AuthResultApiShape>('/api/auth/register/', input))
 }
 
-export function setPassword(uid: string, token: string, password: string): Promise<RoleResponse> {
-  return apiPost<RoleResponse>('/api/auth/set-password/', { uid, token, password })
+export async function setPassword(uid: string, token: string, password: string): Promise<AuthResult> {
+  return mapAuthResult(await apiPost<AuthResultApiShape>('/api/auth/set-password/', { uid, token, password }))
 }
 
 export function changePassword(currentPassword: string, newPassword: string): Promise<void> {
@@ -43,11 +65,4 @@ export function changePassword(currentPassword: string, newPassword: string): Pr
     current_password: currentPassword,
     new_password: newPassword,
   })
-}
-
-export const ROLE_HOME: Record<Role, string> = {
-  tourist: '/account',
-  guide: '/guide',
-  admin: '/admin',
-  referral_agent: '/agent',
 }

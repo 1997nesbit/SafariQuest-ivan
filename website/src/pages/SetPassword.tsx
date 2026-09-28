@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ArrowRight, Eye, EyeSlash } from '@phosphor-icons/react'
+import { ArrowRight } from '@phosphor-icons/react'
 import { Link } from '../i18n/routing'
-import { useRoleHomeNavigate } from '../i18n/useLocale'
+import { useHomeNavigate } from '../i18n/useLocale'
 import { useAuth } from '../auth/AuthContext'
+import { PasswordInput } from '../components/PasswordInput'
 import { ApiError } from '../lib/api'
 
 export function SetPassword() {
@@ -12,10 +13,9 @@ export function SetPassword() {
   const [params] = useSearchParams()
   const uid = params.get('uid') ?? ''
   const token = params.get('token') ?? ''
-  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const navigate = useRoleHomeNavigate()
+  const navigateHome = useHomeNavigate()
   const { setPassword } = useAuth()
 
   const linkLooksValid = uid.length > 0 && token.length > 0
@@ -25,10 +25,13 @@ export function SetPassword() {
     setError(null)
     const form = new FormData(event.currentTarget)
     const password = String(form.get('password') ?? '')
+    if (password !== String(form.get('confirmPassword') ?? '')) {
+      setError(t('setPassword.passwordsDontMatch'))
+      return
+    }
     setSubmitting(true)
     try {
-      const role = await setPassword(uid, token, password)
-      navigate(role)
+      navigateHome(await setPassword(uid, token, password))
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('setPassword.somethingWentWrong'))
     } finally {
@@ -54,24 +57,13 @@ export function SetPassword() {
               <label htmlFor="new-password" className="block font-label-sm text-label-sm text-on-surface mb-2">
                 {t('setPassword.newPassword')}
               </label>
-              <div className="relative">
-                <input
-                  id="new-password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  autoComplete="new-password"
-                  className="w-full min-h-[44px] bg-ivory-base border border-sand-stone rounded-lg px-4 py-3 pr-11 focus:outline-none focus:ring-1 focus:ring-savanna-green"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? t('signIn.hidePassword') : t('signIn.showPassword')}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface transition-colors"
-                >
-                  {showPassword ? <Eye size={20} /> : <EyeSlash size={20} />}
-                </button>
-              </div>
+              <PasswordInput id="new-password" name="password" required autoComplete="new-password" />
+            </div>
+            <div>
+              <label htmlFor="confirm-password" className="block font-label-sm text-label-sm text-on-surface mb-2">
+                {t('setPassword.confirmPassword')}
+              </label>
+              <PasswordInput id="confirm-password" name="confirmPassword" required autoComplete="new-password" />
             </div>
             {error && (
               <p role="alert" className="text-error font-label-sm text-label-sm">

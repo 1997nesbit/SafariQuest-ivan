@@ -53,6 +53,7 @@ import { AdminDestinationForm } from './pages/admin/AdminDestinationForm'
 import { AdminParkForm } from './pages/admin/AdminParkForm'
 import { AdminSafariForm } from './pages/admin/AdminSafariForm'
 import { AdminRegionSafariForm } from './pages/admin/AdminRegionSafariForm'
+import { AdminTeamMemberForm } from './pages/admin/AdminTeamMemberForm'
 import { AdminReferrals } from './pages/admin/AdminReferrals'
 import { AdminFinance } from './pages/admin/AdminFinance'
 import { AdminInvoices } from './pages/admin/AdminInvoices'
@@ -62,6 +63,7 @@ import { AdminAnalytics } from './pages/admin/AdminAnalytics'
 import { AdminUsers } from './pages/admin/AdminUsers'
 import { AuthProvider } from './auth/AuthContext'
 import { RequireRole } from './auth/RequireRole'
+import { RequireAgent } from './auth/RequireAgent'
 import { LocaleRoot } from './i18n/LocaleRoot'
 import { SUPPORTED_LOCALES } from './i18n/locales'
 import { detectPreferredLocale } from './i18n/detectLocale'
@@ -153,7 +155,7 @@ function App() {
           <Route path="support" element={<GuideSupport />} />
         </Route>
 
-        <Route path="/agent" element={<RequireRole allow={['referral_agent']} />}>
+        <Route path="/agent" element={<RequireAgent />}>
           <Route index element={<AgentDashboard />} />
         </Route>
 
@@ -179,6 +181,8 @@ function App() {
             <Route path="content/safaris/:slug/edit" element={<AdminSafariForm />} />
             <Route path="content/region-safaris/new" element={<AdminRegionSafariForm />} />
             <Route path="content/region-safaris/:slug/edit" element={<AdminRegionSafariForm />} />
+            <Route path="content/team/new" element={<AdminTeamMemberForm />} />
+            <Route path="content/team/:id/edit" element={<AdminTeamMemberForm />} />
             <Route path="content/parks/new" element={<AdminParkForm />} />
             <Route path="content/parks/:slug/edit" element={<AdminParkForm />} />
             <Route path="analytics" element={<AdminAnalytics />} />

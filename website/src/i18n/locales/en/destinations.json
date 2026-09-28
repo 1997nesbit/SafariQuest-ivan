@@ -15,6 +15,8 @@
     "wildlife": "Wildlife",
     "bestSeason": "Best Season",
     "gettingThere": "Getting There",
+    "experiencesIn": "Experiences in {{name}}",
+    "experiencesSubtitle": "Signature moments you can add to any journey through this region.",
     "parksAndWondersIn": "Parks & Wonders in {{name}}",
     "parksSubtitle": "Curated journeys designed to immerse you in the heart of the wild with uncompromising luxury and expert guidance.",
     "noSafarisYet": "No safari packages visit this park yet.",

@@ -54,6 +54,15 @@ def _set_auth_cookies(response, user):
     return refresh
 
 
+def auth_payload(user) -> dict:
+    """What every sign-in-shaped response tells the frontend about the user.
+
+    `home` is decided here rather than in the SPA because it depends on whether the user
+    has any bookings (see User.home_path), which the frontend doesn't know at sign-in.
+    """
+    return {"role": user.role, "is_referral_agent": user.is_referral_agent, "home": user.home_path}
+
+
 class LoginView(APIView):
     permission_classes = [AllowAny]
     throttle_classes = [ScopedRateThrottle]
@@ -64,7 +73,7 @@ class LoginView(APIView):
         if not serializer.is_valid():
             return Response({"detail": "Invalid email or password."}, status=status.HTTP_401_UNAUTHORIZED)
         user = serializer.validated_data["user"]
-        response = Response({"role": user.role}, status=status.HTTP_200_OK)
+        response = Response(auth_payload(user), status=status.HTTP_200_OK)
         _set_auth_cookies(response, user)
         return response
 
@@ -200,7 +209,7 @@ class MeView(APIView):
     def get(self, request):
         user = request.user
         return Response(
-            {"role": user.role, "name": user.name, "email": user.email},
+            {**auth_payload(user), "name": user.name, "email": user.email},
             status=status.HTTP_200_OK,
         )
 
@@ -216,7 +225,7 @@ class RegisterView(APIView):
             first_error = str(next(iter(serializer.errors.values()))[0])
             return Response({"detail": first_error}, status=status.HTTP_400_BAD_REQUEST)
         user = serializer.save()
-        response = Response({"role": user.role}, status=status.HTTP_201_CREATED)
+        response = Response(auth_payload(user), status=status.HTTP_201_CREATED)
         _set_auth_cookies(response, user)
         return response
 
@@ -238,7 +247,7 @@ class SetPasswordView(APIView):
         user = serializer.validated_data["user"]
         user.set_password(serializer.validated_data["password"])
         user.save()
-        response = Response({"role": user.role}, status=status.HTTP_200_OK)
+        response = Response(auth_payload(user), status=status.HTTP_200_OK)
         _set_auth_cookies(response, user)
         return response
 

@@ -5,7 +5,10 @@ User = get_user_model()
 
 
 class IsReferralAgentRole(BasePermission):
+    """A tourist account with the agent profile switched on (User.is_referral_agent)."""
+
     def has_permission(self, request, view):
+        user = request.user
         return bool(
-            request.user and request.user.is_authenticated and request.user.role == User.ROLE_REFERRAL_AGENT
+            user and user.is_authenticated and user.role == User.ROLE_TOURIST and user.is_referral_agent
         )

@@ -25,6 +25,7 @@ import { getDestinations } from '../api/destinations'
 import { getPublicReferralSettings } from '../api/referrals'
 import { useFetch } from '../lib/useFetch'
 import { usePrefersReducedMotion } from '../lib/usePrefersReducedMotion'
+import { PromotionsSection } from '../components/PromotionsSection'
 
 const REFERRAL_AUDIENCES = [
   { icon: Buildings, key: 'hotels' },
@@ -241,6 +242,9 @@ export function Home() {
           </div>
         </section>
       )}
+
+      {/* Promotions — client-designed banner ads. Renders nothing when none are live. */}
+      <PromotionsSection />
 
       {/* Explore Tanzania by Region */}
       {featuredDestinations.length > 0 && (

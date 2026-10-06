@@ -198,6 +198,15 @@ day:
   `?all=true` to list them. `python manage.py seed_team` loads the original
   three members (with their English/French/German/Portuguese text) and never
   overwrites an existing one, so re-running it is safe after admin edits.
+- **`promotions`** — `Promotion`: a sponsored event in the homepage's
+  "Sponsoring Events" carousel. Deliberately minimal: an image, a title, a
+  description and a phone number. The phone number opens WhatsApp. There is
+  no outbound link and no click tracking, because partners handle their own
+  bookings and commission. `is_published` is the only visibility control
+  (admins turn events on and off). `GET /api/promotions/` is public and
+  returns published events; admins can pass `?all=true` to include hidden
+  ones. The serializer requires an http(s) image URL and a phone number of
+  7 to 15 digits.
 - **`pricing`** — `Season` records (date range + price multiplier),
   public-read so the checkout page can price a package for whatever trip
   date the tourist picked (`website/src/lib/seasonalPrice.ts`); admin-write
@@ -255,7 +264,7 @@ day:
   admin Users page.
 - **`uploads`** — a single `ImageUploadView` (admin-only, JPEG/PNG/WEBP/GIF,
   8MB max) that all the admin content-editing forms (destinations, parks,
-  safaris, region safaris, team) use for image fields. The
+  safaris, region safaris, team, events) use for image fields. The
   format is decided from the file's own leading bytes
   (`detect_image_extension`), never from the request's Content-Type — that's
   a header the client chooses, so an HTML/SVG file renamed `.png` used to be
@@ -279,6 +288,7 @@ GET is public unless noted, everything else is role-gated.
 | safaris | `/api/safaris/` | safari packages — full CRUD, admin-write |
 | region_safaris | `/api/region-safaris/` | region-scoped mini safaris — full CRUD, admin-write |
 | team | `/api/team/` | About-page team members — public-read (published only), admin-write; `?all=true` includes drafts for admins |
+| promotions | `/api/promotions/` | sponsored events — public-read (published only), admin-write; `?all=true` includes hidden events for admins |
 | pricing | `/api/pricing/seasons/` | public-read, admin-write |
 | guides | `/api/guides/` | admin-only CRUD, plus `create-with-account/`, `me/`, `me/certifications/` |
 | bookings | `/api/bookings/` | staff-role CRUD + pipeline actions above, paginated. `{id}/pay/` and `{id}/pay-balance/` are tourist-only (own booking) |

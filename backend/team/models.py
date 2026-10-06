@@ -31,6 +31,8 @@ class TeamMember(models.Model):
     bio = models.TextField()
     photo = models.URLField(max_length=500, blank=True)
     photo_alt = models.CharField(max_length=255, blank=True)
+    phone = models.CharField(max_length=30, blank=True)
+    email = models.EmailField(max_length=254, blank=True)
     translations = models.JSONField(default=dict, blank=True)
     order = models.PositiveIntegerField(default=0)
     is_published = models.BooleanField(default=True)

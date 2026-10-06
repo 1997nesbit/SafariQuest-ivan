@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "safaris",
     "region_safaris",
     "team",
+    "promotions",
     "pricing",
     "guides",
     "bookings",
@@ -154,6 +155,7 @@ THROTTLE_RATES = {
     "signup": "10/hour",
     "booking_create": "10/hour",
     "funnel_event": "300/hour",
+    "promotion_click": "120/hour",
 }
 
 # The test runner shares one process, so LocMemCache carries throttle counters

@@ -54,6 +54,7 @@ import { AdminParkForm } from './pages/admin/AdminParkForm'
 import { AdminSafariForm } from './pages/admin/AdminSafariForm'
 import { AdminRegionSafariForm } from './pages/admin/AdminRegionSafariForm'
 import { AdminTeamMemberForm } from './pages/admin/AdminTeamMemberForm'
+import { AdminPromotionForm } from './pages/admin/AdminPromotionForm'
 import { AdminReferrals } from './pages/admin/AdminReferrals'
 import { AdminFinance } from './pages/admin/AdminFinance'
 import { AdminInvoices } from './pages/admin/AdminInvoices'
@@ -183,6 +184,8 @@ function App() {
             <Route path="content/region-safaris/:slug/edit" element={<AdminRegionSafariForm />} />
             <Route path="content/team/new" element={<AdminTeamMemberForm />} />
             <Route path="content/team/:id/edit" element={<AdminTeamMemberForm />} />
+            <Route path="content/promotions/new" element={<AdminPromotionForm />} />
+            <Route path="content/promotions/:id/edit" element={<AdminPromotionForm />} />
             <Route path="content/parks/new" element={<AdminParkForm />} />
             <Route path="content/parks/:slug/edit" element={<AdminParkForm />} />
             <Route path="analytics" element={<AdminAnalytics />} />

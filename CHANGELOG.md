@@ -8,6 +8,15 @@ entries below note which side(s) each change touched.
 See `backend/README.md` and `website/README.md` for the current-state
 architecture overview; this file is the story of how it got there.
 
+## 2026-10-06 — Team members get contact details; Experiences removed from footer
+
+Backend and website. Each team member can now have an optional phone number and
+email, set in the admin Team form (with validation before save). The About card
+shows them as tap-to-call and mailto links. The WhatsApp icon opens that member's
+own number when one is set, and otherwise falls back to the company line. The
+"Experiences" link is removed from the footer's Quick Links. Migration
+`team.0002_member_contact_details` adds the two fields.
+
 ## 2026-09-27 — Confirm-password and a show/hide toggle on every password form
 
 Every form in the app that sets a password now has a confirm field and a
@@ -97,6 +106,77 @@ together. `referral_agent` was a `User.role` value, mutually exclusive with
   `VITE_CONTACT_SECONDARY_*`) and a "Refer & Earn" link.
 - Header nav was already cleaned up in an earlier pass — see the 2026-09-17
   entry below.
+
+## 2026-10-06 — Homepage ads reworked into "Sponsoring Events"
+
+Customer feedback: the homepage ad slot should be a plain **Sponsoring Events**
+section for events Pande sponsors (for example a marathon, with a phone number
+to call for a discounted ticket), not a set of partner banners that link out.
+Partners run their own ads and settle commission directly, so the site only
+relays information.
+
+- An event is now an **image, a title, a description and a phone number**.
+  The phone number opens WhatsApp. Removed: the separate mobile image, the
+  external link, click counting, start/end dates and per-language translations.
+  Visibility is a single on/off switch.
+- Migration `promotions.0002_sponsoring_events` renames and drops the old
+  columns. It runs cleanly on existing data.
+- The admin tab is **Sponsoring Events** in the Content Manager. It uses a
+  short form with an image upload, and no longer has language tabs or
+  aspect-ratio checks.
+- The `POST /api/promotions/{id}/click/` endpoint and its throttle scope are gone.
+- The homepage keeps the carousel in the same place, after the signature
+  packages. The section heading and copy are English only.
+
+## 2026-09-27 — Third-party promotion ads on the homepage
+
+A paid banner-ad slot for external partners — not for Pande's own safari
+packages, which is why the copy says "From our partners" rather than
+"Special offers," and outbound links carry `rel="sponsored"` for search
+disclosure.
+
+**Backend: new `promotions` app**
+- `Promotion`: two images per entry — a 3:1 desktop banner and a separate
+  square mobile one, because a desktop banner's baked-in text is illegible
+  shrunk onto a phone. `translations` JSON for non-English image/alt-text
+  variants, same pattern and locale list as `team` (`TRANSLATION_LOCALES`).
+  A computed `status` (draft / scheduled / live / expired) from
+  `is_published` plus optional `starts_at`/`ends_at`.
+- `link_url` accepts a site path, a full `http(s)://` address, or
+  `mailto:`/`tel:` — and rejects anything else, specifically
+  `javascript:`, protocol-relative `//evil.example`, and a leading-slash
+  path with a backslash in it (`/x\evil` reads as protocol-relative in some
+  browsers). Same validation shape as `team`'s photo-URL check, extended
+  for a field that has to accept more than just images.
+- `GET /api/promotions/` — public, live-only (published + inside its date
+  window), same `?all=true`-for-admins visibility rule as `team`.
+- `POST /api/promotions/{id}/click/` — anonymous, unauthenticated, fired
+  with `navigator.sendBeacon` (which can't attach a CSRF header, hence no
+  auth on this one action specifically), increments `click_count` via an
+  `F()` update so two simultaneous clicks can't race each other into
+  under-counting. Throttled (`promotion_click`, 120/hour).
+
+**Frontend**
+- `PromotionsSection.tsx`: an accessible carousel (keyboard nav, ARIA
+  labels, respects `prefers-reduced-motion` via the new shared
+  `usePrefersReducedMotion` hook) using `<picture>` to serve the mobile
+  image below the desktop breakpoint. Slotted into `Home.tsx`.
+- Admin: **Promotions** tab in Content Manager (`AdminPromotionsTab.tsx`,
+  a 6-column table with status badges and click counts) and
+  `AdminPromotionForm.tsx`, following the `AdminTeamMemberForm.tsx`
+  pattern — language tabs, photo upload via the new `BannerImageField`
+  (warns if an uploaded image doesn't match the expected 1920x640 /
+  1080x1080 aspect ratio).
+- The demo/seed content uses three fictional advertisers (Kilima Coffee
+  Estate, Bahari Dive Centre, Savanna Outfitters) — no real organisation is
+  named, and none of Pande's own imagery is reused as ad creative, to keep
+  the third-party framing honest even in placeholder data.
+
+**Open question, left for the client:** whether a visible "Sponsored" /
+"Advertisement" label should appear on the carousel for paid-ad disclosure
+compliance, beyond the `rel="sponsored"` link attribute.
+
+
 
 ## 2026-09-26 — About-page team moves to the database, with per-language text
 

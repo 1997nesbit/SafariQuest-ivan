@@ -14,7 +14,7 @@ export const TRANSLATION_LOCALES = SUPPORTED_LOCALES.filter((l) => l !== DEFAULT
 
 /** Field length limits, matching the backend (team.models / the serializer). The
  * form uses them so people are stopped while typing, not after a failed save. */
-export const TEAM_LIMITS = { name: 150, title: 150, bio: 2000, photoAlt: 255, photoUrl: 500 } as const
+export const TEAM_LIMITS = { name: 150, title: 150, bio: 2000, photoAlt: 255, photoUrl: 500, phone: 30, email: 254 } as const
 
 export interface TeamTexts {
   title: string
@@ -32,6 +32,9 @@ export interface TeamMember {
   bio: string
   photo: string
   photoAlt: string
+  /** Personal contact details. Both are optional; blank means not shared. */
+  phone: string
+  email: string
   translations: TeamTranslations
   order: number
   isPublished: boolean
@@ -50,6 +53,8 @@ interface TeamMemberApiShape {
   bio: string
   photo: string
   photo_alt: string
+  phone: string
+  email: string
   translations: Record<string, TeamTextsApiShape>
   order: number
   is_published: boolean
@@ -89,6 +94,8 @@ export interface TeamMemberInput {
   bio: string
   photo: string
   photoAlt: string
+  phone: string
+  email: string
   translations: TeamTranslations
   order: number
   isPublished: boolean

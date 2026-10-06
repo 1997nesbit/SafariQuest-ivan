@@ -20,6 +20,27 @@ import { ImageDropzone } from '../../components/admin/ImageDropzone'
 
 const BACK_TO_LIST = '/admin/content?tab=Team'
 
+const PHONE_CHARS = /^\+?[0-9][0-9 ()-]*$/
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+/** Checks the optional contact details before saving, so a typo is caught on this screen
+ * rather than by the server. Blank is allowed for both. Mirrors team.serializers. */
+function validateContact(phone: string, email: string): { phone?: string; email?: string } {
+  const errors: { phone?: string; email?: string } = {}
+  const trimmedPhone = phone.trim()
+  if (trimmedPhone) {
+    const digits = trimmedPhone.replace(/\D/g, '')
+    if (!PHONE_CHARS.test(trimmedPhone) || digits.length < 7 || digits.length > 15) {
+      errors.phone = 'Use digits only, with an optional leading +, for example +255 725 377 625 (7 to 15 digits).'
+    }
+  }
+  const trimmedEmail = email.trim()
+  if (trimmedEmail && (trimmedEmail.length > TEAM_LIMITS.email || !EMAIL_SHAPE.test(trimmedEmail))) {
+    errors.email = 'Enter a full email address, for example name@example.com.'
+  }
+  return errors
+}
+
 export function AdminTeamMemberForm() {
   const { id } = useParams<{ id: string }>()
   const isEditing = Boolean(id)
@@ -80,6 +101,9 @@ function TeamMemberFormFields({
   const [order, setOrder] = useState(String(initial?.order ?? 0))
   const [isPublished, setIsPublished] = useState(initial?.isPublished ?? true)
   const [photo, setPhoto] = useState(initial?.photo ?? '')
+  const [phone, setPhone] = useState(initial?.phone ?? '')
+  const [email, setEmail] = useState(initial?.email ?? '')
+  const [contactErrors, setContactErrors] = useState<{ phone?: string; email?: string }>({})
   const [texts, setTexts] = useState<FormTexts>(() => initialTexts(initial))
   const [activeLocale, setActiveLocale] = useState<Locale>('en')
 
@@ -119,6 +143,13 @@ function TeamMemberFormFields({
       return
     }
 
+    const found = validateContact(phone, email)
+    setContactErrors(found)
+    if (found.phone || found.email) {
+      setError('Check the contact details below.')
+      return
+    }
+
     const translations: TeamTranslations = {}
     for (const locale of TRANSLATION_LOCALES) translations[locale] = texts[locale]
 
@@ -128,6 +159,8 @@ function TeamMemberFormFields({
       bio: texts.en.bio.trim(),
       photo,
       photoAlt: texts.en.photoAlt.trim(),
+      phone: phone.trim(),
+      email: email.trim(),
       translations,
       order: Number(order) || 0,
       isPublished,
@@ -187,6 +220,60 @@ function TeamMemberFormFields({
                 className={fieldClass}
               />
               <p className="text-on-surface-variant text-xs mt-1.5">The same in every language.</p>
+            </div>
+          </section>
+
+          <section className="p-6 rounded-2xl bg-surface-container-lowest shadow-sm border border-sand-stone/50 space-y-5">
+            <div>
+              <h3 className="font-headline-md text-[18px] text-on-surface">Contact</h3>
+              <p className="text-on-surface-variant text-sm mt-1">
+                Optional. Shown on the About page under their bio, and used for the WhatsApp icon. Leave blank to show
+                the company contact instead.
+              </p>
+            </div>
+            <div>
+              <label htmlFor="tm-phone" className="block font-label-sm text-label-sm mb-1.5">
+                Phone number
+              </label>
+              <input
+                id="tm-phone"
+                type="tel"
+                maxLength={TEAM_LIMITS.phone}
+                aria-invalid={Boolean(contactErrors.phone)}
+                aria-describedby={contactErrors.phone ? 'tm-phone-error' : undefined}
+                value={phone}
+                onChange={(e) => {
+                  setPhone(e.target.value)
+                  setContactErrors((c) => ({ ...c, phone: undefined }))
+                }}
+                placeholder="+255 725 377 625"
+                className={fieldClass}
+              />
+              {contactErrors.phone && (
+                <p id="tm-phone-error" className="text-error text-xs mt-1.5">{contactErrors.phone}</p>
+              )}
+            </div>
+            <div>
+              <label htmlFor="tm-email" className="block font-label-sm text-label-sm mb-1.5">
+                Email
+              </label>
+              <input
+                id="tm-email"
+                type="email"
+                maxLength={TEAM_LIMITS.email}
+                aria-invalid={Boolean(contactErrors.email)}
+                aria-describedby={contactErrors.email ? 'tm-email-error' : undefined}
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  setContactErrors((c) => ({ ...c, email: undefined }))
+                }}
+                placeholder="name@example.com"
+                className={fieldClass}
+              />
+              {contactErrors.email && (
+                <p id="tm-email-error" className="text-error text-xs mt-1.5">{contactErrors.email}</p>
+              )}
             </div>
           </section>
 

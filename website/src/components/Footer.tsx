@@ -62,7 +62,6 @@ export function Footer() {
           <ul className="space-y-3">
             <li><Link className="text-on-surface-variant hover:text-terracotta transition-colors" to="/safaris">{t('nav.safaris')}</Link></li>
             <li><Link className="text-on-surface-variant hover:text-terracotta transition-colors" to="/destinations">{t('nav.destinations')}</Link></li>
-            <li><Link className="text-on-surface-variant hover:text-terracotta transition-colors" to="/experiences">{t('nav.experiences')}</Link></li>
             <li><Link className="text-on-surface-variant hover:text-terracotta transition-colors" to="/about">{t('nav.about')}</Link></li>
             <li><Link className="text-on-surface-variant hover:text-terracotta transition-colors" to="/become-agent">{t('footer.referAndEarn')}</Link></li>
           </ul>

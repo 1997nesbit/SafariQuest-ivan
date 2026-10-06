@@ -7,9 +7,10 @@ import { deletePark, getParks } from '../../api/parks'
 import { deleteRegionSafari, getRegionSafaris } from '../../api/regionSafaris'
 import { useFetch } from '../../lib/useFetch'
 import { AdminTeamTab } from './AdminTeamTab'
+import { AdminPromotionsTab } from './AdminPromotionsTab'
 import { ApiError } from '../../lib/api'
 
-const TABS = ['Safaris', 'Region Safaris', 'Regions', 'Parks', 'Team'] as const
+const TABS = ['Safaris', 'Region Safaris', 'Regions', 'Parks', 'Team', 'Promotions'] as const
 type Tab = (typeof TABS)[number]
 
 const STATUS_FILTERS = ['All Packages', 'Published', 'Drafts'] as const
@@ -117,7 +118,9 @@ export function AdminContent() {
           type="button"
           onClick={() =>
             navigate(
-              tab === 'Team'
+              tab === 'Promotions'
+                ? '/admin/content/promotions/new'
+                : tab === 'Team'
                 ? '/admin/content/team/new'
                 : tab === 'Regions'
                 ? '/admin/content/destinations/new'
@@ -131,7 +134,9 @@ export function AdminContent() {
           className="flex items-center gap-2 bg-savanna-green text-on-primary py-2.5 px-6 rounded-lg font-label-md text-sm hover:opacity-90 transition-opacity w-fit shrink-0 shadow-sm"
         >
           <Plus size={18} />
-          {tab === 'Team'
+          {tab === 'Promotions'
+            ? 'Add Sponsoring Event'
+            : tab === 'Team'
             ? 'Add Team Member'
             : tab === 'Regions'
             ? 'Add New Destination'
@@ -153,12 +158,14 @@ export function AdminContent() {
               tab === t ? 'text-savanna-green font-bold border-savanna-green' : 'border-transparent text-on-surface-variant hover:text-savanna-green'
             }`}
           >
-            {t}
+            {t === 'Promotions' ? 'Sponsoring Events' : t}
           </button>
         ))}
       </div>
 
-      {tab === 'Team' ? (
+      {tab === 'Promotions' ? (
+        <AdminPromotionsTab />
+      ) : tab === 'Team' ? (
         <AdminTeamTab />
       ) : tab === 'Safaris' ? (
         <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-sand-stone/50 overflow-hidden">

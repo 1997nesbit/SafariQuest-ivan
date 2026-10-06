@@ -1,3 +1,4 @@
+import re
 from urllib.parse import urlparse
 
 from rest_framework import serializers
@@ -5,10 +6,19 @@ from rest_framework import serializers
 from .models import BIO_MAX_LENGTH, TRANSLATABLE_FIELD_LIMITS, TRANSLATION_LOCALES, TeamMember
 
 
+# Same rule as the Sponsoring Events phone: digits with an optional leading +,
+# spaces, brackets or dashes, 7 to 15 digits in total. Mirrored in
+# website/src/lib/phone.ts, which the admin form checks before saving.
+PHONE_PATTERN = re.compile(r"^\+?[0-9][0-9 ()\-]*$")
+
+
 class TeamMemberSerializer(serializers.ModelSerializer):
     class Meta:
         model = TeamMember
-        fields = ["id", "name", "title", "bio", "photo", "photo_alt", "translations", "order", "is_published"]
+        fields = [
+            "id", "name", "title", "bio", "photo", "photo_alt", "phone", "email",
+            "translations", "order", "is_published",
+        ]
         # bio is a TextField, which has no cap of its own; without this a single
         # request could store megabytes of text that the About card then has to render.
         extra_kwargs = {"bio": {"max_length": BIO_MAX_LENGTH}}
@@ -18,6 +28,16 @@ class TeamMemberSerializer(serializers.ModelSerializer):
         # won't load in an <img>.
         if value and urlparse(value).scheme not in ("http", "https"):
             raise serializers.ValidationError("Photo URL must start with http:// or https://.")
+        return value
+
+    def validate_phone(self, value):
+        # Blank means "no personal number"; the About card then falls back to the company line.
+        value = value.strip()
+        if not value:
+            return value
+        digits = re.sub(r"\D", "", value)
+        if not PHONE_PATTERN.match(value) or not 7 <= len(digits) <= 15:
+            raise serializers.ValidationError("Enter a phone number, e.g. +255 725 377 625.")
         return value
 
     def validate_translations(self, value):

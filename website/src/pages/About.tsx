@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from '../i18n/routing'
-import { Leaf, Handshake, SealCheck, WhatsappLogo, ChatCircleText, ArrowRight } from '@phosphor-icons/react'
+import { Leaf, Handshake, SealCheck, WhatsappLogo, ChatCircleText, ArrowRight, DeviceMobile, EnvelopeSimple } from '@phosphor-icons/react'
 import { Reveal } from '../components/Reveal'
 import { contact } from '../config/contact'
 import { getTeam, localizedTeamTexts } from '../api/team'
@@ -154,9 +154,10 @@ export function About() {
                         <h3 className="font-headline-md text-[24px] text-on-surface">{member.name}</h3>
                         <p className="font-body-md text-terracotta">{texts.title}</p>
                       </div>
-                      {contact.social.whatsapp && (
+                      {/* A member's own number opens a WhatsApp chat with them; without one, the company line is used. */}
+                      {(member.phone || contact.social.whatsapp) && (
                         <a
-                          href={contact.social.whatsapp}
+                          href={member.phone ? `https://wa.me/${member.phone.replace(/\D/g, '')}` : contact.social.whatsapp}
                           title={t('team.contactOnWhatsApp')}
                           className="text-savanna-green hover:text-primary-container transition-colors flex items-center justify-center bg-surface-container-low p-2 rounded-full shrink-0"
                         >
@@ -165,6 +166,26 @@ export function About() {
                       )}
                     </div>
                     <p className="font-body-md text-on-surface-variant mt-4 line-clamp-3">{texts.bio}</p>
+                    {(member.phone || member.email) && (
+                      <ul className="mt-4 space-y-1.5 font-body-md text-sm text-on-surface-variant">
+                        {member.phone && (
+                          <li>
+                            <a href={`tel:${member.phone.replace(/[^\d+]/g, '')}`} className="inline-flex items-center gap-2 hover:text-savanna-green">
+                              <DeviceMobile size={16} aria-hidden="true" />
+                              {member.phone}
+                            </a>
+                          </li>
+                        )}
+                        {member.email && (
+                          <li>
+                            <a href={`mailto:${member.email}`} className="inline-flex items-center gap-2 hover:text-savanna-green break-all">
+                              <EnvelopeSimple size={16} aria-hidden="true" />
+                              {member.email}
+                            </a>
+                          </li>
+                        )}
+                      </ul>
+                    )}
                   </div>
                 </Reveal>
               )

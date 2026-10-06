@@ -230,3 +230,32 @@ class SeedTeamCommandTests(APITestCase):
         call_command("seed_team", stdout=StringIO())
         self.assertEqual(TeamMember.objects.count(), 3)
         self.assertEqual(TeamMember.objects.get(name="Juma Mdoe").title, "Edited in admin")
+
+
+class TeamMemberContactValidationTests(APITestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(email="admin@example.com", password="pw12345", role="admin")
+        self.client.post(reverse("login"), {"email": self.admin.email, "password": "pw12345"})
+        self.list_url = reverse("team-member-list")
+
+    def _create(self, **contact):
+        return self.client.post(
+            self.list_url,
+            {"name": "Contact Test", "title": "Guide", "bio": "Bio.", **contact},
+            format="json",
+        )
+
+    def test_contact_details_are_optional(self):
+        self.assertEqual(self._create(phone="", email="").status_code, status.HTTP_201_CREATED)
+
+    def test_accepts_a_formatted_phone_and_stores_it_trimmed(self):
+        response = self._create(phone="  +255 725 377 625 ", email="guide@example.com")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["phone"], "+255 725 377 625")
+
+    def test_rejects_a_phone_with_letters_or_too_few_digits(self):
+        self.assertEqual(self._create(phone="call me").status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self._create(phone="12345").status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_rejects_a_malformed_email(self):
+        self.assertEqual(self._create(email="not-an-email").status_code, status.HTTP_400_BAD_REQUEST)

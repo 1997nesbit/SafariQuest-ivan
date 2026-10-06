@@ -60,7 +60,7 @@ src/
 | Tourist account | `/account`, `/account/trips`, `/account/trips/:tripId`, `/account/invoices`, `/account/complaints`, `/account/profile` | `tourist` |
 | Guide portal | `/guide`, `/guide/trips/:tripId`, `/guide/trips/:tripId/progress`, `/guide/reviews`, `/guide/support`, `/guide/profile` | `guide` |
 | Referral agent portal | `/agent` | a `tourist` with the agent profile on (`isReferralAgent`) |
-| Admin portal | `/admin`, `/admin/inquiries`, `/admin/clients`, `/admin/invoices`, `/admin/invoices/:invoiceId`, `/admin/finance`, `/admin/pricing`, `/admin/guides`, `/admin/complaints`, `/admin/referrals`, `/admin/content` (Safaris / Region Safaris / Regions / Parks / Team tabs, each with its own `Admin*Form`), `/admin/analytics`, `/admin/users` (includes the audit-log widget) | `admin` |
+| Admin portal | `/admin`, `/admin/inquiries`, `/admin/clients`, `/admin/invoices`, `/admin/invoices/:invoiceId`, `/admin/finance`, `/admin/pricing`, `/admin/guides`, `/admin/complaints`, `/admin/referrals`, `/admin/content` (Safaris / Region Safaris / Regions / Parks / Team / Sponsoring Events tabs, each with its own `Admin*Form`), `/admin/analytics`, `/admin/users` (includes the audit-log widget) | `admin` |
 
 `auth/RequireRole` wraps the guide and admin route trees and redirects to
 `/sign-in` if the signed-in user's role doesn't match. `/agent` uses
@@ -161,10 +161,11 @@ customer stats.
 
 ### Admin content editing
 
-`pages/admin/AdminContent.tsx` is the CMS-style hub with five tabs
-(Safaris, Region Safaris, Regions, Parks, Team), each backed by a
+`pages/admin/AdminContent.tsx` is the CMS-style hub with six tabs
+(Safaris, Region Safaris, Regions, Parks, Team, Sponsoring Events), each backed by a
 matching `Admin*Form.tsx` (`AdminSafariForm`, `AdminRegionSafariForm`,
-`AdminDestinationForm`, `AdminParkForm`, `AdminTeamMemberForm`) that reuses
+`AdminDestinationForm`, `AdminParkForm`, `AdminTeamMemberForm`,
+`AdminPromotionForm`, the Sponsoring Events form) that reuses
 `components/admin/ImageDropzone.tsx` to upload images through the backend's
 `/api/uploads/` endpoint before saving the record. The admin bookings
 pipeline (`AdminBookingsPipeline` / `AdminBookingDetail`) is a kanban over

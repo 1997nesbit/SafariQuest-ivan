@@ -152,7 +152,7 @@ function SlotCard({
         <button
           type="button"
           disabled={!dirty || !draftImage || busy !== null}
-          onClick={handleSave}
+          onClick={() => void handleSave()}
           className="min-h-[40px] px-5 bg-savanna-green text-on-primary rounded-lg font-label-md text-sm hover:opacity-90 disabled:opacity-50"
         >
           {busy === 'saving' ? 'Saving…' : 'Save'}
@@ -161,7 +161,7 @@ function SlotCard({
           <button
             type="button"
             disabled={busy !== null}
-            onClick={handleReset}
+            onClick={() => void handleReset()}
             className="min-h-[40px] inline-flex items-center gap-1.5 px-3 text-on-surface-variant hover:text-terracotta rounded-lg font-label-md text-sm disabled:opacity-50"
           >
             <ArrowCounterClockwise size={16} />
@@ -248,7 +248,9 @@ function HeroVideoCard({ video, onChanged }: { video: string; onChanged: () => v
         controls
         preload="metadata"
         className="w-full max-w-xs aspect-video rounded-lg bg-surface-container border border-sand-stone object-cover"
-      />
+      >
+        <track kind="captions" />
+      </video>
       {!draft && <p className="text-xs text-on-surface-variant -mt-2">Original homepage video. Upload one to replace it.</p>}
 
       <label className="min-h-[44px] w-full inline-flex items-center justify-center gap-2 border-2 border-dashed border-sand-stone rounded-lg text-on-surface-variant hover:border-savanna-green hover:text-savanna-green transition-colors cursor-pointer text-sm">
@@ -258,7 +260,7 @@ function HeroVideoCard({ video, onChanged }: { video: string; onChanged: () => v
           accept="video/mp4,video/webm"
           className="sr-only"
           disabled={busy !== null}
-          onChange={(e) => handleFile(e.target.files?.[0])}
+          onChange={(e) => void handleFile(e.target.files?.[0])}
         />
         {busy === 'uploading' ? <SpinnerGap size={18} className="animate-spin" /> : <UploadSimple size={18} />}
         {busy === 'uploading' ? 'Uploading…' : `Upload a video (MP4 or WebM, up to ${MAX_VIDEO_MB}MB)`}
@@ -270,7 +272,7 @@ function HeroVideoCard({ video, onChanged }: { video: string; onChanged: () => v
         <button
           type="button"
           disabled={draft === video || !draft || busy !== null}
-          onClick={handleSave}
+          onClick={() => void handleSave()}
           className="min-h-[40px] px-5 bg-savanna-green text-on-primary rounded-lg font-label-md text-sm hover:opacity-90 disabled:opacity-50"
         >
           {busy === 'saving' ? 'Saving…' : 'Save'}
@@ -279,7 +281,7 @@ function HeroVideoCard({ video, onChanged }: { video: string; onChanged: () => v
           <button
             type="button"
             disabled={busy !== null}
-            onClick={handleReset}
+            onClick={() => void handleReset()}
             className="min-h-[40px] inline-flex items-center gap-1.5 px-3 text-on-surface-variant hover:text-terracotta rounded-lg font-label-md text-sm disabled:opacity-50"
           >
             <ArrowCounterClockwise size={16} />

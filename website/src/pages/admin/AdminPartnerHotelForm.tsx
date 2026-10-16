@@ -99,7 +99,7 @@ function PartnerHotelFormFields({ initial, hotelId }: { initial: PartnerHotel | 
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="max-w-3xl space-y-8">
+    <form onSubmit={(e) => void handleSubmit(e)} noValidate className="max-w-3xl space-y-8">
       <div>
         <nav className="flex items-center gap-1.5 font-label-sm text-xs text-on-surface-variant mb-1">
           <Link to={BACK_TO_LIST} className="hover:text-savanna-green transition-colors">

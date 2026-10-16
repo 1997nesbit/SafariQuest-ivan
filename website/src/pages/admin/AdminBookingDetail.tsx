@@ -430,7 +430,7 @@ export function AdminBookingDetail() {
               <div className="flex gap-3 mt-6 justify-end">
                 <button
                   type="button"
-                  onClick={handleSaveDraft}
+                  onClick={() => void handleSaveDraft()}
                   disabled={savingQuote}
                   className="min-h-[40px] border border-sand-stone px-5 rounded-lg font-label-md text-sm hover:bg-surface-container-low transition-colors disabled:opacity-60"
                 >

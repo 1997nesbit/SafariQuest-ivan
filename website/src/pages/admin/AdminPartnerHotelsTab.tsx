@@ -114,7 +114,7 @@ export function AdminPartnerHotelsTab() {
                         type="button"
                         aria-label={`Remove ${hotel.name}`}
                         disabled={deletingId === hotel.id}
-                        onClick={() => handleDelete(hotel)}
+                        onClick={() => void handleDelete(hotel)}
                         className="inline-flex text-on-surface-variant hover:text-error p-1.5 rounded-full hover:bg-surface-container transition-colors disabled:opacity-50"
                       >
                         <Trash size={18} />

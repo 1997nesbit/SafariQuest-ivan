@@ -106,7 +106,9 @@ export function Home() {
           aria-hidden="true"
           tabIndex={-1}
           className="absolute inset-0 w-full h-full object-cover"
-        />
+        >
+          <track kind="captions" />
+        </video>
         <div className="absolute inset-0 bg-black/30" />
 
         <div className="relative z-10 text-center px-5 max-w-4xl">

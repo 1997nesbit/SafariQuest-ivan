@@ -1,3 +1,4 @@
+import io
 import secrets
 
 from django.contrib.auth import get_user_model
@@ -8,7 +9,9 @@ from rest_framework.test import APITestCase
 
 from unittest import mock
 
-from .views import MAX_UPLOAD_BYTES, detect_image_extension, detect_video_extension
+from PIL import Image
+
+from .views import DEFAULT_MIN_DIMENSIONS, MAX_UPLOAD_BYTES, detect_image_extension, detect_video_extension
 
 User = get_user_model()
 
@@ -21,6 +24,13 @@ PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
 JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 32
 GIF = b"GIF89a" + b"\x00" * 32
 WEBP = b"RIFF\x24\x00\x00\x00WEBP" + b"\x00" * 32
+
+
+def real_image(fmt):
+    """A decodable image at the default minimum size — the upload view opens it with Pillow."""
+    buffer = io.BytesIO()
+    Image.new("RGB", DEFAULT_MIN_DIMENSIONS).save(buffer, format=fmt)
+    return buffer.getvalue()
 
 
 class DetectImageExtensionTests(APITestCase):
@@ -58,7 +68,7 @@ class ImageUploadTests(APITestCase):
 
     def test_admin_uploads_a_real_image(self):
         self._login_as(self.admin)
-        response = self._upload(PNG)
+        response = self._upload(real_image("PNG"))
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(response.data["url"].endswith(".png"))
 
@@ -75,7 +85,7 @@ class ImageUploadTests(APITestCase):
 
     def test_stored_extension_follows_the_bytes_not_the_filename(self):
         self._login_as(self.admin)
-        response = self._upload(JPEG, "actually-a-jpeg.png", "image/png")
+        response = self._upload(real_image("JPEG"), "actually-a-jpeg.png", "image/png")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(response.data["url"].endswith(".jpg"))
 

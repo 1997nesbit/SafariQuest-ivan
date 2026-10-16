@@ -14,6 +14,7 @@ import {
 } from '@phosphor-icons/react'
 import { Reveal } from '../components/Reveal'
 import { useFaqCategories, faqStructure } from '../data/faqs'
+import { useSiteImages } from '../lib/useSiteImage'
 
 const categoryIcons: Record<string, ComponentType<{ size?: number; className?: string }>> = {
   bookingPayment: HandCoins,
@@ -34,6 +35,8 @@ const defaultOpenKey = firstCategoryKey && firstItemKey ? `${firstCategoryKey}-$
 
 export function Faqs() {
   const { t } = useTranslation('faqs')
+  const siteImage = useSiteImages()
+  const heroPhoto = siteImage('faqs_hero', "A Tanzanian safari guide beside a Land Rover on the golden Serengeti plains at sunrise.")
   const faqCategories = useFaqCategories()
   const [openKey, setOpenKey] = useState<string | null>(defaultOpenKey)
   const [activeCategory, setActiveCategory] = useState<string | null>(firstCategoryKey)
@@ -57,8 +60,8 @@ export function Faqs() {
       {/* Hero */}
       <section className="relative h-[420px] md:h-[512px] flex items-center overflow-hidden">
         <img
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuA5QRwWzMyeKz5t--BZvq_Nd0Ms76XKRN2xYqy2xM6zXS6OqlJWJv74kYmwf0Izr1VUDbdwHFHSx835VE7edWB4NdjBMTBEO7QC9PXnYP3mDtXbKC6UgllN3Vk8tvJlTOVVmy7D4nOIE4K5fRkEAc56cTeRbQPrI6Ws9NnJir2yO2BBxD5o0TuIulxabch4kO41uKmPlw35PVi3VbAoCojuJfDPDdaJuv5bdwi_R5b4eovW257i8dmu"
-          alt="A Tanzanian safari guide beside a Land Rover on the golden Serengeti plains at sunrise."
+          src={heroPhoto.image}
+          alt={heroPhoto.alt}
           fetchPriority="high"
           className="absolute inset-0 w-full h-full object-cover"
         />

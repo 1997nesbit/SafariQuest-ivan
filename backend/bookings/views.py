@@ -1,8 +1,9 @@
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
-from django.db import transaction
-from django.db.models import Count, Q, Sum
+from django.db import IntegrityError, transaction
+from django.db.models import Case, Count, F, IntegerField, Q, Sum, Value, When
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
@@ -12,14 +13,15 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from accounts.permissions import IsAdminRole
-from accounts.views import _set_auth_cookies
 from audit.utils import log_action
 from config.mail import send_notification
 from config.pagination import StandardPagination
 from referrals.models import ReferralCode, ReferralRedemption, ReferralSettings
 
 from .models import Booking, BookingNote, Invoice, Review, TripMilestone
+from .pricing import deposit_for, trip_total_for
 from .serializers import (
+    AdminBookingDetailSerializer,
     BookingCreateSerializer,
     BookingDetailSerializer,
     BookingListSerializer,
@@ -38,6 +40,23 @@ from .serializers import (
 User = get_user_model()
 
 INVOICE_DUE_DAYS = 14
+# The balance left after a checkout deposit is due this long before the trip starts.
+BALANCE_DUE_DAYS_BEFORE_TRIP = 30
+
+
+def _balance_due_date(booking):
+    """When the rest of a checkout booking's price falls due: BALANCE_DUE_DAYS_BEFORE_TRIP
+    ahead of the start, but never sooner than INVOICE_DUE_DAYS from today (a last-minute
+    booking still gets the usual time to pay) and never after the trip has started.
+
+    This used to be the payment date itself, which made every deposit invoice "overdue"
+    the next morning — on the tourist's own invoice list and in the finance summary.
+    """
+    due = max(
+        booking.start_date - timedelta(days=BALANCE_DUE_DAYS_BEFORE_TRIP),
+        timezone.localdate() + timedelta(days=INVOICE_DUE_DAYS),
+    )
+    return min(due, booking.start_date)
 
 
 class BookingViewSet(
@@ -46,7 +65,7 @@ class BookingViewSet(
     throttle_scope = "booking_create"
     pagination_class = StandardPagination
     queryset = Booking.objects.select_related(
-        "customer", "safari", "region_safari", "region_safari__region", "assigned_guide", "review"
+        "customer", "safari", "region_safari", "region_safari__region", "assigned_guide", "review", "invoice"
     ).prefetch_related("line_items", "notes", "milestones")
 
     def get_throttles(self):
@@ -68,7 +87,17 @@ class BookingViewSet(
             return BookingListSerializer
         if self.action == "create":
             return BookingCreateSerializer
+        return self._detail_serializer_class()
+
+    def _detail_serializer_class(self):
+        # Only admins get the internal notes thread; a booking's tourist and guide
+        # see everything else.
+        if getattr(self.request.user, "role", None) == User.ROLE_ADMIN:
+            return AdminBookingDetailSerializer
         return BookingDetailSerializer
+
+    def _detail(self, booking):
+        return self._detail_serializer_class()(booking).data
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -99,11 +128,7 @@ class BookingViewSet(
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         booking = serializer.save()
-        response = Response(BookingDetailSerializer(booking).data, status=status.HTTP_201_CREATED)
-        new_customer = getattr(booking, "_new_customer", None)
-        if new_customer is not None:
-            _set_auth_cookies(response, new_customer)
-        return response
+        return Response(self._detail(booking), status=status.HTTP_201_CREATED)
 
     def partial_update(self, request, pk=None):
         instance = self.get_object()
@@ -117,15 +142,22 @@ class BookingViewSet(
                 "booking.stage_changed",
                 f"Booking #{instance.id} moved from {previous_stage} to {instance.stage}",
             )
-        return Response(BookingDetailSerializer(instance).data)
+        return Response(self._detail(instance))
 
     @action(detail=True, methods=["patch"], url_path="quote")
     def quote(self, request, pk=None):
         booking = self.get_object()
+        if booking.stage not in (Booking.STAGE_NEW_INQUIRY, Booking.STAGE_QUOTED):
+            # Money has changed hands against the current quote; rewriting it now would
+            # leave the invoice and what was paid disagreeing with the line items.
+            return Response(
+                {"detail": "This booking has already moved past the quoting stage."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         serializer = QuoteUpdateSerializer(booking, data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(BookingDetailSerializer(booking).data)
+        return Response(self._detail(booking))
 
     @action(detail=True, methods=["post"], url_path="notes")
     def notes(self, request, pk=None):
@@ -134,7 +166,7 @@ class BookingViewSet(
         serializer.is_valid(raise_exception=True)
         BookingNote.objects.create(booking=booking, author=request.user, text=serializer.validated_data["text"])
         booking.refresh_from_db()
-        return Response(BookingDetailSerializer(booking).data, status=status.HTTP_201_CREATED)
+        return Response(self._detail(booking), status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"], url_path="quote/send", url_name="quote-send")
     def send_quote(self, request, pk=None):
@@ -156,13 +188,18 @@ class BookingViewSet(
         with transaction.atomic():
             booking.stage = Booking.STAGE_QUOTED
             booking.save(update_fields=["stage"])
-            Invoice.objects.get_or_create(
+            invoice, created = Invoice.objects.get_or_create(
                 booking=booking,
                 defaults={
                     "amount": booking.subtotal,
                     "due_date": timezone.localdate() + timedelta(days=INVOICE_DUE_DAYS),
                 },
             )
+            # A re-sent quote bills what the email now says, as long as nothing has been
+            # paid against the earlier figure.
+            if not created and invoice.status == Invoice.STATUS_UNPAID and invoice.amount != booking.subtotal:
+                invoice.amount = booking.subtotal
+                invoice.save(update_fields=["amount"])
         send_notification(
             subject=f"Your SafariQuest quote — {booking.package_title}",
             message=(
@@ -173,7 +210,7 @@ class BookingViewSet(
             recipient_list=[booking.customer.email],
         )
         log_action(request.user, "booking.quote_sent", f"Sent quote for booking #{booking.id} (${booking.subtotal:,})")
-        return Response(BookingDetailSerializer(booking).data)
+        return Response(self._detail(booking))
 
     @action(detail=True, methods=["get"], url_path="milestones")
     def milestones(self, request, pk=None):
@@ -219,7 +256,7 @@ class BookingViewSet(
                 next_milestone.save(update_fields=["status"])
 
         booking.refresh_from_db()
-        return Response(BookingDetailSerializer(booking).data)
+        return Response(self._detail(booking))
 
     @action(detail=True, methods=["post"], url_path="review")
     def review(self, request, pk=None):
@@ -240,22 +277,33 @@ class BookingViewSet(
         # to commit together with the review that triggered it — otherwise a
         # crash right after create() leaves the guide's cached rating stale
         # until some unrelated later review happens to refresh it.
-        with transaction.atomic():
-            review = Review.objects.create(
-                booking=booking, guide=booking.assigned_guide, **serializer.validated_data
+        try:
+            with transaction.atomic():
+                review = Review.objects.create(
+                    booking=booking, guide=booking.assigned_guide, **serializer.validated_data
+                )
+                if review.guide_id:
+                    review.guide.recompute_rating()
+        except IntegrityError:
+            # A double-submitted review: both passed the check above, and the
+            # one-to-one constraint stopped the second.
+            return Response(
+                {"detail": "This booking has already been reviewed."}, status=status.HTTP_400_BAD_REQUEST
             )
-            if review.guide_id:
-                review.guide.recompute_rating()
         booking.refresh_from_db()
-        return Response(BookingDetailSerializer(booking).data, status=status.HTTP_201_CREATED)
+        return Response(self._detail(booking), status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"], url_path="pay")
     def pay(self, request, pk=None):
         """Records a mock deposit payment at checkout time (1.3). There's no payment
-        gateway yet — card details never reach this endpoint, only the amount the
-        checkout page already computed and showed the tourist. Real card processing is
+        gateway yet — card details never reach this endpoint. Real card processing is
         PLANNED; this exists so the booking → paid → confirmed flow is real end to end
-        in the meantime, rather than faked with client-only state."""
+        in the meantime, rather than faked with client-only state.
+
+        The trip total and deposit are computed here (bookings.pricing), from the same
+        package price, season and guest counts the checkout page priced from — never
+        taken from the request, or anyone could set their own price and an agent's
+        commission along with it."""
         booking = self.get_object()
         if request.user.role != User.ROLE_TOURIST or booking.customer_id != request.user.id:
             return Response(status=status.HTTP_403_FORBIDDEN)
@@ -265,38 +313,49 @@ class BookingViewSet(
             )
         serializer = BookingPaySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        amount = serializer.validated_data["amount"]
-        referral_code_value = serializer.validated_data.get("referral_code")
-        trip_total = serializer.validated_data.get("trip_total")
+        referral_code_value = (serializer.validated_data.get("referral_code") or "").strip().upper()
 
         # Stage + invoice have to land together, same reasoning as send_quote above —
         # a crash between them must not leave a "paid" booking with no invoice record.
         redemption = None
-        with transaction.atomic():
-            booking.stage = Booking.STAGE_DEPOSIT_PAID
-            booking.save(update_fields=["stage"])
-            invoice = Invoice.objects.create(
-                booking=booking,
-                amount=amount,
-                trip_total=trip_total,
-                status=Invoice.STATUS_DEPOSIT_PAID,
-                due_date=timezone.localdate(),
-            )
-            if referral_code_value and trip_total:
-                # select_for_update + is_used=False in the same atomic block is what makes
-                # "once one person uses it, others can't" race-safe under concurrent redeems.
-                # exclude(agent=...): an agent can also book now, and must not collect
-                # commission on their own trip. The validate endpoint already refuses the
-                # code at checkout; this is the backstop, dropped silently like any other
-                # unusable code.
-                referral_code = (
-                    ReferralCode.objects.select_for_update()
-                    .filter(code=referral_code_value.strip().upper(), is_used=False)
-                    .exclude(agent=request.user)
-                    .first()
-                )
-                if referral_code and not referral_code.is_expired:
+        try:
+            with transaction.atomic():
+                referral_code = None
+                settings_obj = None
+                if referral_code_value:
+                    # select_for_update + is_used=False in the same atomic block is what makes
+                    # "once one person uses it, others can't" race-safe under concurrent redeems.
+                    # exclude(agent=...): an agent can also book now, and must not collect
+                    # commission on their own trip. The validate endpoint already refuses the
+                    # code at checkout; this is the backstop.
+                    referral_code = (
+                        ReferralCode.objects.select_for_update()
+                        .filter(code=referral_code_value, is_used=False)
+                        .exclude(agent=request.user)
+                        .first()
+                    )
+                    if referral_code is None or referral_code.is_expired:
+                        # The page priced the trip with this code's discount. Charging full
+                        # price instead would record a different amount than the tourist
+                        # agreed to, so refuse and let them pay again without the code.
+                        return Response(
+                            {"detail": "This referral code can no longer be used. Remove it and try again."},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
                     settings_obj = ReferralSettings.get_solo()
+
+                trip_total = trip_total_for(booking, settings_obj.discount_percent if referral_code else None)
+                amount = deposit_for(trip_total)
+                booking.stage = Booking.STAGE_DEPOSIT_PAID
+                booking.save(update_fields=["stage"])
+                invoice = Invoice.objects.create(
+                    booking=booking,
+                    amount=amount,
+                    trip_total=trip_total,
+                    status=Invoice.STATUS_DEPOSIT_PAID,
+                    due_date=_balance_due_date(booking),
+                )
+                if referral_code:
                     commission_amount = round(trip_total * settings_obj.commission_percent / 100)
                     redemption = ReferralRedemption.objects.create(
                         code=referral_code,
@@ -309,6 +368,12 @@ class BookingViewSet(
                     referral_code.is_used = True
                     referral_code.used_at = timezone.now()
                     referral_code.save(update_fields=["is_used", "used_at"])
+        except IntegrityError:
+            # A second, concurrent pay for the same booking: both passed the stage check
+            # above, and the invoice's one-to-one constraint stopped this one.
+            return Response(
+                {"detail": "This booking has already been paid."}, status=status.HTTP_400_BAD_REQUEST
+            )
         send_notification(
             subject=f"Payment received — {booking.package_title}",
             message=(
@@ -343,7 +408,7 @@ class BookingViewSet(
                 f"(commission ${redemption.commission_amount:,} owed to {redemption.code.agent.email})",
             )
         booking.refresh_from_db()
-        return Response(BookingDetailSerializer(booking).data)
+        return Response(self._detail(booking))
 
     @action(detail=True, methods=["post"], url_path="pay-balance")
     def pay_balance(self, request, pk=None):
@@ -355,19 +420,25 @@ class BookingViewSet(
         booking = self.get_object()
         if request.user.role != User.ROLE_TOURIST or booking.customer_id != request.user.id:
             return Response(status=status.HTTP_403_FORBIDDEN)
-        invoice = getattr(booking, "invoice", None)
-        if not invoice or invoice.trip_total is None:
-            return Response({"detail": "No balance is due on this booking."}, status=status.HTTP_400_BAD_REQUEST)
-        remaining = invoice.remaining_balance
-        if not remaining:
-            return Response({"detail": "This booking is already fully paid."}, status=status.HTTP_400_BAD_REQUEST)
 
         with transaction.atomic():
+            # Locked and re-read inside the transaction, so a double-clicked payment
+            # sees the first one's result instead of paying (and emailing) twice.
+            invoice = Invoice.objects.select_for_update().filter(booking=booking).first()
+            if not invoice or invoice.trip_total is None:
+                return Response({"detail": "No balance is due on this booking."}, status=status.HTTP_400_BAD_REQUEST)
+            remaining = invoice.remaining_balance
+            if not remaining:
+                return Response({"detail": "This booking is already fully paid."}, status=status.HTTP_400_BAD_REQUEST)
             invoice.amount = invoice.trip_total
             invoice.status = Invoice.STATUS_PAID
             invoice.save(update_fields=["amount", "status"])
-            booking.stage = Booking.STAGE_CONFIRMED
-            booking.save(update_fields=["stage"])
+            # Only a deposit-paid booking moves on. An admin may already have advanced
+            # it (to confirmed, or completed after the trip), and paying the balance
+            # late must not move it backwards.
+            if booking.stage == Booking.STAGE_DEPOSIT_PAID:
+                booking.stage = Booking.STAGE_CONFIRMED
+                booking.save(update_fields=["stage"])
         send_notification(
             subject=f"Balance paid — {booking.package_title}",
             message=(
@@ -384,7 +455,7 @@ class BookingViewSet(
             f"Remaining balance of ${remaining:,} paid for booking #{booking.id} (invoice #{invoice.id})",
         )
         booking.refresh_from_db()
-        return Response(BookingDetailSerializer(booking).data)
+        return Response(self._detail(booking))
 
 
 class InvoiceViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
@@ -443,6 +514,7 @@ class InvoiceViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.
     @action(detail=True, methods=["post"], url_path="remind")
     def remind(self, request, pk=None):
         invoice = self.get_object()
+        log_action(request.user, "invoice.reminder_sent", f"Sent a payment reminder for invoice #{invoice.id}")
         send_notification(
             subject=f"Payment reminder — {invoice.booking.package_title}",
             message=(
@@ -463,18 +535,32 @@ class FinanceSummaryView(APIView):
         # Was: `list(Invoice.objects.all())` — every invoice, every related
         # row prefetched by the model default, loaded into Python — then three
         # passes over that list. A handful of SQL aggregates replace it.
-        invoices = Invoice.objects.with_effective_status()
-        total_invoiced = invoices.aggregate(total=Sum("amount"))["total"] or 0
-        total_collected = (
-            invoices.filter(effective_status_db=Invoice.STATUS_PAID).aggregate(total=Sum("amount"))["total"] or 0
+        #
+        # A checkout invoice bills the whole trip (trip_total) and has collected its
+        # deposit (amount) until the balance is paid; a quote invoice bills `amount`
+        # and has collected nothing until it's marked paid. Counting only `amount`
+        # and only paid invoices used to under-report what's billed and report every
+        # deposit already received as outstanding.
+        billed = Coalesce("trip_total", "amount")
+        collected = Case(
+            When(status=Invoice.STATUS_PAID, then=billed),
+            When(status=Invoice.STATUS_DEPOSIT_PAID, trip_total__isnull=False, then=F("amount")),
+            default=Value(0),
+            output_field=IntegerField(),
         )
-        overdue = invoices.filter(effective_status_db="overdue").aggregate(count=Count("id"), total=Sum("amount"))
+        invoices = Invoice.objects.with_effective_status().annotate(billed=billed, collected=collected)
+        totals = invoices.aggregate(billed_total=Sum("billed"), collected_total=Sum("collected"))
+        total_invoiced = totals["billed_total"] or 0
+        total_collected = totals["collected_total"] or 0
+        overdue = invoices.filter(effective_status_db="overdue").aggregate(
+            count=Count("id"), owed=Sum(F("billed") - F("collected"))
+        )
         return Response(
             {
                 "total_invoiced": total_invoiced,
                 "total_collected": total_collected,
                 "total_outstanding": total_invoiced - total_collected,
                 "overdue_count": overdue["count"] or 0,
-                "overdue_amount": overdue["total"] or 0,
+                "overdue_amount": overdue["owed"] or 0,
             }
         )

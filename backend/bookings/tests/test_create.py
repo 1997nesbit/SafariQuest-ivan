@@ -105,13 +105,20 @@ class BookingCreateTests(APITestCase):
         response = self.client.post(self.url, payload)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_new_account_gets_auth_cookies_and_email(self):
+    def test_new_account_gets_an_email_but_the_caller_is_not_signed_in(self):
+        # The email isn't verified, so whoever typed it may not own it: they must not
+        # get a session on that account. The owner claims it through the emailed link.
         response = self.client.post(self.url, self.payload)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertIn("access_token", response.cookies)
-        self.assertIn("refresh_token", response.cookies)
+        self.assertNotIn("access_token", response.cookies)
+        self.assertNotIn("refresh_token", response.cookies)
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn("jane@example.com", mail.outbox[0].to)
+
+    def test_children_must_leave_at_least_one_adult(self):
+        payload = dict(self.payload, guests=2, children=2)
+        response = self.client.post(self.url, payload)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_existing_registered_account_email_is_rejected(self):
         User.objects.create_user(email="jane@example.com", password="realpassword123", role="tourist")

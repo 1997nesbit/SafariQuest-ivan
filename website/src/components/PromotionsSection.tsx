@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { CaretLeft, CaretRight, WhatsappLogo } from '@phosphor-icons/react'
 import { getPromotions, whatsappUrl, type Promotion } from '../api/promotions'
 import { useFetch } from '../lib/useFetch'
@@ -9,6 +10,7 @@ const AUTO_ADVANCE_MS = 7000
 /** Sponsoring Events on the homepage. Renders nothing when no event is published,
  * so an empty section never shows as a blank block. */
 export function PromotionsSection() {
+  const { t } = useTranslation('home')
   const { data } = useFetch(getPromotions, [])
   const events = data ?? []
   const prefersReducedMotion = usePrefersReducedMotion()
@@ -30,7 +32,7 @@ export function PromotionsSection() {
   return (
     <section aria-labelledby="sponsoring-events-heading" className="py-20 md:py-section-gap px-5 md:px-margin-desktop max-w-container-max mx-auto">
       <h2 id="sponsoring-events-heading" className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-10">
-        Sponsoring Events
+        {t('sponsoringEvents.heading')}
       </h2>
 
       <article className="grid md:grid-cols-2 gap-8 items-center bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm">
@@ -54,7 +56,7 @@ export function PromotionsSection() {
         <div className="flex items-center justify-center gap-4 mt-8">
           <button
             type="button"
-            aria-label="Previous event"
+            aria-label={t('sponsoringEvents.previous')}
             onClick={() => setIndex((i) => (i - 1 + count) % count)}
             className="w-11 h-11 rounded-full border border-sand-stone flex items-center justify-center hover:border-savanna-green"
           >
@@ -67,7 +69,7 @@ export function PromotionsSection() {
           </div>
           <button
             type="button"
-            aria-label="Next event"
+            aria-label={t('sponsoringEvents.next')}
             onClick={() => setIndex((i) => (i + 1) % count)}
             className="w-11 h-11 rounded-full border border-sand-stone flex items-center justify-center hover:border-savanna-green"
           >

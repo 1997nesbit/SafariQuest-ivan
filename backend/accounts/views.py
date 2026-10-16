@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from audit.utils import log_action
@@ -52,6 +53,18 @@ def _set_auth_cookies(response, user):
         samesite=settings.AUTH_COOKIE_SAMESITE,
     )
     return refresh
+
+
+def revoke_refresh_tokens(user):
+    """Sign the user out everywhere else: blacklist every refresh token issued to them.
+
+    Called when a password is set or changed. Without it, whoever already held a session
+    kept it for up to REFRESH_TOKEN_LIFETIME afterwards — including someone who had
+    signed in before the real owner claimed the account. Access tokens still run out on
+    their own within ACCESS_TOKEN_LIFETIME.
+    """
+    for token in OutstandingToken.objects.filter(user=user):
+        BlacklistedToken.objects.get_or_create(token=token)
 
 
 def auth_payload(user) -> dict:
@@ -180,8 +193,11 @@ class CustomerListView(generics.ListAPIView):
     permission_classes = [IsAdminRole]
     serializer_class = CustomerSerializer
     pagination_class = StandardPagination
-    queryset = User.objects.filter(role=User.ROLE_TOURIST).prefetch_related("bookings", "bookings__line_items").order_by(
-        "-date_joined"
+    # bookings__invoice: a checkout booking's total lives on its invoice (Booking.subtotal).
+    queryset = (
+        User.objects.filter(role=User.ROLE_TOURIST)
+        .prefetch_related("bookings", "bookings__line_items", "bookings__invoice")
+        .order_by("-date_joined")
     )
 
 
@@ -199,8 +215,12 @@ class ChangePasswordView(APIView):
     def post(self, request):
         serializer = ChangePasswordSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(status=status.HTTP_200_OK)
+        user = serializer.save()
+        revoke_refresh_tokens(user)
+        response = Response(status=status.HTTP_200_OK)
+        # Fresh tokens for this browser, which revoke_refresh_tokens just signed out too.
+        _set_auth_cookies(response, user)
+        return response
 
 
 class MeView(APIView):
@@ -247,6 +267,7 @@ class SetPasswordView(APIView):
         user = serializer.validated_data["user"]
         user.set_password(serializer.validated_data["password"])
         user.save()
+        revoke_refresh_tokens(user)
         response = Response(auth_payload(user), status=status.HTTP_200_OK)
         _set_auth_cookies(response, user)
         return response

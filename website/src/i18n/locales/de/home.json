@@ -90,15 +90,6 @@
       }
     }
   },
-  "gallery": {
-    "alts": {
-      "flamingos": "Rosa Flamingos waten bei Sonnenaufgang in den seichten alkalischen Gewässern des Manyara-Sees.",
-      "wildebeest": "Eine riesige Gnu-Herde überquert während der Großen Wanderung den Mara-Fluss.",
-      "tent": "Ein luxuriöses Safari-Zelt leuchtet im Laternenlicht unter der Milchstraße.",
-      "cheetah": "Ein Gepardenjunges mit großen, ausdrucksstarken Augen sitzt im taubedeckten Gras.",
-      "maasai": "Ein Massai-Krieger in traditionellem rotem Shuka-Gewand blickt bei Sonnenuntergang über die Savanne."
-    }
-  },
   "newsletter": {
     "heading": "Werden Sie Teil des Abenteuers",
     "body": "Erhalten Sie exklusive Reiseführer, Safari-Tipps und frühzeitigen Zugang zu saisonalen Angeboten direkt in Ihrem Posteingang.",
@@ -117,5 +108,17 @@
       "travellers": "Ehemalige Reisende & Freunde"
     },
     "cta": "Agent werden"
+  },
+  "partnerHotels": {
+    "eyebrow": "Wo Sie übernachten",
+    "heading": "Unsere Partnerhotels",
+    "disclaimer": "Dies sind die Hotels und Lodges in ganz Tansania, mit denen wir zusammenarbeiten. Jede Unterkunft wird unabhängig geführt und ist für ihre eigenen Einrichtungen, Leistungen und Sicherheit verantwortlich, einschließlich Strom und Wasser. Für Probleme, die während Ihres Aufenthalts in einer Unterkunft auftreten, ist die jeweilige Unterkunft verantwortlich.",
+    "visitWebsite": "Website besuchen",
+    "opensInNewTab": "(öffnet in einem neuen Tab)"
+  },
+  "sponsoringEvents": {
+    "heading": "Gesponserte Events",
+    "previous": "Vorheriges Event",
+    "next": "Nächstes Event"
   }
 }

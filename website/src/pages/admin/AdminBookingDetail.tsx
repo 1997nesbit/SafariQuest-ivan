@@ -101,6 +101,9 @@ export function AdminBookingDetail() {
 
   const subtotal = lineItems.reduce((sum, li) => sum + quotePrice(li), 0)
   const quoteSent = booking.stage !== 'new_inquiry'
+  // The API refuses quote edits once a deposit is paid (the invoice and the payment are
+  // against the current figure), so the builder goes read-only from then on.
+  const quoteLocked = booking.stage !== 'new_inquiry' && booking.stage !== 'quoted'
   const nextStageAction = NEXT_STAGE_ACTION[booking.stage]
   const availableGuides = (guides ?? []).filter(
     (g) => g.status === 'Available' || g.id === booking.assignedGuideId,
@@ -368,6 +371,7 @@ export function AdminBookingDetail() {
                       <td className="py-2 pr-2">
                         <input
                           value={li.label}
+                          disabled={quoteLocked}
                           onChange={(e) => updateLineItem(i, { label: e.target.value })}
                           className="w-full bg-surface border border-sand-stone rounded-md px-2 py-1 text-sm"
                         />
@@ -377,6 +381,7 @@ export function AdminBookingDetail() {
                           type="number"
                           min={1}
                           value={li.quantity}
+                          disabled={quoteLocked}
                           onChange={(e) => updateLineItem(i, { quantity: Math.max(1, Number(e.target.value)) })}
                           className="w-14 bg-surface border border-sand-stone rounded-md px-2 py-1 text-sm text-right"
                         />
@@ -386,27 +391,34 @@ export function AdminBookingDetail() {
                           type="number"
                           min={0}
                           value={li.unitPrice}
+                          disabled={quoteLocked}
                           onChange={(e) => updateLineItem(i, { unitPrice: Number(e.target.value) })}
                           className="w-24 bg-surface border border-sand-stone rounded-md px-2 py-1 text-sm text-right"
                         />
                       </td>
                       <td className="py-3 text-right font-label-md text-sm text-on-surface">${quotePrice(li).toLocaleString()}</td>
                       <td className="py-2 text-right">
-                        <button type="button" onClick={() => removeLineItem(i)} className="text-on-surface-variant hover:text-terracotta">
-                          <Trash size={16} />
-                        </button>
+                        {!quoteLocked && (
+                          <button type="button" onClick={() => removeLineItem(i)} className="text-on-surface-variant hover:text-terracotta">
+                            <Trash size={16} />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              <button
-                type="button"
-                onClick={addLineItem}
-                className="flex items-center gap-1.5 text-savanna-green font-label-md text-sm mb-4"
-              >
-                <Plus size={16} /> Add Line Item
-              </button>
+              {quoteLocked ? (
+                <p className="text-on-surface-variant text-sm mb-4">The quote is locked once a deposit has been paid.</p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={addLineItem}
+                  className="flex items-center gap-1.5 text-savanna-green font-label-md text-sm mb-4"
+                >
+                  <Plus size={16} /> Add Line Item
+                </button>
+              )}
             </div>
             <div className="flex justify-end border-t-2 border-sand-stone pt-4">
               <div className="w-56 flex justify-between items-center">
@@ -414,16 +426,18 @@ export function AdminBookingDetail() {
                 <span className="font-headline-md text-[18px] text-savanna-green">${Math.round(subtotal).toLocaleString()}</span>
               </div>
             </div>
-            <div className="flex gap-3 mt-6 justify-end">
-              <button
-                type="button"
-                onClick={handleSaveDraft}
-                disabled={savingQuote}
-                className="min-h-[40px] border border-sand-stone px-5 rounded-lg font-label-md text-sm hover:bg-surface-container-low transition-colors disabled:opacity-60"
-              >
-                {savingQuote ? 'Saving…' : 'Save Draft'}
-              </button>
-            </div>
+            {!quoteLocked && (
+              <div className="flex gap-3 mt-6 justify-end">
+                <button
+                  type="button"
+                  onClick={handleSaveDraft}
+                  disabled={savingQuote}
+                  className="min-h-[40px] border border-sand-stone px-5 rounded-lg font-label-md text-sm hover:bg-surface-container-low transition-colors disabled:opacity-60"
+                >
+                  {savingQuote ? 'Saving…' : 'Save Draft'}
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="bg-surface-container-lowest rounded-xl p-6 shadow-sm border border-sand-stone/50">

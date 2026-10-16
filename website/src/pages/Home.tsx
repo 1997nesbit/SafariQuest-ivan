@@ -23,9 +23,12 @@ import { DestinationSlideshow } from '../components/DestinationSlideshow'
 import { getSafaris } from '../api/safaris'
 import { getDestinations } from '../api/destinations'
 import { getPublicReferralSettings } from '../api/referrals'
+import { getHomepageImages } from '../api/homepage'
+import { PartnerHotelsSection } from '../components/PartnerHotelsSection'
 import { useFetch } from '../lib/useFetch'
 import { usePrefersReducedMotion } from '../lib/usePrefersReducedMotion'
 import { PromotionsSection } from '../components/PromotionsSection'
+import { SITE_IMAGE_DEFAULTS } from '../data/siteImageDefaults'
 
 const REFERRAL_AUDIENCES = [
   { icon: Buildings, key: 'hotels' },
@@ -56,38 +59,11 @@ const TESTIMONIALS = [
     key: 'sarah',
     name: 'Sarah Jenkins',
     location: 'London, United Kingdom',
-    avatar:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuBFIMzrREe_jcC3X0qovnWDaglzRGvVy0TWU8RkvZ8FJFjt-G5ui8oQjFLRe3CjGQe2MWNdqNmotnl0vlV60AzI9bMFWwk2Q2eK5OjTg-v-gmsruDqc-NYDmoFI8Z5vwRsPWq1OlFUbnLj_zrLqx3krWRcM6QldqT6dEiHrROyL29Ks4Bdym0GDriAjvrOfWr3vdON_EefgGk_D94U9rguoRtCUh5hZdfcgEE7999SG7KSS1R32gbmq',
   },
   {
     key: 'markus',
     name: 'Markus Weber',
     location: 'Munich, Germany',
-    avatar:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuCDRcYLtsIkom74XG5p6jZlqurQPzqTawzyhwQ6VXrrML45M24gF6_2XWFN9-a94dapRlzTqElUJ7UjxxyQuKE6SnAbUzrCjiczFOjpgbOZusViypZ-6K0Dl10Ox4FWyVTMexcAn2w_0U7rOHLYR3auBrDSGUthdHkhP48mSb2CswDWp9H7Dv5ckSe4T5Y2tLLzjuHSCKkT3ed6U1caTHsIIeNswwZpmrf8GSvDrf3zz5FL90q6PW_Z',
-  },
-] as const
-
-const GALLERY = [
-  {
-    src: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDsIQ0laWmQuJ5AQGU-MZ2072mfZEQdaQkkaUsq6_PkZkYtTfEY95tkb3PZ0BKDnIRu9l8YS6HRCPPCiwVBk9g1NlUeazkm_csfHTeaoFhcTWB__xcH4ynGYcPq8xYCfhT4tLUmLcu78V_2ezyAdb1WRRfGHQIx2olP-2eIcQ6q20ZEMoyahkAK9YlASM-bRXwgspPT4PgcaZJlpfz027neyCw1iCq2a7fhmM3S3LRoWY1G8skxGXQ3',
-    key: 'flamingos',
-  },
-  {
-    src: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCuH0tePT8qXq_sHGAE4U3Wpha89bXX6gx6ymIKtzx6ySqYp405qvn7vRhJ6rtisiulxyHtycuBJapgtHaAnHfJvpqWCJDYXHShwbcvIdtnfC4IUwzUNXFLjsMLyPLGFNfplUR2nTi0Eduedi6wzDHL1o4hk9nGkuPGdPC8lACGsD6Jn0qNLmtJrXqWp-QWsiyglOScAe-CdT2X9NCU-Qw1lX9rJVKr9siAAV72jk3p8Ii-RlCwBl3T',
-    key: 'wildebeest',
-  },
-  {
-    src: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBpGD1x2a6nBVYSpCjkjQDx3K3ZZD2PlILrve174tC3eyqNGnv9ODFvhlkC6K4kiBjd7VaJXRlrMhPLIGQVfCASltN5NrgcMsk_QuIhZ7BNj50Cs2Z3ACAxBFhtDncWsywDgS54SqpzhRYEGNPTxLCjvWTW82gCTzfdZxhd5fMpRLKles2hCVupN0WSG2PYgnniyzAZQyuBl21E24Am7eGeQkoHB4SjaTriJxjuD05MXIji1PQpVNWL',
-    key: 'tent',
-  },
-  {
-    src: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDCtN0NgbmLUwPgXkv2bz7m5k4NdWFw6BqiXNYnVLiVRIZEYGk29NwE-yM_9XpdsdfAX3t09Vl-BgSfeCic1dLLcFfnRwXtGWWxQd-WcQ8-7nt_LgOtrJUBrTsofGxzfKwbpVFLLPIy6krV2Z4TtCtKLDxz0x3PJ6F1kl5TNc5HiMPQTRDxqRk1CgFFSJ6bJsYsIkCyLr5elPs5nAMO18mxUxO8CgiVDSOevWPfdBM337-7dygXpJNl',
-    key: 'cheetah',
-  },
-  {
-    src: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDnT1UDxNruXxK2N_ZyiXvfqpFmDOChCGzdi_ALZSSxsdOMkNCpeqYkKywimRGndbUhdEmd2PEbtrwUB0SpE0GkwQCxkwAu5eeXztZRLJW4o0vDrU5C0azHpA2e-q4p0nHZMDSZMsYF7xfLezL8n9tjjgXUiqZws_ZwzwvEGwa0_mHNhBg9nMUUw7fHXT1kPt8LG-76w92Jc47wnLEmivr3d4jJNKGlTdKYWnCs6ZcEs9w2u9g5dXC5',
-    key: 'maasai',
   },
 ] as const
 
@@ -97,7 +73,17 @@ export function Home() {
   const signaturePackages = (safaris ?? []).filter((s) => s.signature)
   const { data: destinations } = useFetch(getDestinations, [])
   const { data: referralRates } = useFetch(getPublicReferralSettings, [])
+  const { data: homepageImages, loading: homepageImagesLoading } = useFetch(getHomepageImages, [])
   const featuredDestinations = (destinations ?? []).slice(0, 4)
+  // The hero is always a video: the one replaced in Site Images, or the one that
+  // ships with the site. Its source is held back until saved images have loaded,
+  // so the original never starts playing only to be swapped out a moment later;
+  // the poster covers that gap.
+  const heroVideo = homepageImagesLoading
+    ? undefined
+    : homepageImages?.hero_video?.image || SITE_IMAGE_DEFAULTS.hero_video
+  const heroPoster = homepageImages?.hero_poster?.image || SITE_IMAGE_DEFAULTS.hero_poster
+  const whyChooseImage = homepageImages?.why_choose?.image || SITE_IMAGE_DEFAULTS.why_choose
 
   // <video autoPlay> ignores the global prefers-reduced-motion CSS (it only
   // covers CSS animations/transitions), so it's gated here in JS instead.
@@ -108,8 +94,10 @@ export function Home() {
       {/* Hero */}
       <section className="relative h-screen min-h-[640px] w-full flex items-center justify-center overflow-hidden">
         <video
-          src="/videos/hero.mp4"
-          poster="https://lh3.googleusercontent.com/aida-public/AB6AXuAMR8vztW8A14neiYV4bSqSlUMuo1Y9-mwfvWjE4CS0mK-8UA2Exzvz2F3I9sG-hFGJblKAlfOaZBBbnZqeDi0ivQhv_4XdzmiDeAA7SaAoD1Vbohvb_KalozG-peJSBYM_iDUlD4JEMW3paUXvdttilCgtcnAE5GUg_AiBUFlosW2GqV24mFAx3gROTnY6wB7wJfGBPDixNHiweh10u0W2I2xJeSNIcMvacvsGk_NOXRiC7ZdnPoFM"
+          // key: a new source remounts the element, so autoplay applies to it too.
+          key={heroVideo ?? 'pending'}
+          src={heroVideo}
+          poster={heroPoster}
           autoPlay={!prefersReducedMotion}
           loop={!prefersReducedMotion}
           muted
@@ -343,8 +331,8 @@ export function Home() {
           </Reveal>
           <Reveal delay={200} className="relative h-[600px] rounded-2xl overflow-hidden">
             <img
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDq7Lsu0HDL-2KGvgsD6LvFmTWdIgoRYe-AbUqxiwAMN_cGEM7-I3AB8qoVKHprpteo07PH2DRQVyb4OUTsHBwiNzWADYgfWXjAyMENaOpgVWASL1KTaJjJVIKGwto0mVMnM8ylw70q1IwdL93jMzsSX0yMLOwssyAFiumjbS2qdweYQ3AM07V9LP-WrBG40dWEthdYFnka2n0armknnE1Qa2qeoZaeN_VBnujcXbnbJYwzGUyKBVUR"
-              alt={t('whyChoose.imageAlt')}
+              src={whyChooseImage}
+              alt={homepageImages?.why_choose?.alt || t('whyChoose.imageAlt')}
               loading="lazy"
               className="w-full h-full object-cover"
             />
@@ -376,7 +364,7 @@ export function Home() {
                 </blockquote>
                 <div className="flex items-center gap-4">
                   <img
-                    src={testimonial.avatar}
+                    src={homepageImages?.[`testimonial_${testimonial.key}`]?.image || SITE_IMAGE_DEFAULTS[`testimonial_${testimonial.key}`]}
                     alt={`Portrait of ${testimonial.name}`}
                     loading="lazy"
                     className="w-12 h-12 rounded-full object-cover bg-sand-stone/20"
@@ -392,16 +380,8 @@ export function Home() {
         </div>
       </section>
 
-      {/* Photo Gallery Strip */}
-      <section className="py-12 bg-surface-container-lowest overflow-hidden">
-        <div className="flex gap-4 px-5">
-          {GALLERY.map((photo) => (
-            <div key={photo.src} className="w-64 md:w-80 h-48 md:h-60 shrink-0 rounded-lg overflow-hidden">
-              <img src={photo.src} alt={t(`gallery.alts.${photo.key}`)} loading="lazy" className="w-full h-full object-cover" />
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* Partner hotels — replaced the old photo gallery strip at the client's request. */}
+      <PartnerHotelsSection />
 
       {/* Newsletter CTA */}
       <section className="py-20 md:py-section-gap px-5 md:px-margin-desktop max-w-container-max mx-auto">

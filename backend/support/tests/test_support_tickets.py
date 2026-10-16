@@ -3,6 +3,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from bookings.tests.test_pay import make_booking
 from support.models import SupportTicket, SupportTicketNote
 
 User = get_user_model()
@@ -36,6 +37,16 @@ class SupportTicketTests(APITestCase):
         response = self.client.post(self.list_url, {"description": "Guide was late for pickup"})
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["reporter_role"], "tourist")
+
+    def test_cannot_file_a_ticket_against_someone_elses_booking(self):
+        stranger = User.objects.create_user(email="stranger@example.com", password="pw12345", role="tourist")
+        strangers_booking = make_booking(stranger)
+        own_booking = make_booking(self.tourist)
+        self._login_as(self.tourist)
+        response = self.client.post(self.list_url, {"description": "Late pickup", "booking": strangers_booking.id})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response = self.client.post(self.list_url, {"description": "Late pickup", "booking": own_booking.id})
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_non_admin_cannot_list_tickets(self):
         self._login_as(self.tourist)

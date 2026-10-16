@@ -60,7 +60,7 @@ export function Header() {
         </div>
         <div className="flex-1" />
 
-        <div className="flex items-center gap-1.5 xl:gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 xl:gap-2 shrink-0 lg:ml-6 xl:ml-10">
           <NavLink
             to="/plan"
             className="hidden lg:flex items-center bg-savanna-green text-on-primary font-label-md text-label-md px-4 xl:px-6 py-3 rounded hover:opacity-90 transition-opacity shrink-0 mr-1 xl:mr-2 whitespace-nowrap"
@@ -71,18 +71,20 @@ export function Header() {
             <>
               <PlainNavLink
                 to={dashboardHref}
-                className="hidden lg:flex items-center gap-1.5 text-on-surface-variant hover:text-savanna-green transition-colors font-label-md text-label-md px-2 shrink-0 whitespace-nowrap"
+                title="Dashboard"
+                aria-label="Dashboard"
+                className="hidden lg:flex items-center justify-center w-9 h-9 text-savanna-green hover:opacity-80 transition-opacity shrink-0"
               >
-                <UserCircle size={18} />
-                Dashboard
+                <UserCircle size={20} weight="fill" />
               </PlainNavLink>
               <button
                 type="button"
                 onClick={handleSignOut}
                 title={t('signOut')}
+                aria-label={t('signOut')}
                 className="hidden lg:flex items-center justify-center w-9 h-9 text-on-surface-variant hover:text-savanna-green transition-colors shrink-0"
               >
-                <SignOut size={18} />
+                <SignOut size={20} />
               </button>
             </>
           ) : (

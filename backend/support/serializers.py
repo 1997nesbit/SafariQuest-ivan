@@ -1,6 +1,9 @@
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from .models import SupportTicket, SupportTicketNote
+
+User = get_user_model()
 
 
 class SupportTicketNoteSerializer(serializers.ModelSerializer):
@@ -71,6 +74,21 @@ class SupportTicketCreateSerializer(serializers.ModelSerializer):
         model = SupportTicket
         fields = ["booking", "category", "description", "photo"]
         extra_kwargs = {"booking": {"required": False}}
+
+    def validate_booking(self, booking):
+        """Only a trip the reporter is on: their own booking, or one they're guiding.
+
+        The field otherwise accepts any booking id, which let anyone file a complaint
+        against a stranger's trip (and read its package title back from `mine`).
+        """
+        if booking is None:
+            return booking
+        user = self.context["request"].user
+        if user.role == User.ROLE_ADMIN or booking.customer_id == user.id:
+            return booking
+        if booking.assigned_guide_id and booking.assigned_guide.user_id == user.id:
+            return booking
+        raise serializers.ValidationError("You can only report an issue about one of your own trips.")
 
 
 class SupportTicketUpdateSerializer(serializers.ModelSerializer):

@@ -30,6 +30,14 @@ class UserInviteSerializer(serializers.ModelSerializer):
         model = User
         fields = ["email", "name"]
 
+    def validate_email(self, value):
+        # Same rule as RegisterSerializer: an address differing only by case is the same
+        # person (sign-in matches emails case-insensitively — UserManager.get_by_natural_key).
+        value = User.objects.normalize_email(value)
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("An account with this email already exists.")
+        return value
+
     def create(self, validated_data):
         user = User(email=validated_data["email"], name=validated_data.get("name", ""), role=User.ROLE_ADMIN)
         user.set_unusable_password()

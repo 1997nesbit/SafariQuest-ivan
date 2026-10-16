@@ -21,19 +21,13 @@ import { activateReferralAgent, getPublicReferralSettings } from '../api/referra
 import { useAuth } from '../auth/AuthContext'
 import { useFetch } from '../lib/useFetch'
 import { ApiError } from '../lib/api'
+import { useSiteImages } from '../lib/useSiteImage'
 
 const NEXT_STEPS = [
   { icon: CalendarPlus, borderColor: 'border-savanna-green', iconColor: 'text-savanna-green', key: 'itineraryPrep' },
   { icon: PhoneCall, borderColor: 'border-golden-sun', iconColor: 'text-golden-sun', key: 'consultationCall' },
   { icon: ShieldCheck, borderColor: 'border-terracotta', iconColor: 'text-terracotta', key: 'welcomePack' },
 ] as const
-
-const HERO_IMAGE =
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuD46ZODNecN_x9gUPz05p-6LL7fuBmRbE-9ijpnHvZHq9qTOoiaPErlqy9TDsD8rkMW56A9bfcpdGNPbcTR90iQZ8GdJl0KdSJyYi1EyGR8wMB0xXwYkJ64oYXMvaLlwhH-uGbjzXNH8g_M7pXeu0Cu--tNA8CEaYC71W7mbiNJHRTX-r01h_iG-J5eXHFyQc9OI0xk2bDyws_zde5SL_YFT6xR0oRzBkOBe08_mSs8XxGRapLyXtiC7LYeEHF_eGG_hPmYmZyskXA17g'
-const BENTO_LARGE_IMAGE =
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuCrN7f-31QBo6HA8nmmSsbZ9ZyLEsBm-vJSD8B0tFwsxYCSPAgQKOwjVXDIa1pVFTaTFbEhXI_eR6LXa0Q6g6Bz1l0LOUiuH4FEIrjGdjgjn-qJoRZB8TazdW6oY-UPPy9kjeH3kb7q1eUfhBpQBTRFzyieWQUUWtUo66qS93eDQ5JGSobxmP2iqY7GSA-1jAOrW4RmbsVktB2MoMAqNPADvuzS73fRqWLmCydWeLYQGlABf3_P1MDL'
-const BENTO_SMALL_IMAGE =
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuDfb3LhZ4Grm0EXswuE5zBp3bZPKCMbytAJpHpmDfYSNUSTDLm5vYbftZAZwdux5Q10iL-7nfKMQg9gzB74EyU-dMsejXRcEUVnSl1i8FV0bk8wqKQ500OvVgY7bwTHOYEizBHy9AhLKpsW63GHbJJQq8CMeqP282vuua5vMOMe6owsDuN6sHYWzZPNy9azvAOs0qxaDVkvRNXpkYde_jb-9PtOXTFePInwlQemsHJgYLxKoAmZB8BKSA2j_iAC9JqqYQ'
 
 /**
  * Invites a traveller who has just booked to refer friends, at the moment they're most
@@ -116,6 +110,10 @@ function ReferAndEarnCard() {
 
 export function BookingConfirmed() {
   const { t, i18n } = useTranslation('booking')
+  const siteImage = useSiteImages()
+  const heroPhoto = siteImage('booking_confirmed_hero', t('confirmed.heroImageAlt'))
+  const packingPhoto = siteImage('booking_confirmed_packing', t('confirmed.resources.packingGuide.imageAlt'))
+  const photographyPhoto = siteImage('booking_confirmed_photography', t('confirmed.resources.photographyTips.imageAlt'))
   const location = useLocation()
   const state = location.state as { title?: string; paidAmount?: number; paidToEmail?: string } | null
   const title = state?.title
@@ -178,7 +176,7 @@ export function BookingConfirmed() {
           </div>
           <div className="relative">
             <div className="aspect-[3/4] rounded-xl overflow-hidden shadow-2xl relative z-10 bg-surface-container">
-              <img src={HERO_IMAGE} alt={t('confirmed.heroImageAlt')} className="w-full h-full object-cover" />
+              <img src={heroPhoto.image} alt={heroPhoto.alt} className="w-full h-full object-cover" />
             </div>
             <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-golden-sun/20 rounded-full blur-3xl z-0" />
             <div className="absolute -top-6 -left-6 w-48 h-48 bg-savanna-green/10 rounded-full blur-3xl z-0" />
@@ -235,8 +233,8 @@ export function BookingConfirmed() {
           <div className="grid grid-cols-1 md:grid-cols-4 md:grid-rows-2 gap-6 h-auto md:h-[520px]">
             <div className="md:col-span-2 md:row-span-2 relative rounded-xl overflow-hidden group cursor-pointer shadow-lg">
               <img
-                src={BENTO_LARGE_IMAGE}
-                alt={t('confirmed.resources.packingGuide.imageAlt')}
+                src={packingPhoto.image}
+                alt={packingPhoto.alt}
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-deep-earth/80 via-transparent to-transparent" />
@@ -253,8 +251,8 @@ export function BookingConfirmed() {
 
             <div className="md:col-span-2 relative rounded-xl overflow-hidden group cursor-pointer shadow-lg">
               <img
-                src={BENTO_SMALL_IMAGE}
-                alt={t('confirmed.resources.photographyTips.imageAlt')}
+                src={photographyPhoto.image}
+                alt={photographyPhoto.alt}
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-deep-earth/80 via-transparent to-transparent" />

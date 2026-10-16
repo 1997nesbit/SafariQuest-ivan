@@ -152,22 +152,43 @@ class SelfReferralTests(APITestCase):
         response = self.client.post(reverse("referral-code-validate"), {"code": self.friends_code.code})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_paying_with_your_own_code_records_no_commission(self):
+    def test_paying_with_your_own_code_is_refused_and_records_nothing(self):
+        # Refused rather than silently dropped: the page would have priced the trip
+        # with the discount, and the server now records what it computes itself.
         booking = make_booking(self.agent)
         response = self.client.post(
-            reverse("booking-pay", args=[booking.id]),
-            {"amount": 5100, "trip_total": 17000, "referral_code": self.own_code.code},
+            reverse("booking-pay", args=[booking.id]), {"referral_code": self.own_code.code}
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(ReferralRedemption.objects.filter(booking=booking).exists())
         self.own_code.refresh_from_db()
         self.assertFalse(self.own_code.is_used)
+        booking.refresh_from_db()
+        self.assertEqual(booking.stage, "new_inquiry")
 
     def test_paying_with_someone_elses_code_records_their_commission(self):
         booking = make_booking(self.agent)
         self.client.post(
             reverse("booking-pay", args=[booking.id]),
-            {"amount": 5100, "trip_total": 17000, "referral_code": self.friends_code.code},
+            {"amount": 1, "trip_total": 10000000, "referral_code": self.friends_code.code},
         )
         redemption = ReferralRedemption.objects.get(booking=booking)
         self.assertEqual(redemption.code, self.friends_code)
+        # Priced server-side, ignoring the amounts sent: 4 x $17,000 less the 2% default
+        # discount, and the 5% default commission on that.
+        self.assertEqual(redemption.trip_total, 66640)
+        self.assertEqual(redemption.commission_amount, 3332)
+
+
+class ReferralSettingsBoundsTests(APITestCase):
+    def setUp(self):
+        admin = User.objects.create_user(email="admin@example.com", password=PASSWORD, role="admin")
+        self.client.post(reverse("login"), {"email": admin.email, "password": PASSWORD})
+
+    def test_rejects_a_commission_over_100_percent(self):
+        response = self.client.patch(reverse("referral-settings-admin"), {"commission_percent": "500"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_rejects_a_negative_discount(self):
+        response = self.client.patch(reverse("referral-settings-admin"), {"discount_percent": "-1"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

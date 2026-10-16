@@ -20,6 +20,23 @@ class UserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
+    def get_by_natural_key(self, username):
+        """Look a user up by email for sign-in, ignoring case.
+
+        normalize_email() only lower-cases the domain, so someone who registered as
+        Jane@example.com couldn't sign in by typing jane@example.com. Registration already
+        refuses an address that differs from an existing one only by case, so the
+        case-insensitive match is normally unique; if legacy rows ever make it ambiguous,
+        the exact spelling is required.
+        """
+        try:
+            return self.get(**{self.model.USERNAME_FIELD: username})
+        except self.model.DoesNotExist:
+            try:
+                return self.get(**{f"{self.model.USERNAME_FIELD}__iexact": username})
+            except self.model.MultipleObjectsReturned:
+                raise self.model.DoesNotExist
+
     def create_superuser(self, email, password=None, name="", **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)

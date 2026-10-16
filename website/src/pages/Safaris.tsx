@@ -6,6 +6,7 @@ import { Reveal } from '../components/Reveal'
 import { SafariCard } from '../components/SafariCard'
 import { getSafaris } from '../api/safaris'
 import { useFetch } from '../lib/useFetch'
+import { useSiteImages } from '../lib/useSiteImage'
 
 const DURATION_OPTIONS = [
   { key: 'any', value: '' },
@@ -47,6 +48,8 @@ function matchesBudget(price: number, filter: string) {
 
 export function Safaris() {
   const { t } = useTranslation('safaris')
+  const siteImage = useSiteImages()
+  const heroPhoto = siteImage('safaris_hero', "A green Land Rover safari vehicle driving through tall golden grass in the Serengeti at hazy sunset.")
   const [duration, setDuration] = useState('')
   const [budget, setBudget] = useState('')
   const [destination, setDestination] = useState('')
@@ -74,8 +77,8 @@ export function Safaris() {
       {/* Hero */}
       <section className="relative h-[500px] md:h-[614px] flex items-center overflow-hidden">
         <img
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuArsN8LIH04BlazCIX5eEOzeZucqZDj_kX5blC2ZNDcNAWwC5jDKs-8mGwb-Hfk8aRFQ5QOpshVrmPDLncF37L2Xxn2dm3XaggjgRwBTn0VKO-QrBb5WIyIq5skrUvjXU_7mvAbH0xB1ekeLMgMXjNiZvglIglcF35QnXcz0JQjjEMqkzDsqR9XMx3eoM1vd2rZa_JjqyiP-h_ayzVq86mLinqc3dtvtK1rIJCgHb1lSarNT_JEjwUK"
-          alt="A green Land Rover safari vehicle driving through tall golden grass in the Serengeti at hazy sunset."
+          src={heroPhoto.image}
+          alt={heroPhoto.alt}
           fetchPriority="high"
           className="absolute inset-0 w-full h-full object-cover"
         />

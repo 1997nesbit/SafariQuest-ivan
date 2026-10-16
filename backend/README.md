@@ -207,6 +207,15 @@ day:
   returns published events; admins can pass `?all=true` to include hidden
   ones. The serializer requires an http(s) image URL and a phone number of
   7 to 15 digits.
+- **`homepage`** — the homepage's own image spots that aren't backed by any
+  other model: `HomepageImage` (one row per fixed slot — `hero_poster`,
+  `why_choose`, `testimonial_sarah`, `testimonial_markus` — update-only, never
+  created or deleted through the API) and `GalleryPhoto` (the photo gallery
+  strip, freely addable/orderable/deletable, same shape as `Promotion`).
+  `python manage.py seed_homepage_images` loads the design's original
+  placeholders into both, idempotently, so the migration is a visual no-op
+  until an admin replaces something. See "Image uploads" below for how an
+  upload is kept from ending up too small for its spot.
 - **`pricing`** — `Season` records (date range + price multiplier),
   public-read so the checkout page can price a package for whatever trip
   date the tourist picked (`website/src/lib/seasonalPrice.ts`); admin-write
@@ -264,14 +273,20 @@ day:
   admin Users page.
 - **`uploads`** — a single `ImageUploadView` (admin-only, JPEG/PNG/WEBP/GIF,
   8MB max) that all the admin content-editing forms (destinations, parks,
-  safaris, region safaris, team, events) use for image fields. The
-  format is decided from the file's own leading bytes
+  safaris, region safaris, team, events, the homepage) use for image fields.
+  The format is decided from the file's own leading bytes
   (`detect_image_extension`), never from the request's Content-Type — that's
   a header the client chooses, so an HTML/SVG file renamed `.png` used to be
   accepted and then served back from our public bucket; the stored
-  extension follows the bytes too. Writes go through Django's
-  `default_storage` — see "Object storage" below for where files actually
-  end up.
+  extension follows the bytes too. The upload also carries an optional
+  `purpose` field (e.g. `homepage_hero`); `IMAGE_DIMENSION_REQUIREMENTS` maps
+  it to a minimum width/height (checked with Pillow), so an image too small
+  for a full-bleed spot is rejected with a clear message instead of being
+  saved and coming out stretched or pixelated there. An unlisted or omitted
+  purpose still gets a low floor. The frontend's `ImageDropzone` does the same
+  check client-side first for instant feedback, but this is the one that's
+  actually enforced. Writes go through Django's `default_storage` — see
+  "Object storage" below for where files actually end up.
 
 ## Routes
 
@@ -288,6 +303,8 @@ GET is public unless noted, everything else is role-gated.
 | safaris | `/api/safaris/` | safari packages — full CRUD, admin-write |
 | region_safaris | `/api/region-safaris/` | region-scoped mini safaris — full CRUD, admin-write |
 | team | `/api/team/` | About-page team members — public-read (published only), admin-write; `?all=true` includes drafts for admins |
+| homepage | `/api/homepage/images/{slot}/` | the 4 fixed homepage image slots — public-read, admin-update only (no create/delete) |
+| homepage | `/api/homepage/gallery/` | photo gallery strip — full CRUD, admin-write; public-read is published only, `?all=true` includes drafts for admins |
 | promotions | `/api/promotions/` | sponsored events — public-read (published only), admin-write; `?all=true` includes hidden events for admins |
 | pricing | `/api/pricing/seasons/` | public-read, admin-write |
 | guides | `/api/guides/` | admin-only CRUD, plus `create-with-account/`, `me/`, `me/certifications/` |

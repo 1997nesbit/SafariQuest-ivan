@@ -8,6 +8,23 @@ entries below note which side(s) each change touched.
 See `backend/README.md` and `website/README.md` for the current-state
 architecture overview; this file is the story of how it got there.
 
+## 2026-10-09 — Editable homepage images, with a minimum-resolution check
+
+Backend and website. The homepage's five previously hardcoded image spots
+(the hero poster, the "why choose us" photo, two testimonial avatars, and the
+photo gallery strip) are now admin-editable, in a new "Homepage" tab of the
+content manager. The fixed spots are edited inline; the gallery strip is a
+freely addable/orderable list, same shape as Sponsoring Events.
+
+An upload for any of these declares its `purpose` (e.g. `homepage_hero`), and
+the upload endpoint enforces a minimum width/height for that purpose with
+Pillow, so a too-small image can't be saved into a spot designed to fill the
+screen and come out stretched or pixelated. `ImageDropzone` checks the same
+minimum client-side first, for instant feedback, but the server check is what
+actually enforces it. New migration `homepage.0001_initial`; new seed command
+`seed_homepage_images` loads the original placeholders so the migration is a
+visual no-op until an admin replaces something.
+
 ## 2026-10-06 — Team members get contact details; Experiences removed from footer
 
 Backend and website. Each team member can now have an optional phone number and

@@ -22,6 +22,10 @@ class LoginViewTests(APITestCase):
         self.assertIn(settings.AUTH_COOKIE_REFRESH, response.cookies)
         self.assertTrue(response.cookies[settings.AUTH_COOKIE_ACCESS]["httponly"])
 
+    def test_email_case_does_not_matter(self):
+        response = self.client.post(self.url, {"email": "Guide@Example.com", "password": "correct-pw"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
     def test_no_tokens_in_json_body(self):
         response = self.client.post(self.url, {"email": "guide@example.com", "password": "correct-pw"})
         self.assertNotIn("access", response.data)

@@ -6,6 +6,8 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from rest_framework import status
 from rest_framework.test import APITestCase
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
+from rest_framework_simplejwt.tokens import RefreshToken
 
 User = get_user_model()
 
@@ -26,6 +28,11 @@ class SetPasswordViewTests(APITestCase):
         self.assertIn(settings.AUTH_COOKIE_ACCESS, response.cookies)
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password("brand-new-pw-123"))
+
+    def test_setting_the_password_signs_out_earlier_sessions(self):
+        earlier_session = RefreshToken.for_user(self.user)
+        self.client.post(self.url, {"uid": self.uid, "token": self.token, "password": "brand-new-pw-123"})
+        self.assertTrue(BlacklistedToken.objects.filter(token__jti=earlier_session["jti"]).exists())
 
     def test_invalid_token_returns_400(self):
         response = self.client.post(self.url, {"uid": self.uid, "token": "garbage-token", "password": "brand-new-pw-123"})

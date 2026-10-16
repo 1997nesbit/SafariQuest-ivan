@@ -1,12 +1,14 @@
-from datetime import date
+from datetime import date, timedelta
 
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from bookings.models import Booking, Invoice
+from pricing.models import Season
 from safaris.models import SafariPackage
 
 User = get_user_model()
@@ -72,9 +74,11 @@ class BookingPayTests(APITestCase):
 
     def test_owner_can_pay_creates_invoice_marked_deposit_paid(self):
         self._login_as(self.customer)
-        self.client.post(self.pay_url, {"amount": 5100})
+        self.client.post(self.pay_url)
         invoice = Invoice.objects.get(booking=self.booking)
-        self.assertEqual(invoice.amount, 5100)
+        # 4 adults x $17,000, and a 30% deposit of that.
+        self.assertEqual(invoice.trip_total, 68000)
+        self.assertEqual(invoice.amount, 20400)
         self.assertEqual(invoice.status, Invoice.STATUS_DEPOSIT_PAID)
 
     def test_owner_can_pay_sends_confirmation_email_to_their_own_address(self):
@@ -90,20 +94,80 @@ class BookingPayTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(Invoice.objects.filter(booking=self.booking).count(), 1)
 
-    def test_rejects_missing_amount(self):
+    def test_amounts_sent_by_the_client_are_ignored(self):
         self._login_as(self.customer)
-        response = self.client.post(self.pay_url, {})
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response = self.client.post(self.pay_url, {"amount": 1, "trip_total": 2})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        invoice = Invoice.objects.get(booking=self.booking)
+        self.assertEqual(invoice.trip_total, 68000)
+        self.assertEqual(invoice.amount, 20400)
 
-    def test_rejects_zero_amount(self):
+    def test_children_pay_half_the_adult_rate(self):
+        self.booking.children = 2
+        self.booking.save(update_fields=["children"])
         self._login_as(self.customer)
-        response = self.client.post(self.pay_url, {"amount": 0})
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.client.post(self.pay_url)
+        invoice = Invoice.objects.get(booking=self.booking)
+        self.assertEqual(invoice.trip_total, 2 * 17000 + 2 * 8500)
+
+    def test_season_multiplier_applies_to_the_start_date(self):
+        Season.objects.create(
+            name="Migration peak", start_date=date(2026, 8, 1), end_date=date(2026, 9, 30), multiplier="1.25"
+        )
+        self._login_as(self.customer)
+        self.client.post(self.pay_url)
+        invoice = Invoice.objects.get(booking=self.booking)
+        self.assertEqual(invoice.trip_total, 4 * 21250)
+
+    def test_deposit_invoice_is_not_overdue_the_next_day(self):
+        start = timezone.localdate() + timedelta(days=90)
+        self.booking.start_date = start
+        self.booking.end_date = start + timedelta(days=6)
+        self.booking.save(update_fields=["start_date", "end_date"])
+        self._login_as(self.customer)
+        self.client.post(self.pay_url)
+        invoice = Invoice.objects.get(booking=self.booking)
+        self.assertEqual(invoice.due_date, start - timedelta(days=30))
+        self.assertEqual(invoice.effective_status, Invoice.STATUS_DEPOSIT_PAID)
 
     def test_admin_cannot_pay_on_behalf_of_a_tourist(self):
         self._login_as(self.admin)
         response = self.client.post(self.pay_url, {"amount": 5100})
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class PayBalanceTests(APITestCase):
+    def setUp(self):
+        self.customer = User.objects.create_user(email="mark@example.com", password="pw12345", role="tourist")
+        self.booking = make_booking(self.customer, stage=Booking.STAGE_DEPOSIT_PAID)
+        self.invoice = Invoice.objects.create(
+            booking=self.booking, amount=20400, trip_total=68000,
+            status=Invoice.STATUS_DEPOSIT_PAID, due_date=date(2026, 8, 2),
+        )
+        self.url = reverse("booking-pay-balance", args=[self.booking.id])
+        self.client.post(reverse("login"), {"email": self.customer.email, "password": "pw12345"})
+
+    def test_pays_the_rest_and_confirms(self):
+        response = self.client.post(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.invoice.refresh_from_db()
+        self.assertEqual(self.invoice.amount, 68000)
+        self.assertEqual(self.invoice.status, Invoice.STATUS_PAID)
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.stage, Booking.STAGE_CONFIRMED)
+
+    def test_paying_late_does_not_move_a_completed_trip_backwards(self):
+        self.booking.stage = Booking.STAGE_COMPLETED
+        self.booking.save(update_fields=["stage"])
+        response = self.client.post(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.stage, Booking.STAGE_COMPLETED)
+
+    def test_second_payment_is_refused(self):
+        self.client.post(self.url)
+        response = self.client.post(self.url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 
 class InvoiceMineTests(APITestCase):

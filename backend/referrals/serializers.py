@@ -66,10 +66,12 @@ class ReferralCodeSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "code", "status", "created_at", "expires_at", "used_at"]
 
     def get_redemption(self, obj):
-        redemption = getattr(obj, "redemptions", None) and obj.redemptions.first()
-        if not redemption:
+        # Read through the prefetched list: .first() would add an ORDER BY and so
+        # bypass the prefetch, costing one query per code.
+        redemptions = list(obj.redemptions.all())
+        if not redemptions:
             return None
-        return ReferralRedemptionSummarySerializer(redemption).data
+        return ReferralRedemptionSummarySerializer(redemptions[0]).data
 
 
 class ReferralCodeCreateSerializer(serializers.ModelSerializer):
@@ -113,6 +115,20 @@ class ReferralSettingsSerializer(serializers.ModelSerializer):
     class Meta:
         model = ReferralSettings
         fields = ["discount_percent", "commission_percent", "code_expiry_days"]
+
+    @staticmethod
+    def _validate_percent(value):
+        # The column holds up to 999.99 and negatives, so a slipped digit (50 for 5.0)
+        # would otherwise be saved as a 50% commission.
+        if not 0 <= value <= 100:
+            raise serializers.ValidationError("Enter a percentage between 0 and 100.")
+        return value
+
+    def validate_discount_percent(self, value):
+        return self._validate_percent(value)
+
+    def validate_commission_percent(self, value):
+        return self._validate_percent(value)
 
     def validate_code_expiry_days(self, value):
         if not MIN_CODE_EXPIRY_DAYS <= value <= MAX_CODE_EXPIRY_DAYS:

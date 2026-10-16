@@ -90,15 +90,6 @@
       }
     }
   },
-  "gallery": {
-    "alts": {
-      "flamingos": "Pink flamingos wading in the shallow alkaline waters of Lake Manyara at sunrise.",
-      "wildebeest": "A massive herd of wildebeest crossing the Mara River during the Great Migration.",
-      "tent": "A luxury canvas safari tent glowing with lantern light under the Milky Way.",
-      "cheetah": "A cheetah cub with large expressive eyes sitting in dew-covered grass.",
-      "maasai": "A Maasai warrior in traditional red shuka robes overlooking the savanna at sunset."
-    }
-  },
   "newsletter": {
     "heading": "Join the Quest",
     "body": "Receive exclusive travel guides, safari tips, and early access to seasonal offers directly in your inbox.",
@@ -117,5 +108,17 @@
       "travellers": "Past travellers & friends"
     },
     "cta": "Become an Agent"
+  },
+  "partnerHotels": {
+    "eyebrow": "Where You'll Stay",
+    "heading": "Our Partner Hotels",
+    "disclaimer": "These are the hotels and lodges we partner with across Tanzania. Each property is independently owned and operated, and is responsible for its own facilities, services and safety, including power and water. Any issue that arises during your stay at a property is the responsibility of that property.",
+    "visitWebsite": "Visit website",
+    "opensInNewTab": "(opens in a new tab)"
+  },
+  "sponsoringEvents": {
+    "heading": "Sponsoring Events",
+    "previous": "Previous event",
+    "next": "Next event"
   }
 }

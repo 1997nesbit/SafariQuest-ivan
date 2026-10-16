@@ -11,6 +11,7 @@ import {
   IdentificationBadge,
   Warning,
   Newspaper,
+  ImageSquare,
   ChartLineUp,
   UsersThree,
   HandCoins,
@@ -49,6 +50,7 @@ const NAV_ITEMS = [
   { to: '/admin/complaints', label: 'Complaints', icon: Warning, end: false },
   { to: '/admin/referrals', label: 'Referrals', icon: HandCoins, end: false },
   { to: '/admin/content', label: 'Content', icon: Newspaper, end: false },
+  { to: '/admin/site-images', label: 'Site Images', icon: ImageSquare, end: false },
   { to: '/admin/analytics', label: 'Analytics', icon: ChartLineUp, end: false },
   { to: '/admin/users', label: 'Users & Roles', icon: UsersThree, end: false },
 ]

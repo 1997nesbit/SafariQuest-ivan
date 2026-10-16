@@ -7,11 +7,14 @@ import { useHomeNavigate } from '../i18n/useLocale'
 import { useAuth } from '../auth/AuthContext'
 import { ApiError } from '../lib/api'
 import { PasswordInput } from '../components/PasswordInput'
+import { useSiteImages } from '../lib/useSiteImage'
 
 type Tab = 'signin' | 'signup'
 
 export function SignIn() {
   const { t } = useTranslation('auth')
+  const siteImage = useSiteImages()
+  const sidePhoto = siteImage('sign_in', t('signIn.sidebarImageAlt'))
   const [tab, setTab] = useState<Tab>('signin')
   const [showPassword, setShowPassword] = useState(false)
   const [signUpPassword, setSignUpPassword] = useState('')
@@ -74,8 +77,8 @@ export function SignIn() {
         {/* Left: cinematic photography */}
         <div className="hidden md:block md:w-[55%] relative min-h-[640px]">
           <img
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuAdYTwk12RzNBJyshB1tJLUzkAvY1xMedMhEJYg5dzptaAiz88g3RuMECePo_BLThEgSHWWkNkwS8vG3UwAlZuuBhF1tYeuTEby6Ec3o8R0VMWsG758kDnhwykmXrPMUATE6Bvl96_1JgCKY7FanuQA-_ERCwAbtjW9sICSX-T8LGOJIDbkJ8sk9YsFgxb7SMHrTCbMEPqh5Tf13UQxNKREAjfQQmUWW9rWo-bhZhWuoYihi-6Pla3U"
-            alt={t('signIn.sidebarImageAlt')}
+            src={sidePhoto.image}
+            alt={sidePhoto.alt}
             className="absolute inset-0 w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-deep-earth/70 to-transparent" />

@@ -137,7 +137,9 @@ interface BookingDetailApiShape extends BookingApiShape {
   message: string
   created_at: string
   line_items: QuoteLineItemApiShape[]
-  notes: { id: number; author_name: string; text: string; created_at: string }[]
+  // Admin responses only — the internal notes thread isn't sent to the booking's
+  // tourist or guide (bookings.serializers.AdminBookingDetailSerializer).
+  notes?: { id: number; author_name: string; text: string; created_at: string }[]
   milestones: TripMilestoneApiShape[]
   review: ReviewApiShape | null
 }
@@ -164,7 +166,7 @@ function mapBookingDetail(raw: BookingDetailApiShape): BookingDetail {
     message: raw.message,
     createdAt: raw.created_at,
     lineItems: raw.line_items.map(mapQuoteLineItem),
-    notes: raw.notes.map((n) => ({ id: n.id, author: n.author_name, text: n.text, createdAt: n.created_at })),
+    notes: (raw.notes ?? []).map((n) => ({ id: n.id, author: n.author_name, text: n.text, createdAt: n.created_at })),
     milestones: raw.milestones.map(mapMilestone),
     review: raw.review
       ? {
@@ -240,21 +242,15 @@ export async function sendQuote(id: number): Promise<BookingDetail> {
   return mapBookingDetail(raw)
 }
 
-/** Records a mock deposit payment at checkout (1.3) — no card gateway is integrated yet, so
- * this just posts the amount and the full trip price the checkout page already computed and
- * showed the tourist. tripTotal is stored on the resulting invoice so a later payRemainingBalance
- * call knows what's left to collect. */
-export async function payForBooking(
-  id: number,
-  amount: number,
-  tripTotal: number,
-  referralCode?: string,
-): Promise<BookingDetail> {
-  const raw = await apiPost<BookingDetailApiShape>(`/api/bookings/${id}/pay/`, {
-    amount,
-    trip_total: tripTotal,
-    ...(referralCode ? { referral_code: referralCode } : {}),
-  })
+/** Records a mock deposit payment at checkout (1.3) — no card gateway is integrated yet.
+ * No amounts are sent: the server prices the trip and the deposit itself
+ * (backend/bookings/pricing.py), with the same arithmetic the checkout page uses to show
+ * them, so the figure on screen is the figure recorded. */
+export async function payForBooking(id: number, referralCode?: string): Promise<BookingDetail> {
+  const raw = await apiPost<BookingDetailApiShape>(
+    `/api/bookings/${id}/pay/`,
+    referralCode ? { referral_code: referralCode } : {},
+  )
   return mapBookingDetail(raw)
 }
 
@@ -303,6 +299,8 @@ export interface BookingCreateInput {
   startDate: string
   endDate: string
   guests: number
+  /** How many of `guests` are children (half the adult rate); defaults to 0. */
+  children?: number
   message?: string
 }
 
@@ -316,6 +314,7 @@ export async function createBooking(input: BookingCreateInput): Promise<BookingD
   if (input.email) payload.email = input.email
   if (input.safari) payload.safari = input.safari
   if (input.regionSafari) payload.region_safari = input.regionSafari
+  if (input.children) payload.children = input.children
   if (input.message) payload.message = input.message
   const raw = await apiPost<BookingDetailApiShape>('/api/bookings/', payload)
   return mapBookingDetail(raw)

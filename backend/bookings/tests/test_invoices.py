@@ -62,6 +62,28 @@ class InvoiceCreationOnSendQuoteTests(APITestCase):
         self.client.post(url)
         self.assertEqual(Invoice.objects.filter(booking=self.booking).count(), 1)
 
+    def test_edited_quote_updates_the_unpaid_invoice(self):
+        self._login_as(self.admin)
+        self.client.post(reverse("booking-quote-send", args=[self.booking.id]))
+        self.client.patch(
+            reverse("booking-quote", args=[self.booking.id]),
+            {"line_items": [{"label": "Vehicle", "quantity": 2, "unit_price": 3360}]},
+            format="json",
+        )
+        self.client.post(reverse("booking-quote-send", args=[self.booking.id]))
+        self.assertEqual(Invoice.objects.get(booking=self.booking).amount, 6720)
+
+    def test_quote_cannot_be_edited_once_a_deposit_is_paid(self):
+        self._login_as(self.admin)
+        self.booking.stage = Booking.STAGE_DEPOSIT_PAID
+        self.booking.save(update_fields=["stage"])
+        response = self.client.patch(
+            reverse("booking-quote", args=[self.booking.id]),
+            {"line_items": [{"label": "Vehicle", "quantity": 2, "unit_price": 3360}]},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
 
 class InvoiceAPITests(APITestCase):
     def setUp(self):
@@ -225,3 +247,17 @@ class FinanceSummaryTests(APITestCase):
         self.assertEqual(response.data["total_outstanding"], 500)
         self.assertEqual(response.data["overdue_count"], 1)
         self.assertEqual(response.data["overdue_amount"], 500)
+
+    def test_checkout_deposit_counts_as_collected_and_the_trip_as_invoiced(self):
+        customer = User.objects.get(email="mark@example.com")
+        Invoice.objects.create(
+            booking=make_booking(customer, stage=Booking.STAGE_DEPOSIT_PAID),
+            amount=3000, trip_total=10000, status=Invoice.STATUS_DEPOSIT_PAID,
+            due_date=timezone.localdate() + timedelta(days=30),
+        )
+        self._login_as(self.admin)
+        response = self.client.get(self.url)
+        self.assertEqual(response.data["total_invoiced"], 1500 + 10000)
+        self.assertEqual(response.data["total_collected"], 1000 + 3000)
+        self.assertEqual(response.data["total_outstanding"], 500 + 7000)
+        self.assertEqual(response.data["overdue_count"], 1)

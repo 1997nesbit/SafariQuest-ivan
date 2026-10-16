@@ -8,6 +8,7 @@ import { getTeam, localizedTeamTexts } from '../api/team'
 import { useFetch } from '../lib/useFetch'
 import { initials } from '../lib/initials'
 import { useCurrentLocale } from '../i18n/useLocale'
+import { useSiteImages } from '../lib/useSiteImage'
 
 const VALUES = [
   { icon: Leaf, key: 'conservation' },
@@ -24,6 +25,9 @@ const INTEREST_KEYS = ['greatMigration', 'luxuryHoneymoon', 'familyAdventure', '
 
 export function About() {
   const { t } = useTranslation('about')
+  const siteImage = useSiteImages()
+  const heroPhoto = siteImage('about_hero', t('hero.imageAlt'))
+  const storyPhoto = siteImage('about_story', t('story.imageAlt'))
   const locale = useCurrentLocale()
   // Team members come from the API. A failed fetch or an empty team hides the
   // section entirely rather than leaving a heading over nothing.
@@ -42,8 +46,8 @@ export function About() {
       {/* Hero */}
       <section className="relative h-[480px] md:h-[614px] min-h-[500px] flex items-center justify-center overflow-hidden">
         <img
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuDg5BIRgzqVDmehBpFEJA8lbYjauwRxJ6csIXTWJR34T4eINtkLZuaiTGAs33ctIjezztbrkTYi_Lljx_QgcuArjhckEv0C50VQ6St-MP-PFAtHryw6hyE-6cxwmPJRUzTc_TxeOZkkOJsmbmN5e4fOzE-IX5ga_th3bILhOBg6i5uOorFLdzWLFMXvXaT47qA91_eNEua1I60D9m64ZJl-qLZ7_aovcAfAtYEuMUw_Sxt3q_ag80lC"
-          alt={t('hero.imageAlt')}
+          src={heroPhoto.image}
+          alt={heroPhoto.alt}
           fetchPriority="high"
           className="absolute inset-0 w-full h-full object-cover"
         />
@@ -85,8 +89,8 @@ export function About() {
           </Reveal>
           <Reveal delay={150} className="relative h-[420px] md:h-[600px] w-full rounded-xl overflow-hidden shadow-lg">
             <img
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuCnKe-biQFongU_NYNWVlg6_noR6CDiiUiWStAjS2Oh14yfL8A7Zw_Ie1w1_WaEa0F6fkrEBZkHVIvbntLlEpg5qpCD-hggdprX2gnujvxNE98Rq3OjpPvJErmL33uxTYWbjnLe3xoSRuDJUPdzynCYXEeIScoPItZ1t8Kam1UT7D0pu5sXK9Q2V8r_kEhPOdKJpaOBIDQKDzzJxLZ7jkMm_iYhPZo53E8lo4F66OidyHU-xTxEVjcv"
-              alt={t('story.imageAlt')}
+              src={storyPhoto.image}
+              alt={storyPhoto.alt}
               loading="lazy"
               className="absolute inset-0 w-full h-full object-cover"
             />

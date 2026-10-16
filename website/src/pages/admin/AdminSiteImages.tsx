@@ -64,13 +64,13 @@ function SlotCard({
   image,
   alt,
   onChanged,
-}: {
+}: Readonly<{
   slot: PhotoSlot
   /** The saved photo, or '' when the spot still shows its original. */
   image: string
   alt: string
   onChanged: () => void
-}) {
+}>) {
   const info = SLOT_INFO[slot]
   const [draftImage, setDraftImage] = useState(image)
   const [draftAlt, setDraftAlt] = useState(alt)
@@ -176,7 +176,7 @@ function SlotCard({
 const MAX_VIDEO_MB = 50
 
 /** The homepage hero is always a video; this card replaces it with another one. */
-function HeroVideoCard({ video, onChanged }: { video: string; onChanged: () => void }) {
+function HeroVideoCard({ video, onChanged }: Readonly<{ video: string; onChanged: () => void }>) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [draft, setDraft] = useState(video)
   const [busy, setBusy] = useState<'uploading' | 'saving' | 'resetting' | null>(null)

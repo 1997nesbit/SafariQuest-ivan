@@ -59,7 +59,7 @@ export function AdminPartnerHotelForm() {
   return <PartnerHotelFormFields key={id ?? 'new'} initial={existing} hotelId={id ? Number(id) : undefined} />
 }
 
-function PartnerHotelFormFields({ initial, hotelId }: { initial: PartnerHotel | null; hotelId?: number }) {
+function PartnerHotelFormFields({ initial, hotelId }: Readonly<{ initial: PartnerHotel | null; hotelId?: number }>) {
   const navigate = useNavigate()
   const isEditing = hotelId !== undefined
   const [name, setName] = useState(initial?.name ?? '')
@@ -97,6 +97,9 @@ function PartnerHotelFormFields({ initial, hotelId }: { initial: PartnerHotel | 
       setSaving(false)
     }
   }
+
+  let submitLabel = isEditing ? 'Save changes' : 'Add hotel'
+  if (saving) submitLabel = 'Saving…'
 
   return (
     <form onSubmit={(e) => void handleSubmit(e)} noValidate className="max-w-3xl space-y-8">
@@ -238,7 +241,7 @@ function PartnerHotelFormFields({ initial, hotelId }: { initial: PartnerHotel | 
           className="min-h-[44px] inline-flex items-center gap-2 bg-savanna-green text-on-primary px-6 rounded-lg font-label-md text-sm hover:opacity-90 disabled:opacity-60"
         >
           <Check size={16} />
-          {saving ? 'Saving…' : isEditing ? 'Save changes' : 'Add hotel'}
+          {submitLabel}
         </button>
       </div>
     </form>

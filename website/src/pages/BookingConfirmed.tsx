@@ -51,7 +51,7 @@ function ReferAndEarnCard() {
     try {
       await activateReferralAgent()
       await refreshUser()
-      navigate('/agent')
+      void navigate('/agent')
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('confirmed.referral.error'))
       setActivating(false)
@@ -60,6 +60,29 @@ function ReferAndEarnCard() {
 
   const buttonClass =
     'min-h-[44px] inline-flex items-center justify-center gap-2 bg-golden-sun text-savanna-green font-label-md text-label-md px-8 py-4 rounded-full hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed shrink-0'
+
+  let referralAction = (
+    <Link to="/become-agent" className={buttonClass}>
+      {t('confirmed.referral.learnMore')}
+      <ArrowRight size={18} weight="bold" />
+    </Link>
+  )
+  if (user?.isReferralAgent) {
+    referralAction = (
+      // /agent is an unprefixed portal, so the plain router Link, not the locale-aware one.
+      <PlainLink to="/agent" className={buttonClass}>
+        {t('confirmed.referral.openDashboard')}
+        <ArrowRight size={18} weight="bold" />
+      </PlainLink>
+    )
+  } else if (user) {
+    referralAction = (
+      <button type="button" onClick={() => void handleActivate()} disabled={activating} className={buttonClass}>
+        {activating ? t('confirmed.referral.activating') : t('confirmed.referral.activate')}
+        <ArrowRight size={18} weight="bold" />
+      </button>
+    )
+  }
 
   return (
     <section className="w-full px-5 md:px-margin-desktop pb-16 md:pb-24">
@@ -86,23 +109,7 @@ function ReferAndEarnCard() {
             </p>
           )}
         </div>
-        {user?.isReferralAgent ? (
-          // /agent is an unprefixed portal, so the plain router Link, not the locale-aware one.
-          <PlainLink to="/agent" className={buttonClass}>
-            {t('confirmed.referral.openDashboard')}
-            <ArrowRight size={18} weight="bold" />
-          </PlainLink>
-        ) : user ? (
-          <button type="button" onClick={handleActivate} disabled={activating} className={buttonClass}>
-            {activating ? t('confirmed.referral.activating') : t('confirmed.referral.activate')}
-            <ArrowRight size={18} weight="bold" />
-          </button>
-        ) : (
-          <Link to="/become-agent" className={buttonClass}>
-            {t('confirmed.referral.learnMore')}
-            <ArrowRight size={18} weight="bold" />
-          </Link>
-        )}
+        {referralAction}
       </div>
     </section>
   )

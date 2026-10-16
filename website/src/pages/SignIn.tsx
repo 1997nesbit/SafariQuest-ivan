@@ -11,6 +11,19 @@ import { useSiteImages } from '../lib/useSiteImage'
 
 type Tab = 'signin' | 'signup'
 
+// ?next= brings people back to where they were headed (e.g. "sign in to activate your
+// agent profile" on /become-agent). Only same-site paths: an absolute or
+// protocol-relative URL here would turn the sign-in page into an open redirect.
+function safeNextPath(nextParam: string | null): string | null {
+  if (!nextParam?.startsWith('/') || nextParam.startsWith('//') || nextParam.includes('\\')) return null
+  return nextParam
+}
+
+function tabClass(active: boolean): string {
+  const state = active ? 'text-savanna-green border-b-2 border-savanna-green' : 'text-on-surface-variant hover:text-savanna-green'
+  return `pb-3 font-label-md text-label-md transition-colors ${state}`
+}
+
 export function SignIn() {
   const { t } = useTranslation('auth')
   const siteImage = useSiteImages()
@@ -25,14 +38,8 @@ export function SignIn() {
   const [searchParams] = useSearchParams()
   const { login, register } = useAuth()
 
-  // ?next= brings people back to where they were headed (e.g. "sign in to activate your
-  // agent profile" on /become-agent). Only same-site paths: an absolute or
-  // protocol-relative URL here would turn the sign-in page into an open redirect.
-  const nextParam = searchParams.get('next')
-  const next =
-    nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//') && !nextParam.includes('\\')
-      ? nextParam
-      : null
+  const next = safeNextPath(searchParams.get('next'))
+  const passwordsMismatch = signUpConfirmPassword !== '' && signUpConfirmPassword !== signUpPassword
 
   function goOnward(home: string) {
     navigateHome(next ?? home)
@@ -104,9 +111,7 @@ export function SignIn() {
                 setTab('signin')
                 setError(null)
               }}
-              className={`pb-3 font-label-md text-label-md transition-colors ${
-                tab === 'signin' ? 'text-savanna-green border-b-2 border-savanna-green' : 'text-on-surface-variant hover:text-savanna-green'
-              }`}
+              className={tabClass(tab === 'signin')}
             >
               {t('signIn.signInTab')}
             </button>
@@ -116,9 +121,7 @@ export function SignIn() {
                 setTab('signup')
                 setError(null)
               }}
-              className={`pb-3 font-label-md text-label-md transition-colors ${
-                tab === 'signup' ? 'text-savanna-green border-b-2 border-savanna-green' : 'text-on-surface-variant hover:text-savanna-green'
-              }`}
+              className={tabClass(tab === 'signup')}
             >
               {t('signIn.createAccountTab')}
             </button>
@@ -257,14 +260,10 @@ export function SignIn() {
                   value={signUpConfirmPassword}
                   onChange={(e) => setSignUpConfirmPassword(e.target.value)}
                   customValidity={signUpConfirmPassword !== signUpPassword ? t('signIn.passwordsDontMatch') : ''}
-                  aria-invalid={signUpConfirmPassword !== '' && signUpConfirmPassword !== signUpPassword}
-                  aria-describedby={
-                    signUpConfirmPassword !== '' && signUpConfirmPassword !== signUpPassword
-                      ? 'signup-password-confirm-error'
-                      : undefined
-                  }
+                  aria-invalid={passwordsMismatch}
+                  aria-describedby={passwordsMismatch ? 'signup-password-confirm-error' : undefined}
                 />
-                {signUpConfirmPassword !== '' && signUpConfirmPassword !== signUpPassword && (
+                {passwordsMismatch && (
                   <p id="signup-password-confirm-error" role="alert" className="text-error font-label-sm text-label-sm mt-2">
                     {t('signIn.passwordsDontMatch')}
                   </p>

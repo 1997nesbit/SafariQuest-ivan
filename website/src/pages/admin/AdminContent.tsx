@@ -156,13 +156,16 @@ export function AdminContent() {
         ))}
       </div>
 
-      {tab === 'Partner Hotels' ? (
+      {tab === 'Partner Hotels' && (
         <AdminPartnerHotelsTab />
-      ) : tab === 'Promotions' ? (
+      )}
+      {tab === 'Promotions' && (
         <AdminPromotionsTab />
-      ) : tab === 'Team' ? (
+      )}
+      {tab === 'Team' && (
         <AdminTeamTab />
-      ) : tab === 'Safaris' ? (
+      )}
+      {tab === 'Safaris' && (
         <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-sand-stone/50 overflow-hidden">
           <div className="p-4 border-b border-sand-stone bg-surface/50 flex items-center gap-2">
             {STATUS_FILTERS.map((f) => (
@@ -262,7 +265,8 @@ export function AdminContent() {
             </table>
           </div>
         </div>
-      ) : tab === 'Region Safaris' ? (
+      )}
+      {tab === 'Region Safaris' && (
         <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-sand-stone/50 overflow-hidden">
           {deleteError && (
             <div className="mx-4 mt-4 bg-error-container text-error rounded-lg px-4 py-3 text-sm">{deleteError}</div>
@@ -348,7 +352,8 @@ export function AdminContent() {
             </table>
           </div>
         </div>
-      ) : tab === 'Parks' ? (
+      )}
+      {tab === 'Parks' && (
         <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-sand-stone/50 overflow-hidden">
           {deleteError && (
             <div className="mx-4 mt-4 bg-error-container text-error rounded-lg px-4 py-3 text-sm">{deleteError}</div>
@@ -430,7 +435,8 @@ export function AdminContent() {
             </table>
           </div>
         </div>
-      ) : (
+      )}
+      {tab === 'Regions' && (
         <div className="grid grid-cols-1 gap-4">
           {deleteError && (
             <div className="bg-error-container text-error rounded-lg px-4 py-3 text-sm">{deleteError}</div>
@@ -489,7 +495,7 @@ export function AdminContent() {
                       disabled={deletingSlug === d.id}
                       onClick={(e) => {
                         e.stopPropagation()
-                        handleDeleteDestination(d.id, d.name)
+                        void handleDeleteDestination(d.id, d.name)
                       }}
                       className="text-on-surface-variant hover:text-error p-1 disabled:opacity-50"
                     >

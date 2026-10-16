@@ -38,7 +38,7 @@ function readImageDimensions(file: File): Promise<{ width: number; height: numbe
   })
 }
 
-export function ImageDropzone({ onUploaded, onError, variant = 'banner', purpose, minDimensions }: ImageDropzoneProps) {
+export function ImageDropzone({ onUploaded, onError, variant = 'banner', purpose, minDimensions }: Readonly<ImageDropzoneProps>) {
   const inputId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)

@@ -48,11 +48,11 @@ export function PlanPayment() {
   useEffect(() => {
     if (dataLoading) return
     if (!plan.contactEmail || !plan.travelDates || primaryPrice === undefined) {
-      navigate('/plan/review')
+      void navigate('/plan/review')
       return
     }
     if (!user) {
-      navigate('/plan/account')
+      void navigate('/plan/account')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dataLoading, plan.contactEmail, plan.travelDates, primaryPrice, user])
@@ -107,7 +107,7 @@ export function PlanPayment() {
       const paid = await payForBooking(bookingId, referralDiscountPercent ? referralCode.trim() : undefined)
       setPendingBooking(null)
       trackFunnelEvent('submitted')
-      navigate('/booking-confirmed', {
+      void navigate('/booking-confirmed', {
         state: {
           title: primarySafari?.title ?? primaryRegionSafari?.title,
           paidAmount: deposit,

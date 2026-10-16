@@ -219,7 +219,7 @@ export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
       }
       const paid = await payForBooking(bookingId, referralDiscountPercent ? referralCode.trim() : undefined)
       setPendingBooking(null)
-      navigate('/booking-confirmed', {
+      void navigate('/booking-confirmed', {
         state: { title: safariTitle, paidAmount: deposit, paidToEmail: paid.customerEmail },
       })
     } catch (err) {

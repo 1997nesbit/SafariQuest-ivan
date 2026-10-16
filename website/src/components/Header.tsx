@@ -27,7 +27,7 @@ export function Header() {
   async function handleSignOut() {
     await logout()
     setMenuOpen(false)
-    navigate('/')
+    void navigate('/')
   }
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>

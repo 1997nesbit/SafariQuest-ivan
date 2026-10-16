@@ -7,7 +7,6 @@ import { Home } from './pages/Home'
 import { Safaris } from './pages/Safaris'
 import { SafariDetail } from './pages/SafariDetail'
 import { RegionSafariDetail } from './pages/RegionSafariDetail'
-import { Experiences } from './pages/Experiences'
 import { Destinations } from './pages/Destinations'
 import { DestinationDetail } from './pages/DestinationDetail'
 import { About } from './pages/About'
@@ -55,6 +54,8 @@ import { AdminSafariForm } from './pages/admin/AdminSafariForm'
 import { AdminRegionSafariForm } from './pages/admin/AdminRegionSafariForm'
 import { AdminTeamMemberForm } from './pages/admin/AdminTeamMemberForm'
 import { AdminPromotionForm } from './pages/admin/AdminPromotionForm'
+import { AdminPartnerHotelForm } from './pages/admin/AdminPartnerHotelForm'
+import { AdminSiteImages } from './pages/admin/AdminSiteImages'
 import { AdminReferrals } from './pages/admin/AdminReferrals'
 import { AdminFinance } from './pages/admin/AdminFinance'
 import { AdminInvoices } from './pages/admin/AdminInvoices'
@@ -112,7 +113,6 @@ function App() {
               <Route index element={<Home />} />
               <Route path="safaris" element={<Safaris />} />
               <Route path="safaris/:id" element={<SafariDetail />} />
-              <Route path="experiences" element={<Experiences />} />
               <Route path="destinations" element={<Destinations />} />
               <Route path="destinations/:id" element={<DestinationDetail />} />
               <Route path="about" element={<About />} />
@@ -176,6 +176,7 @@ function App() {
             <Route path="complaints" element={<AdminComplaints />} />
             <Route path="referrals" element={<AdminReferrals />} />
             <Route path="content" element={<AdminContent />} />
+            <Route path="site-images" element={<AdminSiteImages />} />
             <Route path="content/destinations/new" element={<AdminDestinationForm />} />
             <Route path="content/destinations/:slug/edit" element={<AdminDestinationForm />} />
             <Route path="content/safaris/new" element={<AdminSafariForm />} />
@@ -186,6 +187,8 @@ function App() {
             <Route path="content/team/:id/edit" element={<AdminTeamMemberForm />} />
             <Route path="content/promotions/new" element={<AdminPromotionForm />} />
             <Route path="content/promotions/:id/edit" element={<AdminPromotionForm />} />
+            <Route path="content/partner-hotels/new" element={<AdminPartnerHotelForm />} />
+            <Route path="content/partner-hotels/:id/edit" element={<AdminPartnerHotelForm />} />
             <Route path="content/parks/new" element={<AdminParkForm />} />
             <Route path="content/parks/:slug/edit" element={<AdminParkForm />} />
             <Route path="analytics" element={<AdminAnalytics />} />

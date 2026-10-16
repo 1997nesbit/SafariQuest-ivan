@@ -90,15 +90,6 @@
       }
     }
   },
-  "gallery": {
-    "alts": {
-      "flamingos": "Des flamants roses pataugeant dans les eaux alcalines peu profondes du lac Manyara au lever du soleil.",
-      "wildebeest": "Un immense troupeau de gnous traversant la rivière Mara pendant la Grande Migration.",
-      "tent": "Une tente de safari de luxe illuminée par une lanterne sous la Voie lactée.",
-      "cheetah": "Un jeune guépard aux grands yeux expressifs assis dans l'herbe couverte de rosée.",
-      "maasai": "Un guerrier maasaï vêtu du traditionnel shuka rouge surplombant la savane au coucher du soleil."
-    }
-  },
   "newsletter": {
     "heading": "Rejoignez l'aventure",
     "body": "Recevez des guides de voyage exclusifs, des conseils safari et un accès anticipé aux offres saisonnières directement dans votre boîte mail.",
@@ -117,5 +108,17 @@
       "travellers": "Anciens voyageurs et amis"
     },
     "cta": "Devenir agent"
+  },
+  "partnerHotels": {
+    "eyebrow": "Où vous séjournerez",
+    "heading": "Nos hôtels partenaires",
+    "disclaimer": "Voici les hôtels et lodges avec lesquels nous travaillons en Tanzanie. Chaque établissement est détenu et exploité de manière indépendante et est responsable de ses propres installations, services et de la sécurité, y compris l'électricité et l'eau. Tout problème survenant pendant votre séjour dans un établissement relève de la responsabilité de cet établissement.",
+    "visitWebsite": "Visiter le site web",
+    "opensInNewTab": "(s'ouvre dans un nouvel onglet)"
+  },
+  "sponsoringEvents": {
+    "heading": "Événements sponsorisés",
+    "previous": "Événement précédent",
+    "next": "Événement suivant"
   }
 }

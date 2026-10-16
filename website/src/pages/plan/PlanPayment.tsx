@@ -39,17 +39,20 @@ export function PlanPayment() {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [referralCode, setReferralCode] = useState('')
   const [referralDiscountPercent, setReferralDiscountPercent] = useState<number | null>(null)
+  // The booking created by a pay attempt that then failed, and the details it was made
+  // from — retrying with the same details pays for it rather than creating a second one.
+  const [pendingBooking, setPendingBooking] = useState<{ id: number; key: string } | null>(null)
 
   const travelers = plan.adults + plan.children
 
   useEffect(() => {
     if (dataLoading) return
     if (!plan.contactEmail || !plan.travelDates || primaryPrice === undefined) {
-      navigate('/plan/review')
+      void navigate('/plan/review')
       return
     }
     if (!user) {
-      navigate('/plan/account')
+      void navigate('/plan/account')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dataLoading, plan.contactEmail, plan.travelDates, primaryPrice, user])
@@ -84,7 +87,7 @@ export function PlanPayment() {
     setSubmitError(null)
     setSubmitting(true)
     try {
-      const booking = await createBooking({
+      const bookingInput = {
         name: plan.contactName,
         email: plan.contactEmail,
         safari: primarySafari?.id,
@@ -92,20 +95,23 @@ export function PlanPayment() {
         startDate: plan.travelDates,
         endDate: addDays(plan.travelDates, plan.days),
         guests: travelers,
+        children: plan.children,
         message: buildMessage(),
-      })
-      await payForBooking(
-        booking.id,
-        deposit,
-        discountedTotal,
-        referralDiscountPercent ? referralCode.trim() : undefined,
-      )
+      }
+      const bookingKey = JSON.stringify(bookingInput)
+      let bookingId = pendingBooking?.key === bookingKey ? pendingBooking.id : null
+      if (bookingId === null) {
+        bookingId = (await createBooking(bookingInput)).id
+        setPendingBooking({ id: bookingId, key: bookingKey })
+      }
+      const paid = await payForBooking(bookingId, referralDiscountPercent ? referralCode.trim() : undefined)
+      setPendingBooking(null)
       trackFunnelEvent('submitted')
-      navigate('/booking-confirmed', {
+      void navigate('/booking-confirmed', {
         state: {
           title: primarySafari?.title ?? primaryRegionSafari?.title,
           paidAmount: deposit,
-          paidToEmail: booking.customerEmail,
+          paidToEmail: paid.customerEmail,
         },
       })
     } catch (err) {

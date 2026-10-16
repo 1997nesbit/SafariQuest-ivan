@@ -5,7 +5,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from bookings.models import Booking, QuoteLineItem
+from bookings.models import Booking, BookingNote, QuoteLineItem
 from guides.models import Guide
 from safaris.models import SafariPackage
 
@@ -131,6 +131,17 @@ class BookingListDetailTests(APITestCase):
         self.assertEqual(len(response.data["line_items"]), 1)
         self.assertEqual(response.data["line_items"][0]["quote_price"], 3360)
         self.assertEqual(response.data["notes"], [])
+
+    def test_customer_and_guide_do_not_see_internal_notes(self):
+        BookingNote.objects.create(booking=self.booking, author=self.admin, text="Pad the quote, they're flexible.")
+        guide_user = User.objects.create_user(email="juma@example.com", password="pw12345", role="guide")
+        self.guide.user = guide_user
+        self.guide.save(update_fields=["user"])
+        for user in (self.customer, guide_user):
+            self._login_as(user)
+            response = self.client.get(reverse("booking-detail", args=[self.booking.id]))
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertNotIn("notes", response.data)
 
     def test_list_is_paginated(self):
         self._login_as(self.admin)

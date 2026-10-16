@@ -5,7 +5,6 @@ import en_common from './locales/en/common.json'
 import en_home from './locales/en/home.json'
 import en_safaris from './locales/en/safaris.json'
 import en_destinations from './locales/en/destinations.json'
-import en_experiences from './locales/en/experiences.json'
 import en_about from './locales/en/about.json'
 import en_faqs from './locales/en/faqs.json'
 import en_auth from './locales/en/auth.json'
@@ -17,7 +16,6 @@ import fr_common from './locales/fr/common.json'
 import fr_home from './locales/fr/home.json'
 import fr_safaris from './locales/fr/safaris.json'
 import fr_destinations from './locales/fr/destinations.json'
-import fr_experiences from './locales/fr/experiences.json'
 import fr_about from './locales/fr/about.json'
 import fr_faqs from './locales/fr/faqs.json'
 import fr_auth from './locales/fr/auth.json'
@@ -29,7 +27,6 @@ import de_common from './locales/de/common.json'
 import de_home from './locales/de/home.json'
 import de_safaris from './locales/de/safaris.json'
 import de_destinations from './locales/de/destinations.json'
-import de_experiences from './locales/de/experiences.json'
 import de_about from './locales/de/about.json'
 import de_faqs from './locales/de/faqs.json'
 import de_auth from './locales/de/auth.json'
@@ -41,7 +38,6 @@ import pt_common from './locales/pt/common.json'
 import pt_home from './locales/pt/home.json'
 import pt_safaris from './locales/pt/safaris.json'
 import pt_destinations from './locales/pt/destinations.json'
-import pt_experiences from './locales/pt/experiences.json'
 import pt_about from './locales/pt/about.json'
 import pt_faqs from './locales/pt/faqs.json'
 import pt_auth from './locales/pt/auth.json'
@@ -56,7 +52,6 @@ export const NAMESPACES = [
   'home',
   'safaris',
   'destinations',
-  'experiences',
   'about',
   'faqs',
   'auth',
@@ -72,7 +67,6 @@ void i18next.use(initReactI18next).init({
       home: en_home,
       safaris: en_safaris,
       destinations: en_destinations,
-      experiences: en_experiences,
       about: en_about,
       faqs: en_faqs,
       auth: en_auth,
@@ -85,7 +79,6 @@ void i18next.use(initReactI18next).init({
       home: fr_home,
       safaris: fr_safaris,
       destinations: fr_destinations,
-      experiences: fr_experiences,
       about: fr_about,
       faqs: fr_faqs,
       auth: fr_auth,
@@ -98,7 +91,6 @@ void i18next.use(initReactI18next).init({
       home: de_home,
       safaris: de_safaris,
       destinations: de_destinations,
-      experiences: de_experiences,
       about: de_about,
       faqs: de_faqs,
       auth: de_auth,
@@ -111,7 +103,6 @@ void i18next.use(initReactI18next).init({
       home: pt_home,
       safaris: pt_safaris,
       destinations: pt_destinations,
-      experiences: pt_experiences,
       about: pt_about,
       faqs: pt_faqs,
       auth: pt_auth,

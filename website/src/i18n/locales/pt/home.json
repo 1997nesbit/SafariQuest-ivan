@@ -90,15 +90,6 @@
       }
     }
   },
-  "gallery": {
-    "alts": {
-      "flamingos": "Flamingos cor-de-rosa a vadear nas águas alcalinas pouco profundas do lago Manyara ao nascer do sol.",
-      "wildebeest": "Uma enorme manada de gnus a atravessar o rio Mara durante a Grande Migração.",
-      "tent": "Uma tenda de safári de luxo iluminada por um lampião sob a Via Láctea.",
-      "cheetah": "Uma cria de chita com olhos grandes e expressivos sentada na erva coberta de orvalho.",
-      "maasai": "Um guerreiro maasai com a tradicional shuka vermelha a olhar para a savana ao pôr do sol."
-    }
-  },
   "newsletter": {
     "heading": "Junte-se à aventura",
     "body": "Receba guias de viagem exclusivos, dicas de safári e acesso antecipado a ofertas sazonais diretamente na sua caixa de entrada.",
@@ -117,5 +108,17 @@
       "travellers": "Antigos viajantes e amigos"
     },
     "cta": "Tornar-se agente"
+  },
+  "partnerHotels": {
+    "eyebrow": "Onde vai ficar",
+    "heading": "Os nossos hotéis parceiros",
+    "disclaimer": "Estes são os hotéis e lodges com quem trabalhamos na Tanzânia. Cada propriedade é detida e gerida de forma independente e é responsável pelas suas próprias instalações, serviços e segurança, incluindo eletricidade e água. Qualquer problema que surja durante a sua estadia numa propriedade é da responsabilidade dessa propriedade.",
+    "visitWebsite": "Visitar o site",
+    "opensInNewTab": "(abre num novo separador)"
+  },
+  "sponsoringEvents": {
+    "heading": "Eventos patrocinados",
+    "previous": "Evento anterior",
+    "next": "Próximo evento"
   }
 }

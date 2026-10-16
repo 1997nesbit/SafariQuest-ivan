@@ -68,6 +68,9 @@ export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
   const [children, setChildren] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  // The booking created by a pay attempt that then failed, and the details it was made
+  // from — retrying with the same details pays for it rather than creating a second one.
+  const [pendingBooking, setPendingBooking] = useState<{ id: number; key: string } | null>(null)
 
   // Account step — only reached when nobody is signed in yet.
   const [accountMode, setAccountMode] = useState<AccountMode>('register')
@@ -75,7 +78,7 @@ export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
   const [password, setPassword] = useState('')
 
   // Mock payment step — no gateway is integrated yet (PLANNED); these fields
-  // never leave the browser, only the deposit amount does.
+  // never leave the browser. The server prices the deposit itself.
   const [cardName, setCardName] = useState('')
   const [cardNumber, setCardNumber] = useState('')
   const [cardExpiry, setCardExpiry] = useState('')
@@ -197,7 +200,7 @@ export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
     setSubmitError(null)
     setSubmitting(true)
     try {
-      const booking = await createBooking({
+      const bookingInput = {
         name: displayName,
         email: displayEmail,
         safari: kind === 'safari' ? item.id : undefined,
@@ -205,16 +208,19 @@ export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
         startDate: preferredDate,
         endDate: addDays(preferredDate, item.days),
         guests: adults + children,
+        children,
         message: `${travelersText}.`,
-      })
-      await payForBooking(
-        booking.id,
-        deposit,
-        discountedTotal,
-        referralDiscountPercent ? referralCode.trim() : undefined,
-      )
-      navigate('/booking-confirmed', {
-        state: { title: safariTitle, paidAmount: deposit, paidToEmail: booking.customerEmail },
+      }
+      const bookingKey = JSON.stringify(bookingInput)
+      let bookingId = pendingBooking?.key === bookingKey ? pendingBooking.id : null
+      if (bookingId === null) {
+        bookingId = (await createBooking(bookingInput)).id
+        setPendingBooking({ id: bookingId, key: bookingKey })
+      }
+      const paid = await payForBooking(bookingId, referralDiscountPercent ? referralCode.trim() : undefined)
+      setPendingBooking(null)
+      void navigate('/booking-confirmed', {
+        state: { title: safariTitle, paidAmount: deposit, paidToEmail: paid.customerEmail },
       })
     } catch (err) {
       setSubmitError(err instanceof ApiError ? err.message : t('somethingWentWrong'))

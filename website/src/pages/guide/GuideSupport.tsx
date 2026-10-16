@@ -6,6 +6,7 @@ import { getBookings, type Booking } from '../../api/bookings'
 import { createTicket } from '../../api/support'
 import { useFetch } from '../../lib/useFetch'
 import { ApiError } from '../../lib/api'
+import { contact } from '../../config/contact'
 
 const CATEGORIES = ['Vehicle Issue', 'Guest Emergency', 'Guide Safety', 'Equipment', 'Other']
 
@@ -57,20 +58,23 @@ export function GuideSupport() {
             Reach Operations directly for anything urgent during a trip.
           </p>
           <div className="flex gap-3">
+            {/* The company's own numbers (config/contact.ts), not a guide-specific line. */}
             <a
-              href="tel:+255700000001"
+              href={`tel:${contact.phoneHref}`}
               className="flex-1 flex items-center justify-center gap-2 bg-surface-container text-on-surface py-3 rounded-lg font-label-md text-label-md hover:bg-surface-container-high transition-colors"
             >
               <Phone size={20} />
               Call Ops
             </a>
-            <a
-              href="https://wa.me/255700000001"
-              className="flex-1 flex items-center justify-center gap-2 bg-[#25D366] text-white py-3 rounded-lg font-label-md text-label-md hover:bg-[#128C7E] transition-colors"
-            >
-              <ChatCircle size={20} weight="fill" />
-              WhatsApp
-            </a>
+            {contact.social.whatsapp && (
+              <a
+                href={contact.social.whatsapp}
+                className="flex-1 flex items-center justify-center gap-2 bg-[#25D366] text-white py-3 rounded-lg font-label-md text-label-md hover:bg-[#128C7E] transition-colors"
+              >
+                <ChatCircle size={20} weight="fill" />
+                WhatsApp
+              </a>
+            )}
           </div>
         </div>
 

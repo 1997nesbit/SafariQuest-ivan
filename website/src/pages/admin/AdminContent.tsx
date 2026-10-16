@@ -8,10 +8,23 @@ import { deleteRegionSafari, getRegionSafaris } from '../../api/regionSafaris'
 import { useFetch } from '../../lib/useFetch'
 import { AdminTeamTab } from './AdminTeamTab'
 import { AdminPromotionsTab } from './AdminPromotionsTab'
+import { AdminPartnerHotelsTab } from './AdminPartnerHotelsTab'
 import { ApiError } from '../../lib/api'
 
-const TABS = ['Safaris', 'Region Safaris', 'Regions', 'Parks', 'Team', 'Promotions'] as const
+const TABS = ['Safaris', 'Region Safaris', 'Regions', 'Parks', 'Team', 'Promotions', 'Partner Hotels'] as const
 type Tab = (typeof TABS)[number]
+
+// What the header's "Add" button does on each tab. (The site's fixed photos
+// live on their own admin page, Site Images, since they're never added.)
+const ADD_ACTION: Record<Tab, { to: string; label: string } | null> = {
+  Safaris: { to: '/admin/content/safaris/new', label: 'Add New Safari Package' },
+  'Region Safaris': { to: '/admin/content/region-safaris/new', label: 'Add New Mini Safari' },
+  Regions: { to: '/admin/content/destinations/new', label: 'Add New Destination' },
+  Parks: { to: '/admin/content/parks/new', label: 'Add New Park' },
+  Team: { to: '/admin/content/team/new', label: 'Add Team Member' },
+  Promotions: { to: '/admin/content/promotions/new', label: 'Add Sponsoring Event' },
+  'Partner Hotels': { to: '/admin/content/partner-hotels/new', label: 'Add Partner Hotel' },
+}
 
 const STATUS_FILTERS = ['All Packages', 'Published', 'Drafts'] as const
 type StatusFilter = (typeof STATUS_FILTERS)[number]
@@ -105,6 +118,8 @@ export function AdminContent() {
   // All real safari packages are live/published — there is no draft flag in the data model yet.
   const visiblePackages = statusFilter === 'Drafts' ? [] : safariPackages ?? []
 
+  const addAction = ADD_ACTION[tab]
+
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
@@ -114,38 +129,16 @@ export function AdminContent() {
             Organize the regions we operate in and curate the safari packages offered to clients.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() =>
-            navigate(
-              tab === 'Promotions'
-                ? '/admin/content/promotions/new'
-                : tab === 'Team'
-                ? '/admin/content/team/new'
-                : tab === 'Regions'
-                ? '/admin/content/destinations/new'
-                : tab === 'Parks'
-                  ? '/admin/content/parks/new'
-                  : tab === 'Region Safaris'
-                    ? '/admin/content/region-safaris/new'
-                    : '/admin/content/safaris/new',
-            )
-          }
-          className="flex items-center gap-2 bg-savanna-green text-on-primary py-2.5 px-6 rounded-lg font-label-md text-sm hover:opacity-90 transition-opacity w-fit shrink-0 shadow-sm"
-        >
-          <Plus size={18} />
-          {tab === 'Promotions'
-            ? 'Add Sponsoring Event'
-            : tab === 'Team'
-            ? 'Add Team Member'
-            : tab === 'Regions'
-            ? 'Add New Destination'
-            : tab === 'Parks'
-              ? 'Add New Park'
-              : tab === 'Region Safaris'
-                ? 'Add New Mini Safari'
-                : 'Add New Safari Package'}
-        </button>
+        {addAction && (
+          <button
+            type="button"
+            onClick={() => navigate(addAction.to)}
+            className="flex items-center gap-2 bg-savanna-green text-on-primary py-2.5 px-6 rounded-lg font-label-md text-sm hover:opacity-90 transition-opacity w-fit shrink-0 shadow-sm"
+          >
+            <Plus size={18} />
+            {addAction.label}
+          </button>
+        )}
       </div>
 
       <div className="border-b border-sand-stone mb-8 flex gap-6 md:gap-8 overflow-x-auto">
@@ -163,11 +156,16 @@ export function AdminContent() {
         ))}
       </div>
 
-      {tab === 'Promotions' ? (
+      {tab === 'Partner Hotels' && (
+        <AdminPartnerHotelsTab />
+      )}
+      {tab === 'Promotions' && (
         <AdminPromotionsTab />
-      ) : tab === 'Team' ? (
+      )}
+      {tab === 'Team' && (
         <AdminTeamTab />
-      ) : tab === 'Safaris' ? (
+      )}
+      {tab === 'Safaris' && (
         <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-sand-stone/50 overflow-hidden">
           <div className="p-4 border-b border-sand-stone bg-surface/50 flex items-center gap-2">
             {STATUS_FILTERS.map((f) => (
@@ -267,7 +265,8 @@ export function AdminContent() {
             </table>
           </div>
         </div>
-      ) : tab === 'Region Safaris' ? (
+      )}
+      {tab === 'Region Safaris' && (
         <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-sand-stone/50 overflow-hidden">
           {deleteError && (
             <div className="mx-4 mt-4 bg-error-container text-error rounded-lg px-4 py-3 text-sm">{deleteError}</div>
@@ -353,7 +352,8 @@ export function AdminContent() {
             </table>
           </div>
         </div>
-      ) : tab === 'Parks' ? (
+      )}
+      {tab === 'Parks' && (
         <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-sand-stone/50 overflow-hidden">
           {deleteError && (
             <div className="mx-4 mt-4 bg-error-container text-error rounded-lg px-4 py-3 text-sm">{deleteError}</div>
@@ -435,7 +435,8 @@ export function AdminContent() {
             </table>
           </div>
         </div>
-      ) : (
+      )}
+      {tab === 'Regions' && (
         <div className="grid grid-cols-1 gap-4">
           {deleteError && (
             <div className="bg-error-container text-error rounded-lg px-4 py-3 text-sm">{deleteError}</div>
@@ -494,7 +495,7 @@ export function AdminContent() {
                       disabled={deletingSlug === d.id}
                       onClick={(e) => {
                         e.stopPropagation()
-                        handleDeleteDestination(d.id, d.name)
+                        void handleDeleteDestination(d.id, d.name)
                       }}
                       className="text-on-surface-variant hover:text-error p-1 disabled:opacity-50"
                     >

@@ -122,20 +122,30 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 
 class BookingDetailSerializer(BookingListSerializer):
+    """What the booking's tourist and assigned guide see. Leaves out `notes`, the admins'
+    internal thread — see AdminBookingDetailSerializer, and SupportTicketOwnSerializer for
+    the same rule on support tickets."""
+
     line_items = QuoteLineItemSerializer(many=True, read_only=True)
-    notes = BookingNoteSerializer(many=True, read_only=True)
     milestones = TripMilestoneSerializer(many=True, read_only=True)
     review = ReviewSerializer(read_only=True)
 
     class Meta(BookingListSerializer.Meta):
         fields = BookingListSerializer.Meta.fields + [
+            "children",
             "message",
             "created_at",
             "line_items",
-            "notes",
             "milestones",
             "review",
         ]
+
+
+class AdminBookingDetailSerializer(BookingDetailSerializer):
+    notes = BookingNoteSerializer(many=True, read_only=True)
+
+    class Meta(BookingDetailSerializer.Meta):
+        fields = BookingDetailSerializer.Meta.fields + ["notes"]
 
 
 class BookingUpdateSerializer(serializers.ModelSerializer):
@@ -163,14 +173,9 @@ class BookingUpdateSerializer(serializers.ModelSerializer):
 class BookingPaySerializer(serializers.Serializer):
     """Validates a mock checkout deposit payment (1.3). No card fields are accepted here —
     they never leave the browser, since this endpoint doesn't talk to a real payment
-    processor yet (PLANNED)."""
+    processor yet (PLANNED). No amounts are accepted either: the trip total and deposit are
+    computed server-side (bookings.pricing), so a caller can't choose their own price."""
 
-    amount = serializers.IntegerField(min_value=1)
-    # trip_total is the full trip price the checkout page already computed — needed because
-    # Booking stores no price field of its own, so it's trusted from the client the same way
-    # `amount` already is. Stored on the resulting Invoice so a later pay_balance call knows
-    # what's left to collect; also required to record a referral redemption's commission.
-    trip_total = serializers.IntegerField(required=False, min_value=1)
     referral_code = serializers.CharField(required=False, allow_blank=True)
 
 
@@ -191,6 +196,11 @@ class QuoteUpdateSerializer(serializers.Serializer):
             instance.line_items.all().delete()
             for order, item in enumerate(validated_data["line_items"]):
                 QuoteLineItem.objects.create(booking=instance, order=order, **item)
+            # A quote that's already been sent has an invoice; while nothing has been paid
+            # against it, it follows the quote, or the customer is billed the old figure.
+            new_total = sum(item["quantity"] * item["unit_price"] for item in validated_data["line_items"])
+            if new_total:
+                Invoice.objects.filter(booking=instance, status=Invoice.STATUS_UNPAID).update(amount=new_total)
         return instance
 
 
@@ -215,7 +225,9 @@ class BookingCreateSerializer(serializers.Serializer):
     Anonymous submissions attach to an existing unusable-password account (an earlier
     auto-created shell), create a new tourist account, or are rejected if the email already
     belongs to a real registered account (sign-in required — this endpoint never takes over an
-    existing account). Authenticated tourists always book as themselves.
+    existing account). An anonymous caller is never signed in to the account: the email isn't
+    verified, so whoever typed it may not own it. The owner claims it through the set-password
+    link sent to that address. Authenticated tourists always book as themselves.
     """
 
     name = serializers.CharField(max_length=150, required=False, allow_blank=True)
@@ -229,6 +241,7 @@ class BookingCreateSerializer(serializers.Serializer):
     start_date = serializers.DateField()
     end_date = serializers.DateField()
     guests = serializers.IntegerField(min_value=1)
+    children = serializers.IntegerField(min_value=0, default=0)
     message = serializers.CharField(required=False, allow_blank=True)
 
     def validate(self, attrs):
@@ -236,6 +249,8 @@ class BookingCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError("Provide exactly one of safari or region_safari.")
         if attrs["end_date"] < attrs["start_date"]:
             raise serializers.ValidationError({"end_date": "End date cannot be before the start date."})
+        if attrs["children"] >= attrs["guests"]:
+            raise serializers.ValidationError({"children": "At least one guest must be an adult."})
         request = self.context["request"]
         if not request.user.is_authenticated and not attrs.get("email"):
             raise serializers.ValidationError({"email": "This field is required."})
@@ -317,10 +332,10 @@ class BookingCreateSerializer(serializers.Serializer):
                 start_date=validated_data["start_date"],
                 end_date=validated_data["end_date"],
                 guests=validated_data["guests"],
+                children=validated_data["children"],
                 message=validated_data.get("message", ""),
             )
             self._create_milestones(booking)
         if is_new:
             self._send_account_created_email(customer)
-        booking._new_customer = customer if is_new else None
         return booking

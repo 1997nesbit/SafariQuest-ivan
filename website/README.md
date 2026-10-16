@@ -60,7 +60,7 @@ src/
 | Tourist account | `/account`, `/account/trips`, `/account/trips/:tripId`, `/account/invoices`, `/account/complaints`, `/account/profile` | `tourist` |
 | Guide portal | `/guide`, `/guide/trips/:tripId`, `/guide/trips/:tripId/progress`, `/guide/reviews`, `/guide/support`, `/guide/profile` | `guide` |
 | Referral agent portal | `/agent` | a `tourist` with the agent profile on (`isReferralAgent`) |
-| Admin portal | `/admin`, `/admin/inquiries`, `/admin/clients`, `/admin/invoices`, `/admin/invoices/:invoiceId`, `/admin/finance`, `/admin/pricing`, `/admin/guides`, `/admin/complaints`, `/admin/referrals`, `/admin/content` (Safaris / Region Safaris / Regions / Parks / Team / Sponsoring Events tabs, each with its own `Admin*Form`), `/admin/analytics`, `/admin/users` (includes the audit-log widget) | `admin` |
+| Admin portal | `/admin`, `/admin/inquiries`, `/admin/clients`, `/admin/invoices`, `/admin/invoices/:invoiceId`, `/admin/finance`, `/admin/pricing`, `/admin/guides`, `/admin/complaints`, `/admin/referrals`, `/admin/content` (Safaris / Region Safaris / Regions / Parks / Team / Sponsoring Events / Homepage tabs, each with its own `Admin*Form`), `/admin/analytics`, `/admin/users` (includes the audit-log widget) | `admin` |
 
 `auth/RequireRole` wraps the guide and admin route trees and redirects to
 `/sign-in` if the signed-in user's role doesn't match. `/agent` uses
@@ -161,13 +161,22 @@ customer stats.
 
 ### Admin content editing
 
-`pages/admin/AdminContent.tsx` is the CMS-style hub with six tabs
-(Safaris, Region Safaris, Regions, Parks, Team, Sponsoring Events), each backed by a
-matching `Admin*Form.tsx` (`AdminSafariForm`, `AdminRegionSafariForm`,
-`AdminDestinationForm`, `AdminParkForm`, `AdminTeamMemberForm`,
-`AdminPromotionForm`, the Sponsoring Events form) that reuses
-`components/admin/ImageDropzone.tsx` to upload images through the backend's
-`/api/uploads/` endpoint before saving the record. The admin bookings
+`pages/admin/AdminContent.tsx` is the CMS-style hub with seven tabs
+(Safaris, Region Safaris, Regions, Parks, Team, Sponsoring Events, Homepage),
+each backed by a matching `Admin*Form.tsx` (`AdminSafariForm`,
+`AdminRegionSafariForm`, `AdminDestinationForm`, `AdminParkForm`,
+`AdminTeamMemberForm`, `AdminPromotionForm`, `AdminGalleryPhotoForm`) that
+reuses `components/admin/ImageDropzone.tsx` to upload images through the
+backend's `/api/uploads/` endpoint before saving the record. The Homepage tab
+(`AdminHomepageTab.tsx`) is the odd one out: its four fixed photo spots
+(hero poster, the "why choose us" photo, the two testimonial avatars) are
+edited inline on the tab itself rather than through a separate form, since
+each is just an image + alt text with no other fields — only the gallery
+strip below them gets its own add/edit page. `ImageDropzone` optionally takes
+a `purpose` (passed through to the upload endpoint, which enforces a minimum
+resolution for that spot — see the backend README's "Image uploads" section)
+and a `minDimensions`, checked client-side first so a too-small image is
+rejected instantly rather than after a round trip. The admin bookings
 pipeline (`AdminBookingsPipeline` / `AdminBookingDetail`) is a kanban over
 the backend's `Booking.stage` field, with a quote builder and note thread
 per booking.

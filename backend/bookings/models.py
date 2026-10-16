@@ -38,6 +38,8 @@ class Booking(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
     guests = models.PositiveIntegerField()
+    # How many of `guests` are children, who pay half the adult rate (bookings.pricing).
+    children = models.PositiveIntegerField(default=0)
     assigned_guide = models.ForeignKey(
         "guides.Guide", related_name="bookings", null=True, blank=True, on_delete=models.SET_NULL
     )
@@ -61,7 +63,14 @@ class Booking(models.Model):
 
     @property
     def subtotal(self):
-        return sum(item.quote_price for item in self.line_items.all())
+        """The booking's price: its quote line items when an admin has built a quote,
+        otherwise the trip total recorded at checkout. Checkout bookings never get line
+        items, so summing those alone showed every self-serve booking as $0."""
+        line_items = self.line_items.all()
+        if line_items:
+            return sum(item.quote_price for item in line_items)
+        invoice = getattr(self, "invoice", None)
+        return (invoice.trip_total or 0) if invoice else 0
 
     @property
     def package_title(self):

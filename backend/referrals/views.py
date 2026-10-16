@@ -8,6 +8,7 @@ from rest_framework.views import APIView
 
 from accounts.permissions import IsAdminRole
 from accounts.views import _set_auth_cookies, auth_payload
+from audit.utils import log_action
 
 from .models import ReferralCode, ReferralRedemption, ReferralSettings
 from .permissions import IsReferralAgentRole
@@ -116,6 +117,15 @@ class ReferralSettingsAdminView(generics.RetrieveUpdateAPIView):
     def get_object(self):
         return ReferralSettings.get_solo()
 
+    def perform_update(self, serializer):
+        settings_obj = serializer.save()
+        log_action(
+            self.request.user,
+            "referral.settings_changed",
+            f"Referral rates set to {settings_obj.discount_percent}% discount, "
+            f"{settings_obj.commission_percent}% commission, codes valid {settings_obj.code_expiry_days} days",
+        )
+
 
 class AdminReferralRedemptionViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     permission_classes = [IsAdminRole]
@@ -125,6 +135,13 @@ class AdminReferralRedemptionViewSet(mixins.ListModelMixin, viewsets.GenericView
     @action(detail=True, methods=["post"], url_path="mark-paid")
     def mark_paid(self, request, pk=None):
         redemption = self.get_object()
-        redemption.commission_status = ReferralRedemption.STATUS_PAID
-        redemption.save(update_fields=["commission_status"])
+        if redemption.commission_status != ReferralRedemption.STATUS_PAID:
+            redemption.commission_status = ReferralRedemption.STATUS_PAID
+            redemption.save(update_fields=["commission_status"])
+            log_action(
+                request.user,
+                "referral.commission_paid",
+                f"Marked ${redemption.commission_amount:,} commission paid to {redemption.code.agent.email} "
+                f"(code {redemption.code.code}, booking #{redemption.booking_id})",
+            )
         return Response(AdminReferralRedemptionSerializer(redemption).data)

@@ -6,6 +6,7 @@ import { useFetch } from '../../lib/useFetch'
 import { useAuth } from '../../auth/AuthContext'
 import { ApiError } from '../../lib/api'
 import { DEFAULT_LOCALE } from '../../i18n/locales'
+import { formatMoney } from '../../lib/money'
 
 const STATUS_BADGE: Record<ReferralCode['status'], string> = {
   active: 'bg-savanna-green/10 text-savanna-green border border-savanna-green/20',
@@ -49,7 +50,7 @@ export function AgentDashboard() {
   }
 
   function handleCopy(code: string) {
-    navigator.clipboard?.writeText(code).then(() => {
+    void navigator.clipboard?.writeText(code).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     })
@@ -109,13 +110,13 @@ export function AgentDashboard() {
             <p className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-1">
               Pending Commission
             </p>
-            <p className="font-headline-md text-[28px] text-golden-sun">${pendingCommission.toLocaleString()}</p>
+            <p className="font-headline-md text-[28px] text-golden-sun">{formatMoney(pendingCommission)}</p>
           </div>
           <div className="bg-ivory-base rounded-xl p-6 shadow-sm border border-sand-stone">
             <p className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-1">
               Paid Out
             </p>
-            <p className="font-headline-md text-[28px] text-savanna-green">${paidCommission.toLocaleString()}</p>
+            <p className="font-headline-md text-[28px] text-savanna-green">{formatMoney(paidCommission)}</p>
           </div>
         </div>
 
@@ -211,7 +212,7 @@ export function AgentDashboard() {
                       <td className="py-3 pr-4">
                         {c.redemption ? (
                           <span className="inline-flex items-center gap-2">
-                            ${c.redemption.commissionAmount.toLocaleString()}
+                            {formatMoney(c.redemption.commissionAmount)}
                             <span
                               className={`inline-flex items-center py-0.5 px-2 rounded-md text-xs ${COMMISSION_BADGE[c.redemption.commissionStatus]}`}
                             >

@@ -121,11 +121,11 @@
   },
   "payment": {
     "heading": "Pagamento",
-    "subtitle": "Introduza os dados do seu cartão para pagar o depósito e garantir a sua reserva.",
+    "subtitle": "Pague o sinal por mobile money — M-Pesa, Airtel Money, Mixx by Yas ou Halotel — para garantir a sua reserva.",
     "depositDueNow": "Depósito devido agora (30%)",
     "back": "Voltar",
     "processing": "A processar…",
-    "payAndBook": "Pagar {{amount}} $ e reservar",
+    "payAndBook": "Pagar {{amount}} e reservar",
     "somethingWentWrong": "Algo correu mal. Tente novamente."
   },
   "message": {

@@ -16,7 +16,7 @@
         },
         "paymentMethods": {
           "question": "Welche Zahlungsmethoden akzeptieren Sie?",
-          "answer": "Wir akzeptieren Banküberweisungen und gängige Kreditkarten. Eine Anzahlung sichert Ihre Buchung, der Restbetrag ist vor Abreise fällig."
+          "answer": "Wir akzeptieren Mobile Money — M-Pesa, Airtel Money, Mixx by Yas und Halotel — über unsere sichere Snippe-Kasse. Alle Preise sind in Tansania-Schilling (TZS). Eine Anzahlung von 30 % sichert Ihre Buchung, der Restbetrag ist vor der Abreise fällig."
         },
         "depositRequired": {
           "question": "Ist eine Anzahlung erforderlich?",

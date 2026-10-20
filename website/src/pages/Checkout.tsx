@@ -2,9 +2,9 @@ import { Fragment, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import { Link } from '../i18n/routing'
-import { useLocalizedNavigate as useNavigate } from '../i18n/useLocale'
+import { useCurrentLocale } from '../i18n/useLocale'
 import {
-  CreditCard,
+  DeviceMobile,
   CalendarBlank,
   Users,
   MapPin,
@@ -19,21 +19,40 @@ import {
 import { getSafari, type SafariPackage } from '../api/safaris'
 import { getRegionSafari, type RegionSafari } from '../api/regionSafaris'
 import { getDestinations } from '../api/destinations'
-import { createBooking, payForBooking } from '../api/bookings'
+import { createBooking, getPaymentAvailability, payForBooking } from '../api/bookings'
 import { getSeasons } from '../api/pricing'
 import { useFetch } from '../lib/useFetch'
 import { useAuth } from '../auth/AuthContext'
 import { ApiError } from '../lib/api'
-import { addDays } from '../lib/date'
+import { addDays, todayISO } from '../lib/date'
 import { activeSeasonForDate, seasonalPrice } from '../lib/seasonalPrice'
 import { contact } from '../config/contact'
 import { AccountFields, type AccountMode } from '../components/checkout/AccountFields'
-import { MockCardFields } from '../components/checkout/MockCardFields'
+import { CountInput } from '../components/checkout/CountInput'
+import { MobileMoneyNotice } from '../components/checkout/MobileMoneyNotice'
+import { PaymentOutageNotice } from '../components/checkout/PaymentOutageNotice'
 import { ReferralCodeField } from '../components/checkout/ReferralCodeField'
+import { formatMoney } from '../lib/money'
 
 type CheckoutStep = 'details' | 'review' | 'account' | 'payment'
 
 const ALL_STEP_KEYS: CheckoutStep[] = ['details', 'account', 'review', 'payment']
+
+/** The main button's label key for each checkout step (S3358: no nested ternaries). */
+function ctaLabelKey({
+  step,
+  submitting,
+  accountMode,
+  isAuthenticated,
+}: Readonly<{ step: CheckoutStep; submitting: boolean; accountMode: AccountMode; isAuthenticated: boolean }>): string {
+  if (step === 'payment') return submitting ? 'cta.processing' : 'cta.payAndBook'
+  if (step === 'account') {
+    if (submitting) return 'cta.pleaseWait'
+    return accountMode === 'register' ? 'cta.createAccountAndContinue' : 'cta.signInAndContinue'
+  }
+  if (step === 'review') return 'cta.continueToPayment'
+  return isAuthenticated ? 'cta.continueToReview' : 'cta.continueToAccount'
+}
 
 export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
   const { t, i18n } = useTranslation('booking')
@@ -56,7 +75,8 @@ export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
   )
   const { data: destinations } = useFetch(getDestinations, [])
   const { data: seasons } = useFetch(getSeasons, [])
-  const navigate = useNavigate()
+  const { data: paymentAvailability } = useFetch(getPaymentAvailability, [])
+  const locale = useCurrentLocale()
   const { user, login, register, logout } = useAuth()
   const isAuthenticated = Boolean(user)
 
@@ -77,12 +97,8 @@ export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
   const [signInEmail, setSignInEmail] = useState('')
   const [password, setPassword] = useState('')
 
-  // Mock payment step — no gateway is integrated yet (PLANNED); these fields
-  // never leave the browser. The server prices the deposit itself.
-  const [cardName, setCardName] = useState('')
-  const [cardNumber, setCardNumber] = useState('')
-  const [cardExpiry, setCardExpiry] = useState('')
-  const [cardCvv, setCardCvv] = useState('')
+  // Payment step — the tourist pays on Snippe's hosted checkout; the server prices the
+  // deposit itself.
   const [referralCode, setReferralCode] = useState('')
   const [referralDiscountPercent, setReferralDiscountPercent] = useState<number | null>(null)
 
@@ -156,7 +172,6 @@ export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
   const stepKeys = isAuthenticated ? ALL_STEP_KEYS.filter((k) => k !== 'account') : ALL_STEP_KEYS
   const steps = stepKeys.map((key) => ({ key, label: t(`steps.${key}`) }))
   const activeIndex = steps.findIndex((s) => s.key === step)
-  const safariTitle = item.title
   // Once signed in — whether they arrived that way or just registered/signed in on the
   // Account step — the account's real name/email is authoritative over whatever was typed
   // on the Details step (which may be stale, e.g. after signing in with a different email).
@@ -217,34 +232,20 @@ export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
         bookingId = (await createBooking(bookingInput)).id
         setPendingBooking({ id: bookingId, key: bookingKey })
       }
-      const paid = await payForBooking(bookingId, referralDiscountPercent ? referralCode.trim() : undefined)
-      setPendingBooking(null)
-      void navigate('/booking-confirmed', {
-        state: { title: safariTitle, paidAmount: deposit, paidToEmail: paid.customerEmail },
-      })
+      const checkout = await payForBooking(bookingId, locale, referralDiscountPercent ? referralCode.trim() : undefined)
+      // Off to Snippe's hosted checkout; it sends the tourist back to /booking-confirmed.
+      // `submitting` stays true so the button can't be pressed again on the way out.
+      window.location.assign(checkout.checkoutUrl)
     } catch (err) {
       setSubmitError(err instanceof ApiError ? err.message : t('somethingWentWrong'))
-    } finally {
       setSubmitting(false)
     }
   }
 
-  const ctaLabel =
-    step === 'payment'
-      ? submitting
-        ? t('cta.processing')
-        : t('cta.payAndBook', { amount: deposit.toLocaleString(i18n.language) })
-      : step === 'account'
-        ? submitting
-          ? t('cta.pleaseWait')
-          : accountMode === 'register'
-            ? t('cta.createAccountAndContinue')
-            : t('cta.signInAndContinue')
-        : step === 'review'
-          ? t('cta.continueToPayment')
-          : isAuthenticated
-            ? t('cta.continueToReview')
-            : t('cta.continueToAccount')
+  // `amount` is only used by cta.payAndBook; the other labels ignore it.
+  const ctaLabel = t(ctaLabelKey({ step, submitting, accountMode, isAuthenticated }), {
+    amount: formatMoney(deposit, i18n.language),
+  })
 
   return (
     <section className="min-h-screen bg-surface-container-low py-16 md:py-20 px-5 md:px-margin-desktop">
@@ -327,14 +328,12 @@ export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
                       <label htmlFor="checkout-adults" className="font-label-md text-label-sm text-on-surface-variant">
                         {t('details.adultsLabel')}
                       </label>
-                      <input
+                      <CountInput
                         id="checkout-adults"
-                        type="number"
                         min={1}
-                        step={1}
                         required
                         value={adults}
-                        onChange={(e) => setAdults(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
+                        onChange={setAdults}
                         className="min-h-[44px] bg-ivory-base border border-sand-stone rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-savanna-green"
                       />
                     </div>
@@ -342,13 +341,11 @@ export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
                       <label htmlFor="checkout-children" className="font-label-md text-label-sm text-on-surface-variant">
                         {t('details.childrenLabel')}
                       </label>
-                      <input
+                      <CountInput
                         id="checkout-children"
-                        type="number"
                         min={0}
-                        step={1}
                         value={children}
-                        onChange={(e) => setChildren(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
+                        onChange={setChildren}
                         className="min-h-[44px] bg-ivory-base border border-sand-stone rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-savanna-green"
                       />
                     </div>
@@ -360,6 +357,7 @@ export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
                         id="checkout-date"
                         type="date"
                         required
+                        min={todayISO()}
                         value={preferredDate}
                         onChange={(e) => setPreferredDate(e.target.value)}
                         className="min-h-[44px] bg-ivory-base border border-sand-stone rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-savanna-green"
@@ -480,17 +478,10 @@ export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
                   />
 
                   <div className="mt-6">
-                    <MockCardFields
-                      namePlaceholder={fullName || 'Johnathan Doe'}
-                      cardName={cardName}
-                      onCardNameChange={setCardName}
-                      cardNumber={cardNumber}
-                      onCardNumberChange={setCardNumber}
-                      cardExpiry={cardExpiry}
-                      onCardExpiryChange={setCardExpiry}
-                      cardCvv={cardCvv}
-                      onCardCvvChange={setCardCvv}
-                    />
+                    <MobileMoneyNotice />
+                    <div className="mt-4">
+                      <PaymentOutageNotice availability={paymentAvailability} />
+                    </div>
                   </div>
 
                   <button
@@ -556,13 +547,13 @@ export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
 
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between text-on-surface-variant">
-                    <span>{t('priceLine.adults', { count: adults, price: adultPrice.toLocaleString(i18n.language) })}</span>
-                    <span>${(adultPrice * adults).toLocaleString(i18n.language)}</span>
+                    <span>{t('priceLine.adults', { count: adults, price: formatMoney(adultPrice, i18n.language) })}</span>
+                    <span>{formatMoney((adultPrice * adults), i18n.language)}</span>
                   </div>
                   {children > 0 && (
                     <div className="flex justify-between text-on-surface-variant">
-                      <span>{t('priceLine.children', { count: children, price: childPrice.toLocaleString(i18n.language) })}</span>
-                      <span>${(childPrice * children).toLocaleString(i18n.language)}</span>
+                      <span>{t('priceLine.children', { count: children, price: formatMoney(childPrice, i18n.language) })}</span>
+                      <span>{formatMoney((childPrice * children), i18n.language)}</span>
                     </div>
                   )}
                   {activeSeason && (
@@ -574,14 +565,14 @@ export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
 
                 <div className="flex justify-between items-baseline pt-4 border-t border-sand-stone">
                   <span className="font-label-md text-label-md text-on-surface-variant">{t('summary.total')}</span>
-                  <span className="font-headline-md text-[28px] text-savanna-green">${total.toLocaleString(i18n.language)}</span>
+                  <span className="font-headline-md text-[28px] text-savanna-green">{formatMoney(total, i18n.language)}</span>
                 </div>
                 <div className="flex justify-between font-label-md text-label-md text-terracotta">
                   <span>
                     {t('summary.depositDueNow')}
                     {referralDiscountPercent ? ` (${referralDiscountPercent}% off applied)` : ''}
                   </span>
-                  <span>${deposit.toLocaleString(i18n.language)}</span>
+                  <span>{formatMoney(deposit, i18n.language)}</span>
                 </div>
 
                 {submitError && (
@@ -592,11 +583,11 @@ export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
                 <button
                   type="submit"
                   form="checkout-form"
-                  disabled={submitting}
+                  disabled={submitting || (step === 'payment' && Boolean(paymentAvailability?.blocked))}
                   className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 bg-savanna-green text-on-primary py-4 rounded-lg font-label-md text-label-md hover:opacity-90 transition-opacity shadow-lg shadow-savanna-green/20 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {ctaLabel}
-                  {step === 'payment' && <CreditCard size={18} weight="bold" />}
+                  {step === 'payment' && <DeviceMobile size={18} weight="bold" />}
                   {step !== 'payment' && <ArrowRight size={18} weight="bold" />}
                 </button>
                 <p className="text-center text-label-sm text-on-surface-variant px-2">

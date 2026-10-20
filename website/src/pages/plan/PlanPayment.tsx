@@ -1,9 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, CreditCard } from '@phosphor-icons/react'
-import { useLocalizedNavigate as useNavigate } from '../../i18n/useLocale'
+import { ArrowLeft, DeviceMobile } from '@phosphor-icons/react'
+import { useCurrentLocale, useLocalizedNavigate as useNavigate } from '../../i18n/useLocale'
 import { getSeasons } from '../../api/pricing'
-import { createBooking, payForBooking } from '../../api/bookings'
+import { createBooking, getPaymentAvailability, payForBooking } from '../../api/bookings'
 import { useFetch } from '../../lib/useFetch'
 import { useTripPlan } from '../../components/plan/tripPlanStore'
 import { usePlanSelections } from '../../components/plan/usePlanSelections'
@@ -12,13 +12,16 @@ import { ApiError } from '../../lib/api'
 import { addDays } from '../../lib/date'
 import { seasonalPrice } from '../../lib/seasonalPrice'
 import { trackFunnelEvent } from '../../lib/funnelTracking'
-import { MockCardFields } from '../../components/checkout/MockCardFields'
+import { MobileMoneyNotice } from '../../components/checkout/MobileMoneyNotice'
+import { PaymentOutageNotice } from '../../components/checkout/PaymentOutageNotice'
 import { ReferralCodeField } from '../../components/checkout/ReferralCodeField'
+import { formatMoney } from '../../lib/money'
 
 export function PlanPayment() {
   const { t, i18n } = useTranslation('plan')
   const { plan } = useTripPlan()
   const navigate = useNavigate()
+  const locale = useCurrentLocale()
   const { user } = useAuth()
   const {
     loading: selectionsLoading,
@@ -29,12 +32,9 @@ export function PlanPayment() {
     primaryPrice,
   } = usePlanSelections()
   const { data: seasons, loading: seasonsLoading } = useFetch(getSeasons, [])
+  const { data: paymentAvailability } = useFetch(getPaymentAvailability, [])
   const dataLoading = selectionsLoading || seasonsLoading
 
-  const [cardName, setCardName] = useState('')
-  const [cardNumber, setCardNumber] = useState('')
-  const [cardExpiry, setCardExpiry] = useState('')
-  const [cardCvv, setCardCvv] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [referralCode, setReferralCode] = useState('')
@@ -104,19 +104,13 @@ export function PlanPayment() {
         bookingId = (await createBooking(bookingInput)).id
         setPendingBooking({ id: bookingId, key: bookingKey })
       }
-      const paid = await payForBooking(bookingId, referralDiscountPercent ? referralCode.trim() : undefined)
-      setPendingBooking(null)
+      const checkout = await payForBooking(bookingId, locale, referralDiscountPercent ? referralCode.trim() : undefined)
       trackFunnelEvent('submitted')
-      void navigate('/booking-confirmed', {
-        state: {
-          title: primarySafari?.title ?? primaryRegionSafari?.title,
-          paidAmount: deposit,
-          paidToEmail: paid.customerEmail,
-        },
-      })
+      // Off to Snippe's hosted checkout; it sends the tourist back to /booking-confirmed.
+      // `submitting` stays true so the button can't be pressed again on the way out.
+      window.location.assign(checkout.checkoutUrl)
     } catch (err) {
       setSubmitError(err instanceof ApiError ? err.message : t('payment.somethingWentWrong'))
-    } finally {
       setSubmitting(false)
     }
   }
@@ -139,22 +133,13 @@ export function PlanPayment() {
             {t('payment.depositDueNow')}
             {referralDiscountPercent ? ` (${referralDiscountPercent}% off applied)` : ''}
           </span>
-          <span className="font-headline-md text-[24px] text-savanna-green">${deposit.toLocaleString(i18n.language)}</span>
+          <span className="font-headline-md text-[24px] text-savanna-green">{formatMoney(deposit, i18n.language)}</span>
         </div>
 
         <ReferralCodeField code={referralCode} onCodeChange={setReferralCode} onDiscountChange={setReferralDiscountPercent} />
 
-        <MockCardFields
-          namePlaceholder={plan.contactName || 'Johnathan Doe'}
-          cardName={cardName}
-          onCardNameChange={setCardName}
-          cardNumber={cardNumber}
-          onCardNumberChange={setCardNumber}
-          cardExpiry={cardExpiry}
-          onCardExpiryChange={setCardExpiry}
-          cardCvv={cardCvv}
-          onCardCvvChange={setCardCvv}
-        />
+        <MobileMoneyNotice />
+        <PaymentOutageNotice availability={paymentAvailability} />
 
         {submitError && (
           <p role="alert" className="text-error font-label-sm text-label-sm">
@@ -173,11 +158,11 @@ export function PlanPayment() {
           </button>
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || Boolean(paymentAvailability?.blocked)}
             className="min-h-[44px] inline-flex items-center justify-center gap-2 bg-golden-sun text-on-primary px-8 rounded-lg font-label-md text-label-md hover:opacity-90 transition-opacity shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {submitting ? t('payment.processing') : t('payment.payAndBook', { amount: deposit.toLocaleString(i18n.language) })}
-            <CreditCard size={18} weight="bold" />
+            {submitting ? t('payment.processing') : t('payment.payAndBook', { amount: formatMoney(deposit, i18n.language) })}
+            <DeviceMobile size={18} weight="bold" />
           </button>
         </div>
       </form>

@@ -1,11 +1,16 @@
-import { useState, type ComponentType } from 'react'
+import { useEffect, useState, type ComponentType } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { CalendarBlank, CheckCircle, Clock, ClockCounterClockwise, MapPin, CreditCard } from '@phosphor-icons/react'
 import { Link } from '../../i18n/routing'
-import { getBookings, payRemainingBalance, type Booking, type BookingStage } from '../../api/bookings'
+import { getBookings, getPaymentAvailability, payForBooking, payRemainingBalance, type Booking, type BookingStage, type PaymentStatusValue } from '../../api/bookings'
 import { getMyInvoices } from '../../api/invoices'
 import { useFetch } from '../../lib/useFetch'
 import { ApiError } from '../../lib/api'
+import { useCurrentLocale } from '../../i18n/useLocale'
+import { paymentReturnParams, usePaymentStatus } from '../../lib/usePaymentStatus'
+import { PaymentOutageNotice } from '../../components/checkout/PaymentOutageNotice'
+import { formatMoney } from '../../lib/money'
 
 const BADGE: Record<BookingStage, { className: string; icon: ComponentType<{ size?: number; weight?: 'fill' }> }> = {
   new_inquiry: { className: 'bg-surface-tint text-on-primary', icon: CheckCircle },
@@ -15,27 +20,56 @@ const BADGE: Record<BookingStage, { className: string; icon: ComponentType<{ siz
   completed: { className: 'bg-outline text-on-tertiary', icon: ClockCounterClockwise },
 }
 
+/** What to tell a tourist who has just come back from Snippe's checkout after paying a balance. */
+function returnBannerText(status: PaymentStatusValue | undefined, gaveUp: boolean): string {
+  if (status === 'completed') return 'Payment received — thank you! Your trip has been updated.'
+  if (status === 'failed' || status === 'expired') {
+    return "That payment didn't go through, so nothing was charged. You can try again below."
+  }
+  if (gaveUp) return "We haven't had confirmation yet. If you approved the payment it will show here shortly."
+  return "Confirming your payment… approve the prompt on your phone if you haven't yet."
+}
+
 export function MyTrips() {
   const { t } = useTranslation('account')
   const { data: bookings, loading, error, refetch: refetchBookings } = useFetch<Booking[]>(() => getBookings(), [])
   const { data: invoices, refetch: refetchInvoices } = useFetch(getMyInvoices, [])
+  const { data: paymentAvailability } = useFetch(getPaymentAvailability, [])
+  const paymentsBlocked = Boolean(paymentAvailability?.blocked)
   const trips = bookings ?? []
   const [payingId, setPayingId] = useState<number | null>(null)
   const [payError, setPayError] = useState<string | null>(null)
+  const locale = useCurrentLocale()
+  // Snippe's checkout sends the tourist back here with ?booking=&payment= after a balance payment.
+  const location = useLocation()
+  const { bookingId: returnedBookingId, paymentId: returnedPaymentId } = paymentReturnParams(location.search)
+  const { payment: returnedPayment, gaveUp } = usePaymentStatus(returnedBookingId, returnedPaymentId)
+  const returnedStatus = returnedPayment?.status
 
-  async function handlePayBalance(bookingId: number) {
+  useEffect(() => {
+    if (returnedStatus === 'completed') {
+      refetchInvoices()
+      refetchBookings()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [returnedStatus])
+
+  /** Opens a Snippe checkout for the deposit (a booking whose checkout payment didn't go
+   * through) or the remaining balance, and sends the browser there. */
+  async function handlePay(bookingId: number, kind: 'deposit' | 'balance') {
     setPayError(null)
     setPayingId(bookingId)
     try {
-      await payRemainingBalance(bookingId)
-      refetchInvoices()
-      refetchBookings()
+      const checkout =
+        kind === 'deposit' ? await payForBooking(bookingId, locale) : await payRemainingBalance(bookingId, locale)
+      window.location.assign(checkout.checkoutUrl)
     } catch (err) {
       setPayError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.')
-    } finally {
       setPayingId(null)
     }
   }
+
+  const returnBanner = returnedPaymentId === null ? null : returnBannerText(returnedStatus, gaveUp)
 
   return (
     <div>
@@ -48,6 +82,16 @@ export function MyTrips() {
 
       {loading && <p className="text-on-surface-variant">{t('myTrips.loading')}</p>}
       {error && <p className="text-error">{error}</p>}
+      {returnBanner && (
+        <p role="status" aria-live="polite" className="font-label-md text-label-md text-on-surface bg-savanna-green/10 border border-savanna-green/20 rounded-xl p-4 mb-6">
+          {returnBanner}
+        </p>
+      )}
+      {trips.some((trip) => trip.stage === 'new_inquiry' || trip.stage === 'deposit_paid') && (
+        <div className="mb-6">
+          <PaymentOutageNotice availability={paymentAvailability} />
+        </div>
+      )}
       {payError && (
         <p role="alert" className="text-error font-label-sm text-label-sm mb-6">
           {payError}
@@ -66,6 +110,8 @@ export function MyTrips() {
                 const isCompleted = trip.stage === 'completed'
                 const invoice = (invoices ?? []).find((i) => i.bookingId === trip.id)
                 const remainingBalance = invoice?.remainingBalance
+                // A checkout booking whose deposit payment never completed.
+                const depositDue = trip.stage === 'new_inquiry' && invoices !== null && !invoice
                 return (
                   <div
                     key={trip.id}
@@ -93,17 +139,28 @@ export function MyTrips() {
                       <p className="font-body-md text-on-surface-variant/80 text-sm mb-4 flex-1">
                         {trip.assignedGuideName ? t('myTrips.guideAssigned', { name: trip.assignedGuideName }) : t('myTrips.guideNotAssigned')}
                       </p>
+                      {depositDue && (
+                        <button
+                          type="button"
+                          onClick={() => void handlePay(trip.id, 'deposit')}
+                          disabled={payingId === trip.id || paymentsBlocked}
+                          className="w-full mb-2 inline-flex items-center justify-center gap-2 bg-golden-sun text-on-primary py-3 rounded-lg font-label-md hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          <CreditCard size={18} weight="bold" />
+                          {payingId === trip.id ? 'Processing…' : 'Pay Deposit'}
+                        </button>
+                      )}
                       {Boolean(remainingBalance) && (
                         <button
                           type="button"
-                          onClick={() => handlePayBalance(trip.id)}
-                          disabled={payingId === trip.id}
+                          onClick={() => void handlePay(trip.id, 'balance')}
+                          disabled={payingId === trip.id || paymentsBlocked}
                           className="w-full mb-2 inline-flex items-center justify-center gap-2 bg-golden-sun text-on-primary py-3 rounded-lg font-label-md hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                           <CreditCard size={18} weight="bold" />
                           {payingId === trip.id
                             ? 'Processing…'
-                            : `Pay Remaining Balance ($${remainingBalance!.toLocaleString()})`}
+                            : `Pay Remaining Balance (${formatMoney(remainingBalance!)})`}
                         </button>
                       )}
                       <Link

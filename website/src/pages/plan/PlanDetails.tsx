@@ -12,6 +12,7 @@ import {
 } from '@phosphor-icons/react'
 import { useLocalizedNavigate as useNavigate } from '../../i18n/useLocale'
 import { useTripPlan, type AccommodationTier } from '../../components/plan/tripPlanStore'
+import { todayISO } from '../../lib/date'
 
 const TIERS: { value: AccommodationTier }[] = [{ value: 'Budget' }, { value: 'Mid-range' }, { value: 'Luxury' }]
 
@@ -73,6 +74,7 @@ export function PlanDetails() {
                 id="plan-travel-dates"
                 type="date"
                 required
+                min={todayISO()}
                 value={plan.travelDates}
                 onChange={(e) => setTravelDates(e.target.value)}
                 className="w-full min-h-[44px] bg-ivory-base border border-sand-stone rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-savanna-green"

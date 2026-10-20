@@ -16,9 +16,9 @@
     },
     "budget": {
       "any": "Orçamento (Todos)",
-      "under-3000": "Menos de 3.000 $",
-      "3000-6000": "3.000 $ - 6.000 $",
-      "6000+": "Mais de 6.000 $"
+      "under-7500k": "Menos de 7,5 M TZS",
+      "7500k-15m": "7,5 M – 15 M TZS",
+      "15m+": "15 M TZS ou mais"
     },
     "destination": {
       "all": "Destino (Todos)",
@@ -62,7 +62,7 @@
     "notIncluded": "Não incluído",
     "bookThisSafari": "Reservar este safári",
     "bookSubtitle": "Comece hoje a planear a aventura dos seus sonhos.",
-    "fromPrice": "A partir de {{price}} $",
+    "fromPrice": "A partir de {{price}}",
     "perPerson": "por pessoa",
     "bookNow": "Reservar agora",
     "talkToTourHelper": "Falar com um assistente de viagem",

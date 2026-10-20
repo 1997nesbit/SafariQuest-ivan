@@ -15,6 +15,8 @@ import {
   CreditCard,
   WhatsappLogo,
   HandCoins,
+  HourglassMedium,
+  WarningCircle,
 } from '@phosphor-icons/react'
 import { contact } from '../config/contact'
 import { activateReferralAgent, getPublicReferralSettings } from '../api/referrals'
@@ -22,6 +24,8 @@ import { useAuth } from '../auth/AuthContext'
 import { useFetch } from '../lib/useFetch'
 import { ApiError } from '../lib/api'
 import { useSiteImages } from '../lib/useSiteImage'
+import { paymentReturnParams, usePaymentStatus } from '../lib/usePaymentStatus'
+import { formatMoney } from '../lib/money'
 
 const NEXT_STEPS = [
   { icon: CalendarPlus, borderColor: 'border-savanna-green', iconColor: 'text-savanna-green', key: 'itineraryPrep' },
@@ -115,6 +119,35 @@ function ReferAndEarnCard() {
   )
 }
 
+/** Shown in place of the confirmation while Snippe's payment is still settling, or when it
+ * didn't go through — the booking isn't confirmed until the deposit is. */
+function PaymentNotYetConfirmed({ failed, gaveUp }: Readonly<{ failed: boolean; gaveUp: boolean }>) {
+  const { t } = useTranslation('booking')
+  const Icon = failed ? WarningCircle : HourglassMedium
+  let body = t('confirmed.pending.body')
+  if (failed) body = t('confirmed.failed.body')
+  else if (gaveUp) body = t('confirmed.pending.stillWaiting')
+  return (
+    <section className="min-h-[60vh] flex items-center justify-center px-5 py-32 text-center">
+      <div className="max-w-xl" role="status" aria-live="polite">
+        <Icon size={48} className={`mx-auto mb-6 ${failed ? 'text-error' : 'text-savanna-green'}`} />
+        <h1 className="font-headline-lg text-headline-lg-mobile text-on-surface mb-4">
+          {failed ? t('confirmed.failed.heading') : t('confirmed.pending.heading')}
+        </h1>
+        <p className="text-on-surface-variant mb-8">{body}</p>
+        {(failed || gaveUp) && (
+          <Link
+            to="/account"
+            className="min-h-[44px] inline-flex items-center justify-center bg-savanna-green text-on-primary px-8 py-3.5 rounded-full font-label-md hover:opacity-90 transition-opacity"
+          >
+            {t('confirmed.goToDashboard')}
+          </Link>
+        )}
+      </div>
+    </section>
+  )
+}
+
 export function BookingConfirmed() {
   const { t, i18n } = useTranslation('booking')
   const siteImage = useSiteImages()
@@ -122,10 +155,17 @@ export function BookingConfirmed() {
   const packingPhoto = siteImage('booking_confirmed_packing', t('confirmed.resources.packingGuide.imageAlt'))
   const photographyPhoto = siteImage('booking_confirmed_photography', t('confirmed.resources.photographyTips.imageAlt'))
   const location = useLocation()
-  const state = location.state as { title?: string; paidAmount?: number; paidToEmail?: string } | null
-  const title = state?.title
-  const paidAmount = state?.paidAmount
-  const paidToEmail = state?.paidToEmail
+  // Snippe's checkout sends the tourist back here with ?booking=&payment=.
+  const { bookingId, paymentId } = paymentReturnParams(location.search)
+  const { payment, gaveUp } = usePaymentStatus(bookingId, paymentId)
+
+  if (paymentId !== null && payment?.status !== 'completed') {
+    return <PaymentNotYetConfirmed failed={payment?.status === 'failed' || payment?.status === 'expired'} gaveUp={gaveUp} />
+  }
+
+  const title = payment?.packageTitle
+  const paidAmount = payment?.amount
+  const paidToEmail = payment?.customerEmail
 
   return (
     <>
@@ -148,7 +188,7 @@ export function BookingConfirmed() {
                 <CreditCard size={22} className="text-savanna-green shrink-0 mt-0.5" />
                 <div>
                   <p className="font-label-md text-label-md text-on-surface mb-1">
-                    {t('confirmed.depositReceived', { amount: paidAmount.toLocaleString(i18n.language) })}
+                    {t('confirmed.depositReceived', { amount: formatMoney(paidAmount, i18n.language) })}
                   </p>
                   <p className="text-on-surface-variant text-sm">
                     {t('confirmed.confirmationSentTo', { email: paidToEmail ?? t('confirmed.yourRegistrationEmail') })}

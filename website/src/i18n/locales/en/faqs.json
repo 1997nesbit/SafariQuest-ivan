@@ -16,7 +16,7 @@
         },
         "paymentMethods": {
           "question": "What payment methods do you accept?",
-          "answer": "We accept bank transfer and major credit cards. A deposit secures your booking, with the balance due before departure."
+          "answer": "We accept mobile money — M-Pesa, Airtel Money, Mixx by Yas and Halotel — through our secure Snippe checkout. All prices are in Tanzanian shillings (TZS). A 30% deposit secures your booking, with the balance due before departure."
         },
         "depositRequired": {
           "question": "Is a deposit required?",

@@ -121,11 +121,11 @@
   },
   "payment": {
     "heading": "Zahlung",
-    "subtitle": "Geben Sie Ihre Kartendaten ein, um die Anzahlung zu leisten und Ihre Buchung zu sichern.",
+    "subtitle": "Zahlen Sie die Anzahlung per Mobile Money — M-Pesa, Airtel Money, Mixx by Yas oder Halotel —, um Ihre Buchung zu sichern.",
     "depositDueNow": "Anzahlung jetzt fällig (30 %)",
     "back": "Zurück",
     "processing": "Wird verarbeitet…",
-    "payAndBook": "{{amount}} $ zahlen & buchen",
+    "payAndBook": "{{amount}} zahlen & buchen",
     "somethingWentWrong": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut."
   },
   "message": {

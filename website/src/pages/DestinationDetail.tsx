@@ -8,6 +8,7 @@ import { getParks, type Park } from '../api/parks'
 import { getSafaris, type SafariPackage } from '../api/safaris'
 import { getRegionSafaris, type RegionSafari } from '../api/regionSafaris'
 import { useFetch } from '../lib/useFetch'
+import { formatMoney } from '../lib/money'
 
 export function DestinationDetail() {
   const { t, i18n } = useTranslation('destinations')
@@ -225,7 +226,7 @@ export function DestinationDetail() {
                     <div className="mt-auto flex items-center justify-between pt-2">
                       <span className="text-on-surface-variant text-sm">{t('detail.days', { count: rs.days })}</span>
                       <span className="font-headline-md text-savanna-green font-bold">
-                        ${rs.price.toLocaleString(i18n.language)}
+                        {formatMoney(rs.price, i18n.language)}
                       </span>
                     </div>
                   </div>

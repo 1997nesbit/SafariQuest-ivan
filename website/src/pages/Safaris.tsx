@@ -17,9 +17,9 @@ const DURATION_OPTIONS = [
 
 const BUDGET_OPTIONS = [
   { key: 'any', value: '' },
-  { key: 'under-3000', value: 'under-3000' },
-  { key: '3000-6000', value: '3000-6000' },
-  { key: '6000+', value: '6000+' },
+  { key: 'under-7500k', value: 'under-7500k' },
+  { key: '7500k-15m', value: '7500k-15m' },
+  { key: '15m+', value: '15m+' },
 ] as const
 
 const DESTINATION_OPTIONS = [
@@ -38,11 +38,15 @@ function matchesDuration(days: number, filter: string) {
   return true
 }
 
+// Per-person price bands in TZS (prices are stored in shillings).
+const BUDGET_LOW = 7_500_000
+const BUDGET_HIGH = 15_000_000
+
 function matchesBudget(price: number, filter: string) {
   if (!filter) return true
-  if (filter === 'under-3000') return price < 3000
-  if (filter === '3000-6000') return price >= 3000 && price <= 6000
-  if (filter === '6000+') return price > 6000
+  if (filter === 'under-7500k') return price < BUDGET_LOW
+  if (filter === '7500k-15m') return price >= BUDGET_LOW && price <= BUDGET_HIGH
+  if (filter === '15m+') return price > BUDGET_HIGH
   return true
 }
 

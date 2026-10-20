@@ -16,9 +16,9 @@
     },
     "budget": {
       "any": "Budget (Tous)",
-      "under-3000": "Moins de 3 000 $",
-      "3000-6000": "3 000 $ - 6 000 $",
-      "6000+": "6 000 $ et plus"
+      "under-7500k": "Moins de 7,5 M TZS",
+      "7500k-15m": "7,5 M – 15 M TZS",
+      "15m+": "15 M TZS et plus"
     },
     "destination": {
       "all": "Destination (Toutes)",
@@ -62,7 +62,7 @@
     "notIncluded": "Non inclus",
     "bookThisSafari": "Réserver ce safari",
     "bookSubtitle": "Commencez à planifier l'aventure de vos rêves dès aujourd'hui.",
-    "fromPrice": "À partir de {{price}} $",
+    "fromPrice": "À partir de {{price}}",
     "perPerson": "par pers.",
     "bookNow": "Réserver maintenant",
     "talkToTourHelper": "Parler à un conseiller voyage",

@@ -12,11 +12,12 @@ import {
 import { useFetch } from '../../lib/useFetch'
 import { ApiError } from '../../lib/api'
 import { contact } from '../../config/contact'
+import { formatMoney } from '../../lib/money'
 
 // Same 30% figure Checkout.tsx quotes a tourist at booking time. Only used as
 // a *fallback* estimate for invoices issued the older way (2.2 send_quote),
 // which never captured a real trip_total/remaining_balance — invoices issued
-// from the mock checkout deposit (1.3) carry the real split instead, see
+// from the Snippe checkout deposit (1.3) carry the real split instead, see
 // paymentSchedule() below.
 const DEPOSIT_FRACTION = 0.3
 
@@ -27,7 +28,7 @@ function formatInvoiceNumber(invoice: InvoiceDetail) {
 
 /** The invoice total and its deposit/balance split. Real figures
  * (`tripTotal`/`remainingBalance`) exist only for invoices issued from the
- * mock checkout deposit (1.3); a quote-sent invoice (2.2) never captured a
+ * Snippe checkout deposit (1.3); a quote-sent invoice (2.2) never captured a
  * trip_total, so it falls back to the same derived 30/70 estimate this page
  * always showed. */
 function paymentSchedule(invoice: InvoiceDetail) {
@@ -231,8 +232,8 @@ export function AdminInvoiceDocument() {
                   <tr key={i}>
                     <td className="py-3 text-sm text-on-surface">{li.label}</td>
                     <td className="py-3 text-sm text-on-surface-variant text-right">{li.quantity}</td>
-                    <td className="py-3 text-sm text-on-surface-variant text-right">${li.unitPrice.toLocaleString()}</td>
-                    <td className="py-3 text-sm text-on-surface text-right">${li.quotePrice.toLocaleString()}</td>
+                    <td className="py-3 text-sm text-on-surface-variant text-right">{formatMoney(li.unitPrice)}</td>
+                    <td className="py-3 text-sm text-on-surface text-right">{formatMoney(li.quotePrice)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -246,28 +247,28 @@ export function AdminInvoiceDocument() {
               </p>
               <div className="flex justify-between text-sm mb-1">
                 <span className="text-on-surface-variant">{schedule!.depositLabel}</span>
-                <span className="text-on-surface font-label-md">${schedule!.depositAmount.toLocaleString()}</span>
+                <span className="text-on-surface font-label-md">{formatMoney(schedule!.depositAmount)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-on-surface-variant">{schedule!.balanceLabel}</span>
-                <span className="text-on-surface font-label-md">${schedule!.balanceAmount.toLocaleString()}</span>
+                <span className="text-on-surface font-label-md">{formatMoney(schedule!.balanceAmount)}</span>
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-on-surface-variant">Subtotal</span>
-                <span className="text-on-surface">${schedule!.total.toLocaleString()}</span>
+                <span className="text-on-surface">{formatMoney(schedule!.total)}</span>
               </div>
               <div className="flex justify-between items-center pt-3 border-t border-sand-stone bg-savanna-green text-on-primary rounded-lg px-4 py-3">
                 <span className="font-label-md text-sm">TOTAL</span>
-                <span className="font-headline-md text-[22px]">${schedule!.total.toLocaleString()}</span>
+                <span className="font-headline-md text-[22px]">{formatMoney(schedule!.total)}</span>
               </div>
             </div>
           </div>
 
           <div className="pt-6 border-t border-sand-stone text-center">
             <p className="text-on-surface-variant text-xs mb-1">
-              Bank transfer details will be shared directly by your safari consultant. All payments are quoted in USD.
+              Bank transfer details will be shared directly by your safari consultant. All amounts are in Tanzanian shillings (TZS).
             </p>
             <p className="text-on-surface-variant text-xs italic">
               Thank you for choosing Pande Wilderness Safari. We look forward to hosting your adventure.

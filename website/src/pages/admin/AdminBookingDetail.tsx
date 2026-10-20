@@ -26,6 +26,7 @@ import {
 import { getGuides } from '../../api/guides'
 import { useFetch } from '../../lib/useFetch'
 import { ApiError } from '../../lib/api'
+import { formatMoney } from '../../lib/money'
 
 const STAGE_DOT: Record<BookingStage, string> = {
   new_inquiry: 'bg-secondary-container',
@@ -396,7 +397,7 @@ export function AdminBookingDetail() {
                           className="w-24 bg-surface border border-sand-stone rounded-md px-2 py-1 text-sm text-right"
                         />
                       </td>
-                      <td className="py-3 text-right font-label-md text-sm text-on-surface">${quotePrice(li).toLocaleString()}</td>
+                      <td className="py-3 text-right font-label-md text-sm text-on-surface">{formatMoney(quotePrice(li))}</td>
                       <td className="py-2 text-right">
                         {!quoteLocked && (
                           <button type="button" onClick={() => removeLineItem(i)} className="text-on-surface-variant hover:text-terracotta">
@@ -423,7 +424,7 @@ export function AdminBookingDetail() {
             <div className="flex justify-end border-t-2 border-sand-stone pt-4">
               <div className="w-56 flex justify-between items-center">
                 <span className="font-headline-md text-[18px] text-on-surface">Total</span>
-                <span className="font-headline-md text-[18px] text-savanna-green">${Math.round(subtotal).toLocaleString()}</span>
+                <span className="font-headline-md text-[18px] text-savanna-green">{formatMoney(Math.round(subtotal))}</span>
               </div>
             </div>
             {!quoteLocked && (

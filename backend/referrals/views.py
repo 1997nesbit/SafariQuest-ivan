@@ -141,7 +141,7 @@ class AdminReferralRedemptionViewSet(mixins.ListModelMixin, viewsets.GenericView
             log_action(
                 request.user,
                 "referral.commission_paid",
-                f"Marked ${redemption.commission_amount:,} commission paid to {redemption.code.agent.email} "
+                f"Marked TZS {redemption.commission_amount:,} commission paid to {redemption.code.agent.email} "
                 f"(code {redemption.code.code}, booking #{redemption.booking_id})",
             )
         return Response(AdminReferralRedemptionSerializer(redemption).data)

@@ -8,7 +8,8 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from bookings.tests.test_pay import make_booking
+from bookings.models import Payment
+from bookings.tests.test_pay import SnippeTestMixin, make_booking
 from referrals.models import ReferralCode, ReferralRedemption
 
 User = get_user_model()
@@ -17,8 +18,9 @@ PASSWORD = "pw12345"
 STRONG_PASSWORD = "Kilimanjaro-5895m"
 
 
-class AgentProfileTests(APITestCase):
+class AgentProfileTests(SnippeTestMixin, APITestCase):
     def setUp(self):
+        super().setUp()
         self.tourist = User.objects.create_user(email="traveller@example.com", password=PASSWORD, role="tourist")
         self.agent = User.objects.create_user(
             email="hotel@example.com", password=PASSWORD, role="tourist", is_referral_agent=True
@@ -111,8 +113,8 @@ class AgentProfileTests(APITestCase):
     def test_agent_can_make_a_booking(self):
         self._login_as(self.agent)
         booking = make_booking(self.agent)
-        response = self.client.post(reverse("booking-pay", args=[booking.id]), {"amount": 5100})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response = self.client.post(reverse("booking-pay", args=[booking.id]))
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     # --- where they land ---------------------------------------------------
 
@@ -131,8 +133,9 @@ class AgentProfileTests(APITestCase):
         self.assertEqual(response.data["home"], "/agent")
 
 
-class SelfReferralTests(APITestCase):
+class SelfReferralTests(SnippeTestMixin, APITestCase):
     def setUp(self):
+        super().setUp()
         self.agent = User.objects.create_user(
             email="agent@example.com", password=PASSWORD, role="tourist", is_referral_agent=True
         )
@@ -168,16 +171,54 @@ class SelfReferralTests(APITestCase):
 
     def test_paying_with_someone_elses_code_records_their_commission(self):
         booking = make_booking(self.agent)
-        self.client.post(
+        self.pay_and_confirm(
             reverse("booking-pay", args=[booking.id]),
             {"amount": 1, "trip_total": 10000000, "referral_code": self.friends_code.code},
         )
         redemption = ReferralRedemption.objects.get(booking=booking)
         self.assertEqual(redemption.code, self.friends_code)
-        # Priced server-side, ignoring the amounts sent: 4 x $17,000 less the 2% default
+        # Priced server-side, ignoring the amounts sent: 4 x 17,000 less the 2% default
         # discount, and the 5% default commission on that.
         self.assertEqual(redemption.trip_total, 66640)
         self.assertEqual(redemption.commission_amount, 3332)
+        self.friends_code.refresh_from_db()
+        self.assertTrue(self.friends_code.is_used)
+
+    def _failed_first_attempt(self, booking):
+        response = self.client.post(
+            reverse("booking-pay", args=[booking.id]), {"referral_code": self.friends_code.code}
+        )
+        Payment.objects.filter(pk=response.data["payment_id"]).update(status=Payment.STATUS_FAILED)
+        return response
+
+    def test_retrying_a_failed_deposit_keeps_the_code(self):
+        booking = make_booking(self.agent)
+        first = self._failed_first_attempt(booking)
+        # My Trips' "Pay Deposit" retry sends no code.
+        retry = self.pay_and_confirm(reverse("booking-pay", args=[booking.id]))
+        self.assertNotEqual(retry.data["payment_id"], first.data["payment_id"])
+        self.assertEqual(retry.data["amount"], first.data["amount"])
+        redemption = ReferralRedemption.objects.get(booking=booking)
+        self.assertEqual(redemption.code, self.friends_code)
+        self.assertEqual(redemption.trip_total, 66640)
+
+    def test_retry_charges_full_price_once_the_code_is_used_elsewhere(self):
+        booking = make_booking(self.agent)
+        self._failed_first_attempt(booking)
+        self.friends_code.is_used = True
+        self.friends_code.save(update_fields=["is_used"])
+        retry = self.client.post(reverse("booking-pay", args=[booking.id]))
+        self.assertEqual(retry.data["amount"], 20400)  # 30% of 4 x 17,000, no discount
+        self.assertIsNone(Payment.objects.get(pk=retry.data["payment_id"]).referral_code)
+
+    def test_abandoned_checkout_does_not_use_up_the_code(self):
+        booking = make_booking(self.agent)
+        response = self.client.post(
+            reverse("booking-pay", args=[booking.id]), {"referral_code": self.friends_code.code}
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.friends_code.refresh_from_db()
+        self.assertFalse(self.friends_code.is_used)
 
 
 class ReferralSettingsBoundsTests(APITestCase):

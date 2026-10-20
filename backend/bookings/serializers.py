@@ -2,6 +2,7 @@ from django.conf import settings
 from django.db import transaction
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
+from django.utils import timezone
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from rest_framework import serializers
@@ -171,12 +172,12 @@ class BookingUpdateSerializer(serializers.ModelSerializer):
 
 
 class BookingPaySerializer(serializers.Serializer):
-    """Validates a mock checkout deposit payment (1.3). No card fields are accepted here —
-    they never leave the browser, since this endpoint doesn't talk to a real payment
-    processor yet (PLANNED). No amounts are accepted either: the trip total and deposit are
-    computed server-side (bookings.pricing), so a caller can't choose their own price."""
+    """Opens a Snippe checkout session for a deposit or balance. No amounts are accepted:
+    they're computed server-side (bookings.pricing / the invoice), so a caller can't choose
+    their own price. `locale` only picks which language the return page opens in."""
 
     referral_code = serializers.CharField(required=False, allow_blank=True)
+    locale = serializers.ChoiceField(choices=["en", "fr", "de", "pt"], required=False, default="en")
 
 
 class QuoteLineItemInputSerializer(serializers.Serializer):
@@ -247,6 +248,10 @@ class BookingCreateSerializer(serializers.Serializer):
     def validate(self, attrs):
         if bool(attrs.get("safari")) == bool(attrs.get("region_safari")):
             raise serializers.ValidationError("Provide exactly one of safari or region_safari.")
+        # Today counts (Tanzania time, settings.TIME_ZONE): only trips that would already
+        # have started are refused.
+        if attrs["start_date"] < timezone.localdate():
+            raise serializers.ValidationError({"start_date": "The start date can't be in the past."})
         if attrs["end_date"] < attrs["start_date"]:
             raise serializers.ValidationError({"end_date": "End date cannot be before the start date."})
         if attrs["children"] >= attrs["guests"]:

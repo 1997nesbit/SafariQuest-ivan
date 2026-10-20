@@ -121,11 +121,11 @@
   },
   "payment": {
     "heading": "Paiement",
-    "subtitle": "Saisissez les informations de votre carte pour payer l'acompte et sécuriser votre réservation.",
+    "subtitle": "Payez l'acompte par mobile money — M-Pesa, Airtel Money, Mixx by Yas ou Halotel — pour sécuriser votre réservation.",
     "depositDueNow": "Acompte dû maintenant (30 %)",
     "back": "Retour",
     "processing": "Traitement en cours…",
-    "payAndBook": "Payer {{amount}} $ et réserver",
+    "payAndBook": "Payer {{amount}} et réserver",
     "somethingWentWrong": "Une erreur s'est produite. Veuillez réessayer."
   },
   "message": {

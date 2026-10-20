@@ -16,10 +16,10 @@
     "children_other": "{{count}} children"
   },
   "priceLine": {
-    "adults_one": "{{count}} adult × ${{price}}",
-    "adults_other": "{{count}} adults × ${{price}}",
-    "children_one": "{{count}} child × ${{price}}",
-    "children_other": "{{count}} children × ${{price}}"
+    "adults_one": "{{count}} adult × {{price}}",
+    "adults_other": "{{count}} adults × {{price}}",
+    "children_one": "{{count}} child × {{price}}",
+    "children_other": "{{count}} children × {{price}}"
   },
   "days_one": "{{count}} day",
   "days_other": "{{count}} days",
@@ -67,13 +67,9 @@
   },
   "payment": {
     "heading": "Payment",
-    "subtitle": "Enter your card details to pay the deposit and secure your booking.",
+    "subtitle": "Pay the deposit with mobile money — M-Pesa, Airtel Money, Mixx by Yas or Halotel — to secure your booking.",
     "back": "Back",
-    "testMode": "Test mode — card processing isn't connected yet, so no real charge will be made.",
-    "nameOnCard": "Name on Card",
-    "cardNumber": "Card Number",
-    "expiry": "Expiry (MM/YY)",
-    "cvv": "CVV"
+    "mobileMoneyNotice": "You'll be taken to Snippe's secure checkout to approve the payment on your phone, then brought back here."
   },
   "trustBadges": {
     "certifiedOperator": "Certified Operator",
@@ -90,7 +86,7 @@
   },
   "cta": {
     "processing": "Processing…",
-    "payAndBook": "Pay ${{amount}} & Book",
+    "payAndBook": "Pay {{amount}} & Book",
     "pleaseWait": "Please wait…",
     "createAccountAndContinue": "Create Account & Continue",
     "signInAndContinue": "Sign In & Continue",
@@ -111,8 +107,8 @@
     "thankYouWithTitle": "Thank you for booking {{title}}.",
     "thankYouGeneric": "Thank you for booking with Pande Wilderness Safari.",
     "subtitle": "Our master guides and planners have received your reservation and are already mapping out your authentic Tanzanian adventure.",
-    "depositReceived": "Deposit of ${{amount}} received",
-    "confirmationSentTo": "A payment confirmation was sent to {{email}}. This was a test payment — real card processing is coming soon.",
+    "depositReceived": "Deposit of {{amount}} received",
+    "confirmationSentTo": "A payment confirmation was sent to {{email}}.",
     "yourRegistrationEmail": "your registration email",
     "goToDashboard": "Go to My Dashboard",
     "browseMoreSafaris": "Browse More Safaris",
@@ -169,6 +165,15 @@
       "openDashboard": "Share My Referral Code",
       "learnMore": "Become a Referral Agent",
       "error": "Something went wrong. Please try again."
+    },
+    "pending": {
+      "heading": "Confirming your payment…",
+      "body": "Approve the prompt on your phone if you haven't yet. This page updates on its own.",
+      "stillWaiting": "We haven't had confirmation yet. If you approved the payment it will appear on your dashboard shortly, and we'll email you."
+    },
+    "failed": {
+      "heading": "Payment not completed",
+      "body": "The payment didn't go through or the checkout expired, so nothing was charged. You can try again from your dashboard."
     }
   },
   "referralField": {

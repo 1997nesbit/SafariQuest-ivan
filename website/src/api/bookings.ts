@@ -242,24 +242,81 @@ export async function sendQuote(id: number): Promise<BookingDetail> {
   return mapBookingDetail(raw)
 }
 
-/** Records a mock deposit payment at checkout (1.3) — no card gateway is integrated yet.
- * No amounts are sent: the server prices the trip and the deposit itself
- * (backend/bookings/pricing.py), with the same arithmetic the checkout page uses to show
- * them, so the figure on screen is the figure recorded. */
-export async function payForBooking(id: number, referralCode?: string): Promise<BookingDetail> {
-  const raw = await apiPost<BookingDetailApiShape>(
-    `/api/bookings/${id}/pay/`,
-    referralCode ? { referral_code: referralCode } : {},
-  )
-  return mapBookingDetail(raw)
+/** A Snippe checkout session opened for a deposit or balance. The browser goes to
+ * `checkoutUrl` to pay with mobile money; Snippe sends it back to the booking-confirmed
+ * page (deposit) or /account (balance) with `?booking=&payment=` to poll. */
+export interface PaymentCheckout {
+  paymentId: number
+  checkoutUrl: string
+  amount: number
+  currency: string
 }
 
-/** Pays off whatever remains after the deposit, from the tourist's own dashboard — no
- * credentials or card details are re-entered; the amount is computed server-side from the
- * invoice's trip_total, not trusted from the client. */
-export async function payRemainingBalance(id: number): Promise<BookingDetail> {
-  const raw = await apiPost<BookingDetailApiShape>(`/api/bookings/${id}/pay-balance/`)
-  return mapBookingDetail(raw)
+interface PaymentCheckoutApiShape {
+  payment_id: number
+  checkout_url: string
+  amount: number
+  currency: string
+}
+
+function mapPaymentCheckout(raw: PaymentCheckoutApiShape): PaymentCheckout {
+  return { paymentId: raw.payment_id, checkoutUrl: raw.checkout_url, amount: raw.amount, currency: raw.currency }
+}
+
+/** Opens a Snippe checkout session for the deposit (1.3). No amounts are sent: the server
+ * prices the trip and the deposit itself (backend/bookings/pricing.py), with the same
+ * arithmetic the checkout page uses to show them, so the figure on screen is the figure
+ * charged. Nothing about the booking changes until Snippe confirms the payment. */
+export async function payForBooking(id: number, locale: string, referralCode?: string): Promise<PaymentCheckout> {
+  const raw = await apiPost<PaymentCheckoutApiShape>(
+    `/api/bookings/${id}/pay/`,
+    referralCode ? { locale, referral_code: referralCode } : { locale },
+  )
+  return mapPaymentCheckout(raw)
+}
+
+/** Opens a Snippe checkout session for whatever remains after the deposit; the amount is
+ * computed server-side from the invoice's trip_total, not trusted from the client. */
+export async function payRemainingBalance(id: number, locale: string): Promise<PaymentCheckout> {
+  const raw = await apiPost<PaymentCheckoutApiShape>(`/api/bookings/${id}/pay-balance/`, { locale })
+  return mapPaymentCheckout(raw)
+}
+
+export type PaymentStatusValue = 'pending' | 'completed' | 'failed' | 'expired'
+
+export interface PaymentStatus {
+  paymentId: number
+  kind: 'deposit' | 'balance'
+  status: PaymentStatusValue
+  amount: number
+  currency: string
+  customerEmail: string
+  packageTitle: string
+}
+
+interface PaymentStatusApiShape {
+  payment_id: number
+  kind: 'deposit' | 'balance'
+  status: PaymentStatusValue
+  amount: number
+  currency: string
+  customer_email: string
+  package_title: string
+}
+
+/** Where a payment stands. A pending one is checked against Snippe server-side, so this
+ * settles even if Snippe's webhook hasn't arrived. */
+export async function getPaymentStatus(bookingId: number, paymentId: number): Promise<PaymentStatus> {
+  const raw = await apiGet<PaymentStatusApiShape>(`/api/bookings/${bookingId}/payments/${paymentId}/`)
+  return {
+    paymentId: raw.payment_id,
+    kind: raw.kind,
+    status: raw.status,
+    amount: raw.amount,
+    currency: raw.currency,
+    customerEmail: raw.customer_email,
+    packageTitle: raw.package_title,
+  }
 }
 
 export async function addNote(id: number, text: string): Promise<BookingDetail> {
@@ -318,4 +375,17 @@ export async function createBooking(input: BookingCreateInput): Promise<BookingD
   if (input.message) payload.message = input.message
   const raw = await apiPost<BookingDetailApiShape>('/api/bookings/', payload)
   return mapBookingDetail(raw)
+}
+
+/** Whether online payment works right now (backend bookings.outages): `blocked` while
+ * Snippe can't take payments at all, `warnings` for a single network being down. The
+ * messages come from the server, which knows the outage window. */
+export interface PaymentAvailability {
+  blocked: boolean
+  message: string | null
+  warnings: string[]
+}
+
+export function getPaymentAvailability(): Promise<PaymentAvailability> {
+  return apiGet<PaymentAvailability>('/api/payments/availability/')
 }

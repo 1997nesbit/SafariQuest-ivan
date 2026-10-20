@@ -20,6 +20,7 @@ urlpatterns = [
     path("api/bookings/", include("bookings.urls")),
     path("api/invoices/", include("bookings.invoice_urls")),
     path("api/finance/", include("bookings.finance_urls")),
+    path("api/payments/", include("bookings.payment_urls")),
     path("api/uploads/", include("uploads.urls")),
     path("api/support/", include("support.urls")),
     path("api/analytics/", include("analytics.urls")),

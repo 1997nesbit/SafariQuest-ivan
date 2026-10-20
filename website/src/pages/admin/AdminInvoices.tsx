@@ -5,6 +5,7 @@ import { getInvoicesPage, INVOICE_STATUS_LABELS, type InvoiceStatus } from '../.
 import { usePaginatedFetch } from '../../lib/usePaginatedFetch'
 import { STANDARD_PAGE_SIZE } from '../../lib/api'
 import { Pager } from '../../components/admin/Pager'
+import { formatMoney } from '../../lib/money'
 
 const STATUS_STYLES: Record<InvoiceStatus, string> = {
   unpaid: 'bg-surface-container text-on-surface-variant',
@@ -102,7 +103,7 @@ export function AdminInvoices() {
                       <p className="text-xs text-on-surface-variant">{invoice.customerEmail}</p>
                     </td>
                     <td className="px-5 py-4 text-sm text-on-surface-variant">{invoice.packageTitle}</td>
-                    <td className="px-5 py-4 text-sm text-on-surface">${invoice.amount.toLocaleString()}</td>
+                    <td className="px-5 py-4 text-sm text-on-surface">{formatMoney(invoice.amount)}</td>
                     <td className="px-5 py-4 text-sm text-on-surface-variant">{invoice.issuedDate}</td>
                     <td className="px-5 py-4 text-sm text-on-surface-variant">{invoice.dueDate}</td>
                     <td className="px-5 py-4">

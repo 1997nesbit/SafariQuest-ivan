@@ -16,9 +16,9 @@
     },
     "budget": {
       "any": "Budget (Any)",
-      "under-3000": "Under $3,000",
-      "3000-6000": "$3,000 - $6,000",
-      "6000+": "$6,000+"
+      "under-7500k": "Under TZS 7.5M",
+      "7500k-15m": "TZS 7.5M – 15M",
+      "15m+": "TZS 15M+"
     },
     "destination": {
       "all": "Destination (All)",
@@ -62,7 +62,7 @@
     "notIncluded": "Not Included",
     "bookThisSafari": "Book This Safari",
     "bookSubtitle": "Start planning your dream adventure today.",
-    "fromPrice": "From ${{price}}",
+    "fromPrice": "From {{price}}",
     "perPerson": "pp",
     "bookNow": "Book Now",
     "talkToTourHelper": "Talk to a Tour Helper",

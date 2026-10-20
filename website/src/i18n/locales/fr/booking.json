@@ -16,10 +16,10 @@
     "children_other": "{{count}} enfants"
   },
   "priceLine": {
-    "adults_one": "{{count}} adulte × {{price}} $",
-    "adults_other": "{{count}} adultes × {{price}} $",
-    "children_one": "{{count}} enfant × {{price}} $",
-    "children_other": "{{count}} enfants × {{price}} $"
+    "adults_one": "{{count}} adulte × {{price}}",
+    "adults_other": "{{count}} adultes × {{price}}",
+    "children_one": "{{count}} enfant × {{price}}",
+    "children_other": "{{count}} enfants × {{price}}"
   },
   "days_one": "{{count}} jour",
   "days_other": "{{count}} jours",
@@ -67,13 +67,9 @@
   },
   "payment": {
     "heading": "Paiement",
-    "subtitle": "Saisissez les informations de votre carte pour payer l'acompte et sécuriser votre réservation.",
+    "subtitle": "Payez l'acompte par mobile money — M-Pesa, Airtel Money, Mixx by Yas ou Halotel — pour sécuriser votre réservation.",
     "back": "Retour",
-    "testMode": "Mode test — le traitement des cartes n'est pas encore connecté, aucun débit réel ne sera effectué.",
-    "nameOnCard": "Nom sur la carte",
-    "cardNumber": "Numéro de carte",
-    "expiry": "Expiration (MM/AA)",
-    "cvv": "CVV"
+    "mobileMoneyNotice": "Vous serez redirigé vers le paiement sécurisé de Snippe pour valider le paiement sur votre téléphone, puis ramené ici."
   },
   "trustBadges": {
     "certifiedOperator": "Opérateur certifié",
@@ -90,7 +86,7 @@
   },
   "cta": {
     "processing": "Traitement en cours…",
-    "payAndBook": "Payer {{amount}} $ et réserver",
+    "payAndBook": "Payer {{amount}} et réserver",
     "pleaseWait": "Veuillez patienter…",
     "createAccountAndContinue": "Créer un compte et continuer",
     "signInAndContinue": "Se connecter et continuer",
@@ -111,8 +107,8 @@
     "thankYouWithTitle": "Merci pour votre réservation de {{title}}.",
     "thankYouGeneric": "Merci pour votre réservation chez Pande Wilderness Safari.",
     "subtitle": "Nos guides et planificateurs experts ont bien reçu votre réservation et préparent déjà votre authentique aventure tanzanienne.",
-    "depositReceived": "Acompte de {{amount}} $ reçu",
-    "confirmationSentTo": "Une confirmation de paiement a été envoyée à {{email}}. Il s'agissait d'un paiement test — le traitement réel des cartes arrive bientôt.",
+    "depositReceived": "Acompte de {{amount}} reçu",
+    "confirmationSentTo": "Une confirmation de paiement a été envoyée à {{email}}.",
     "yourRegistrationEmail": "votre e-mail d'inscription",
     "goToDashboard": "Accéder à mon tableau de bord",
     "browseMoreSafaris": "Découvrir d'autres safaris",
@@ -169,6 +165,15 @@
       "openDashboard": "Partager mon code de parrainage",
       "learnMore": "Devenir agent de parrainage",
       "error": "Une erreur s'est produite. Veuillez réessayer."
+    },
+    "pending": {
+      "heading": "Confirmation de votre paiement…",
+      "body": "Validez la demande sur votre téléphone si ce n'est pas encore fait. Cette page se met à jour automatiquement.",
+      "stillWaiting": "Nous n'avons pas encore reçu de confirmation. Si vous avez validé le paiement, il apparaîtra bientôt dans votre tableau de bord et nous vous enverrons un e-mail."
+    },
+    "failed": {
+      "heading": "Paiement non effectué",
+      "body": "Le paiement n'a pas abouti ou la session a expiré : rien n'a été débité. Vous pouvez réessayer depuis votre tableau de bord."
     }
   },
   "referralField": {

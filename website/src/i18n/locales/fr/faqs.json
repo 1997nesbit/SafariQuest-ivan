@@ -16,7 +16,7 @@
         },
         "paymentMethods": {
           "question": "Quels moyens de paiement acceptez-vous ?",
-          "answer": "Nous acceptons les virements bancaires et les principales cartes de crédit. Un acompte sécurise votre réservation, le solde étant dû avant le départ."
+          "answer": "Nous acceptons le mobile money — M-Pesa, Airtel Money, Mixx by Yas et Halotel — via notre paiement sécurisé Snippe. Tous les prix sont en shillings tanzaniens (TZS). Un acompte de 30 % garantit votre réservation, le solde étant dû avant le départ."
         },
         "depositRequired": {
           "question": "Un acompte est-il requis ?",

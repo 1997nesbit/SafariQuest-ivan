@@ -16,10 +16,10 @@
     "children_other": "{{count}} Kinder"
   },
   "priceLine": {
-    "adults_one": "{{count}} Erwachsener × {{price}} $",
-    "adults_other": "{{count}} Erwachsene × {{price}} $",
-    "children_one": "{{count}} Kind × {{price}} $",
-    "children_other": "{{count}} Kinder × {{price}} $"
+    "adults_one": "{{count}} Erwachsener × {{price}}",
+    "adults_other": "{{count}} Erwachsene × {{price}}",
+    "children_one": "{{count}} Kind × {{price}}",
+    "children_other": "{{count}} Kinder × {{price}}"
   },
   "days_one": "{{count}} Tag",
   "days_other": "{{count}} Tage",
@@ -67,13 +67,9 @@
   },
   "payment": {
     "heading": "Zahlung",
-    "subtitle": "Geben Sie Ihre Kartendaten ein, um die Anzahlung zu leisten und Ihre Buchung zu sichern.",
+    "subtitle": "Zahlen Sie die Anzahlung per Mobile Money — M-Pesa, Airtel Money, Mixx by Yas oder Halotel —, um Ihre Buchung zu sichern.",
     "back": "Zurück",
-    "testMode": "Testmodus — die Kartenzahlung ist noch nicht angebunden, es wird keine echte Abbuchung vorgenommen.",
-    "nameOnCard": "Name auf der Karte",
-    "cardNumber": "Kartennummer",
-    "expiry": "Ablaufdatum (MM/JJ)",
-    "cvv": "CVV"
+    "mobileMoneyNotice": "Sie werden zur sicheren Snippe-Kasse weitergeleitet, bestätigen die Zahlung auf Ihrem Telefon und kehren dann hierher zurück."
   },
   "trustBadges": {
     "certifiedOperator": "Zertifizierter Veranstalter",
@@ -90,7 +86,7 @@
   },
   "cta": {
     "processing": "Wird verarbeitet…",
-    "payAndBook": "{{amount}} $ zahlen & buchen",
+    "payAndBook": "{{amount}} zahlen & buchen",
     "pleaseWait": "Bitte warten…",
     "createAccountAndContinue": "Konto erstellen & fortfahren",
     "signInAndContinue": "Anmelden & fortfahren",
@@ -111,8 +107,8 @@
     "thankYouWithTitle": "Vielen Dank für Ihre Buchung von {{title}}.",
     "thankYouGeneric": "Vielen Dank für Ihre Buchung bei Pande Wilderness Safari.",
     "subtitle": "Unsere erfahrenen Guides und Planer haben Ihre Reservierung erhalten und gestalten bereits Ihr authentisches tansanisches Abenteuer.",
-    "depositReceived": "Anzahlung von {{amount}} $ erhalten",
-    "confirmationSentTo": "Eine Zahlungsbestätigung wurde an {{email}} gesendet. Dies war eine Testzahlung — die echte Kartenzahlung folgt in Kürze.",
+    "depositReceived": "Anzahlung von {{amount}} erhalten",
+    "confirmationSentTo": "Eine Zahlungsbestätigung wurde an {{email}} gesendet.",
     "yourRegistrationEmail": "Ihre Registrierungs-E-Mail",
     "goToDashboard": "Zu meinem Dashboard",
     "browseMoreSafaris": "Weitere Safaris entdecken",
@@ -169,6 +165,15 @@
       "openDashboard": "Meinen Empfehlungscode teilen",
       "learnMore": "Empfehlungsagent werden",
       "error": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut."
+    },
+    "pending": {
+      "heading": "Ihre Zahlung wird bestätigt…",
+      "body": "Bestätigen Sie die Anfrage auf Ihrem Telefon, falls noch nicht geschehen. Diese Seite aktualisiert sich automatisch.",
+      "stillWaiting": "Wir haben noch keine Bestätigung erhalten. Wenn Sie die Zahlung bestätigt haben, erscheint sie in Kürze in Ihrem Dashboard, und wir senden Ihnen eine E-Mail."
+    },
+    "failed": {
+      "heading": "Zahlung nicht abgeschlossen",
+      "body": "Die Zahlung ist nicht durchgegangen oder die Kasse ist abgelaufen, es wurde nichts abgebucht. Sie können es über Ihr Dashboard erneut versuchen."
     }
   },
   "referralField": {

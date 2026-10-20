@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { CreditCard } from '@phosphor-icons/react'
 import { getMyInvoices, type InvoiceStatus } from '../../api/invoices'
 import { useFetch } from '../../lib/useFetch'
+import { formatMoney } from '../../lib/money'
 
 const STATUS_STYLES: Record<InvoiceStatus, string> = {
   unpaid: 'bg-surface-container text-on-surface-variant',
@@ -56,7 +57,7 @@ export function AccountInvoices() {
                 {allInvoices.map((invoice) => (
                   <tr key={invoice.id} className="hover:bg-surface-container-low transition-colors">
                     <td className="px-5 py-4 font-label-md text-sm text-on-surface">{invoice.packageTitle}</td>
-                    <td className="px-5 py-4 text-sm text-on-surface">${invoice.amount.toLocaleString(i18n.language)}</td>
+                    <td className="px-5 py-4 text-sm text-on-surface">{formatMoney(invoice.amount, i18n.language)}</td>
                     <td className="px-5 py-4 text-sm text-on-surface-variant">{invoice.issuedDate}</td>
                     <td className="px-5 py-4 text-sm text-on-surface-variant">{invoice.dueDate}</td>
                     <td className="px-5 py-4">

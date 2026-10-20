@@ -215,6 +215,48 @@ CSRF_TRUSTED_ORIGINS = [
 
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
 
+# Snippe hosted checkout (bookings.snippe). Deposits and balances are paid on
+# Snippe's page with mobile money; a booking only moves to paid when Snippe's
+# signed webhook says so (or a status check against Snippe's API confirms it).
+# SNIPPE_WEBHOOK_URL has to be publicly reachable over HTTPS — an ngrok URL
+# locally, the API's own domain when deployed.
+SNIPPE_API_URL = os.environ.get("SNIPPE_API_URL", "https://api.snippe.sh").rstrip("/")
+# Needs the collection:create scope. SNIPPE_READ_API_KEY (collection:read) is used for
+# session status checks; leave it unset if SNIPPE_API_KEY carries both scopes.
+SNIPPE_API_KEY = os.environ.get("SNIPPE_API_KEY", "")
+SNIPPE_READ_API_KEY = os.environ.get("SNIPPE_READ_API_KEY", "")
+SNIPPE_WEBHOOK_SECRET = os.environ.get("SNIPPE_WEBHOOK_SECRET", "")
+SNIPPE_WEBHOOK_URL = os.environ.get("SNIPPE_WEBHOOK_URL", "")
+SNIPPE_PROFILE_ID = os.environ.get("SNIPPE_PROFILE_ID", "")
+SNIPPE_CURRENCY = "TZS"
+# How long a checkout session stays payable, in seconds (Snippe allows 60–86400).
+SNIPPE_SESSION_EXPIRES_IN = int(os.environ.get("SNIPPE_SESSION_EXPIRES_IN", "3600"))
+
+# Snippe outage notices (bookings.outages, run by `manage.py check_snippe_outages`).
+# The mailbox Snippe's emails arrive in, read over IMAP without marking anything read.
+# For Gmail: imap.gmail.com and an App Password, not the account password. Unset
+# SNIPPE_NOTICES_IMAP_HOST skips the email check; the status page is still checked.
+SNIPPE_NOTICES_IMAP_HOST = os.environ.get("SNIPPE_NOTICES_IMAP_HOST", "")
+SNIPPE_NOTICES_IMAP_PORT = int(os.environ.get("SNIPPE_NOTICES_IMAP_PORT", "993"))
+SNIPPE_NOTICES_IMAP_USER = os.environ.get("SNIPPE_NOTICES_IMAP_USER", "")
+SNIPPE_NOTICES_IMAP_PASSWORD = os.environ.get("SNIPPE_NOTICES_IMAP_PASSWORD", "")
+SNIPPE_NOTICES_IMAP_FOLDER = os.environ.get("SNIPPE_NOTICES_IMAP_FOLDER", "INBOX")
+SNIPPE_NOTICES_LOOKBACK_DAYS = int(os.environ.get("SNIPPE_NOTICES_LOOKBACK_DAYS", "14"))
+# Only mail from these domains is acted on, and only with a DKIM pass for them — a
+# forged "Snippe" email must not be able to switch payments off.
+SNIPPE_NOTICES_SENDER_DOMAINS = [
+    d.strip().lower() for d in os.environ.get("SNIPPE_NOTICES_SENDER_DOMAINS", "snippe.sh").split(",") if d.strip()
+]
+SNIPPE_NOTICES_REQUIRE_DKIM = os.environ.get("SNIPPE_NOTICES_REQUIRE_DKIM", "True") == "True"
+SNIPPE_STATUS_URL = os.environ.get("SNIPPE_STATUS_URL", "https://snippe-status.instatus.com")
+# Unannounced network trouble, spotted from Snippe's payment.failed webhooks: this many
+# failures on one network within the window, across at least this many different
+# payments and with no success in between, shows a warning for that network. It clears
+# on the next success, or once a whole window passes with no new failure.
+SNIPPE_FAILURE_THRESHOLD = int(os.environ.get("SNIPPE_FAILURE_THRESHOLD", "3"))
+SNIPPE_FAILURE_WINDOW_MINUTES = int(os.environ.get("SNIPPE_FAILURE_WINDOW_MINUTES", "30"))
+SNIPPE_FAILURE_MIN_PAYMENTS = int(os.environ.get("SNIPPE_FAILURE_MIN_PAYMENTS", "2"))
+
 # Django's CSRF check compares the request's Origin against CSRF_TRUSTED_ORIGINS
 # plus this host. The SPA is always a different origin than the API — a
 # different port locally, a different domain in production — so its origin has

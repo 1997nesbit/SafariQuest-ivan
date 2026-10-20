@@ -16,10 +16,10 @@
     "children_other": "{{count}} crianças"
   },
   "priceLine": {
-    "adults_one": "{{count}} adulto × {{price}} $",
-    "adults_other": "{{count}} adultos × {{price}} $",
-    "children_one": "{{count}} criança × {{price}} $",
-    "children_other": "{{count}} crianças × {{price}} $"
+    "adults_one": "{{count}} adulto × {{price}}",
+    "adults_other": "{{count}} adultos × {{price}}",
+    "children_one": "{{count}} criança × {{price}}",
+    "children_other": "{{count}} crianças × {{price}}"
   },
   "days_one": "{{count}} dia",
   "days_other": "{{count}} dias",
@@ -67,13 +67,9 @@
   },
   "payment": {
     "heading": "Pagamento",
-    "subtitle": "Introduza os dados do seu cartão para pagar o depósito e garantir a sua reserva.",
+    "subtitle": "Pague o sinal por mobile money — M-Pesa, Airtel Money, Mixx by Yas ou Halotel — para garantir a sua reserva.",
     "back": "Voltar",
-    "testMode": "Modo de teste — o processamento de cartões ainda não está ativo, pelo que não será feita qualquer cobrança real.",
-    "nameOnCard": "Nome no cartão",
-    "cardNumber": "Número do cartão",
-    "expiry": "Validade (MM/AA)",
-    "cvv": "CVV"
+    "mobileMoneyNotice": "Será levado para o checkout seguro da Snippe para aprovar o pagamento no seu telemóvel e depois regressará aqui."
   },
   "trustBadges": {
     "certifiedOperator": "Operador certificado",
@@ -90,7 +86,7 @@
   },
   "cta": {
     "processing": "A processar…",
-    "payAndBook": "Pagar {{amount}} $ e reservar",
+    "payAndBook": "Pagar {{amount}} e reservar",
     "pleaseWait": "Aguarde…",
     "createAccountAndContinue": "Criar conta e continuar",
     "signInAndContinue": "Iniciar sessão e continuar",
@@ -111,8 +107,8 @@
     "thankYouWithTitle": "Obrigado por reservar {{title}}.",
     "thankYouGeneric": "Obrigado por reservar com a Pande Wilderness Safari.",
     "subtitle": "Os nossos guias e planeadores especializados receberam a sua reserva e já estão a preparar a sua autêntica aventura tanzaniana.",
-    "depositReceived": "Depósito de {{amount}} $ recebido",
-    "confirmationSentTo": "Foi enviada uma confirmação de pagamento para {{email}}. Este foi um pagamento de teste — o processamento real de cartões estará disponível em breve.",
+    "depositReceived": "Depósito de {{amount}} recebido",
+    "confirmationSentTo": "Foi enviada uma confirmação de pagamento para {{email}}.",
     "yourRegistrationEmail": "o seu e-mail de registo",
     "goToDashboard": "Ir para o meu painel",
     "browseMoreSafaris": "Ver mais safáris",
@@ -169,6 +165,15 @@
       "openDashboard": "Partilhar o meu código de indicação",
       "learnMore": "Tornar-se agente de indicação",
       "error": "Algo correu mal. Tente novamente."
+    },
+    "pending": {
+      "heading": "A confirmar o seu pagamento…",
+      "body": "Aprove o pedido no seu telemóvel, se ainda não o fez. Esta página atualiza-se automaticamente.",
+      "stillWaiting": "Ainda não recebemos confirmação. Se aprovou o pagamento, ele aparecerá em breve no seu painel e enviaremos um e-mail."
+    },
+    "failed": {
+      "heading": "Pagamento não concluído",
+      "body": "O pagamento não foi concluído ou o checkout expirou, por isso nada foi cobrado. Pode tentar novamente a partir do seu painel."
     }
   },
   "referralField": {

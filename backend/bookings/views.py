@@ -1,5 +1,8 @@
+import json
+import logging
 from datetime import timedelta
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
 from django.db.models import Case, Count, F, IntegerField, Q, Sum, Value, When
@@ -16,9 +19,12 @@ from accounts.permissions import IsAdminRole
 from audit.utils import log_action
 from config.mail import send_notification
 from config.pagination import StandardPagination
-from referrals.models import ReferralCode, ReferralRedemption, ReferralSettings
+from referrals.models import ReferralCode, ReferralSettings
 
-from .models import Booking, BookingNote, Invoice, Review, TripMilestone
+from . import snippe
+from .models import Booking, BookingNote, Invoice, Payment, Review, TripMilestone
+from .outages import payment_availability, record_attempt
+from .payments import close_payment, complete_payment, open_session, refresh_from_snippe
 from .pricing import deposit_for, trip_total_for
 from .serializers import (
     AdminBookingDetailSerializer,
@@ -38,25 +44,9 @@ from .serializers import (
 )
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 INVOICE_DUE_DAYS = 14
-# The balance left after a checkout deposit is due this long before the trip starts.
-BALANCE_DUE_DAYS_BEFORE_TRIP = 30
-
-
-def _balance_due_date(booking):
-    """When the rest of a checkout booking's price falls due: BALANCE_DUE_DAYS_BEFORE_TRIP
-    ahead of the start, but never sooner than INVOICE_DUE_DAYS from today (a last-minute
-    booking still gets the usual time to pay) and never after the trip has started.
-
-    This used to be the payment date itself, which made every deposit invoice "overdue"
-    the next morning — on the tourist's own invoice list and in the finance summary.
-    """
-    due = max(
-        booking.start_date - timedelta(days=BALANCE_DUE_DAYS_BEFORE_TRIP),
-        timezone.localdate() + timedelta(days=INVOICE_DUE_DAYS),
-    )
-    return min(due, booking.start_date)
 
 
 class BookingViewSet(
@@ -78,7 +68,9 @@ class BookingViewSet(
     def get_permissions(self):
         if self.action == "create":
             return [AllowAny()]
-        if self.action in ("list", "retrieve", "milestones", "complete_milestone", "review", "pay", "pay_balance"):
+        if self.action in (
+            "list", "retrieve", "milestones", "complete_milestone", "review", "pay", "pay_balance", "payment_status"
+        ):
             return [IsAuthenticated()]
         return [IsAdminRole()]
 
@@ -204,12 +196,12 @@ class BookingViewSet(
             subject=f"Your SafariQuest quote — {booking.package_title}",
             message=(
                 f"Hi {booking.customer.name or booking.customer.email},\n\n"
-                f"Your quote for {booking.package_title} is ready: ${booking.subtotal:,}. "
+                f"Your quote for {booking.package_title} is ready: TZS {booking.subtotal:,}. "
                 "Please reply to confirm or ask any questions."
             ),
             recipient_list=[booking.customer.email],
         )
-        log_action(request.user, "booking.quote_sent", f"Sent quote for booking #{booking.id} (${booking.subtotal:,})")
+        log_action(request.user, "booking.quote_sent", f"Sent quote for booking #{booking.id} (TZS {booking.subtotal:,})")
         return Response(self._detail(booking))
 
     @action(detail=True, methods=["get"], url_path="milestones")
@@ -293,12 +285,57 @@ class BookingViewSet(
         booking.refresh_from_db()
         return Response(self._detail(booking), status=status.HTTP_201_CREATED)
 
+    def _open_payment(self, booking, locale, **fields):
+        """Returns a pending Payment with a live Snippe checkout session for these exact
+        terms — the one already open if the tourist clicked pay twice or came back from
+        Snippe's page without paying, otherwise a new one."""
+        fresh_since = timezone.now() - timedelta(seconds=settings.SNIPPE_SESSION_EXPIRES_IN - 300)
+        existing = (
+            Payment.objects.filter(
+                booking=booking, status=Payment.STATUS_PENDING, created_at__gte=fresh_since, **fields
+            )
+            .exclude(checkout_url="")
+            .first()
+        )
+        if existing:
+            return existing
+        payment = Payment.objects.create(booking=booking, currency=settings.SNIPPE_CURRENCY, **fields)
+        return open_session(payment, locale)
+
+    def _outage_refusal(self, request, booking):
+        """A 503 with the outage message while Snippe can't take payments at all — rather
+        than sending the tourist to a checkout that will fail. Logged, so there's a record
+        of who was turned away and when."""
+        availability = payment_availability()
+        if not availability["blocked"]:
+            return None
+        logger.warning("Refused payment for booking %s: %s", booking.id, availability["message"])
+        log_action(
+            request.user,
+            "booking.payment_blocked_outage",
+            f"Payment for booking #{booking.id} refused during a Snippe outage: {availability['message']}"[:500],
+        )
+        return Response(
+            {"detail": availability["message"], "code": "payment_outage"},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    def _checkout_response(self, payment):
+        return Response(
+            {
+                "payment_id": payment.id,
+                "checkout_url": payment.checkout_url,
+                "amount": payment.amount,
+                "currency": payment.currency,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
     @action(detail=True, methods=["post"], url_path="pay")
     def pay(self, request, pk=None):
-        """Records a mock deposit payment at checkout time (1.3). There's no payment
-        gateway yet — card details never reach this endpoint. Real card processing is
-        PLANNED; this exists so the booking → paid → confirmed flow is real end to end
-        in the meantime, rather than faked with client-only state.
+        """Opens a Snippe checkout session for the deposit (1.3) and returns its URL; the
+        browser goes there to pay with mobile money. Nothing about the booking changes
+        here — bookings.payments.complete_payment does that once Snippe confirms.
 
         The trip total and deposit are computed here (bookings.pricing), from the same
         package price, season and guest counts the checkout page priced from — never
@@ -307,161 +344,232 @@ class BookingViewSet(
         booking = self.get_object()
         if request.user.role != User.ROLE_TOURIST or booking.customer_id != request.user.id:
             return Response(status=status.HTTP_403_FORBIDDEN)
-        if booking.stage != Booking.STAGE_NEW_INQUIRY:
+        if booking.stage != Booking.STAGE_NEW_INQUIRY or Invoice.objects.filter(booking=booking).exists():
             return Response(
                 {"detail": "This booking has already been paid."}, status=status.HTTP_400_BAD_REQUEST
             )
+        if not snippe.is_configured():
+            return Response(
+                {"detail": "Online payment isn't available right now. Please contact us to pay."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        refusal = self._outage_refusal(request, booking)
+        if refusal:
+            return refusal
         serializer = BookingPaySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         referral_code_value = (serializer.validated_data.get("referral_code") or "").strip().upper()
 
-        # Stage + invoice have to land together, same reasoning as send_quote above —
-        # a crash between them must not leave a "paid" booking with no invoice record.
-        redemption = None
-        try:
-            with transaction.atomic():
-                referral_code = None
-                settings_obj = None
-                if referral_code_value:
-                    # select_for_update + is_used=False in the same atomic block is what makes
-                    # "once one person uses it, others can't" race-safe under concurrent redeems.
-                    # exclude(agent=...): an agent can also book now, and must not collect
-                    # commission on their own trip. The validate endpoint already refuses the
-                    # code at checkout; this is the backstop.
-                    referral_code = (
-                        ReferralCode.objects.select_for_update()
-                        .filter(code=referral_code_value, is_used=False)
-                        .exclude(agent=request.user)
-                        .first()
-                    )
-                    if referral_code is None or referral_code.is_expired:
-                        # The page priced the trip with this code's discount. Charging full
-                        # price instead would record a different amount than the tourist
-                        # agreed to, so refuse and let them pay again without the code.
-                        return Response(
-                            {"detail": "This referral code can no longer be used. Remove it and try again."},
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
-                    settings_obj = ReferralSettings.get_solo()
-
-                trip_total = trip_total_for(booking, settings_obj.discount_percent if referral_code else None)
-                amount = deposit_for(trip_total)
-                booking.stage = Booking.STAGE_DEPOSIT_PAID
-                booking.save(update_fields=["stage"])
-                invoice = Invoice.objects.create(
-                    booking=booking,
-                    amount=amount,
-                    trip_total=trip_total,
-                    status=Invoice.STATUS_DEPOSIT_PAID,
-                    due_date=_balance_due_date(booking),
+        referral_code = None
+        discount_percent = commission_percent = None
+        if not referral_code_value:
+            # A retry (My Trips' "Pay Deposit", after the first attempt failed or was
+            # abandoned) sends no code. Carry over the one from this booking's earlier
+            # attempt, on the same terms it was opened with, so a failed payment doesn't
+            # cost the tourist their discount or the agent their commission. Dropped
+            # quietly if the code has since been used or expired.
+            previous = (
+                Payment.objects.filter(booking=booking, kind=Payment.KIND_DEPOSIT, referral_code__isnull=False)
+                .select_related("referral_code")
+                .first()
+            )
+            code = previous.referral_code if previous else None
+            if code and not code.is_used and not code.is_expired and code.agent_id != request.user.id:
+                referral_code = code
+                discount_percent = previous.discount_percent
+                commission_percent = previous.commission_percent
+        else:
+            # exclude(agent=...): an agent can also book now, and must not collect
+            # commission on their own trip. The validate endpoint already refuses the
+            # code at checkout; this is the backstop. The code is only marked used once
+            # the payment completes (complete_payment re-checks it under a lock), so an
+            # abandoned checkout doesn't burn it.
+            referral_code = (
+                ReferralCode.objects.filter(code=referral_code_value, is_used=False)
+                .exclude(agent=request.user)
+                .first()
+            )
+            if referral_code is None or referral_code.is_expired:
+                # The page priced the trip with this code's discount. Charging full
+                # price instead would record a different amount than the tourist
+                # agreed to, so refuse and let them pay again without the code.
+                return Response(
+                    {"detail": "This referral code can no longer be used. Remove it and try again."},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
-                if referral_code:
-                    commission_amount = round(trip_total * settings_obj.commission_percent / 100)
-                    redemption = ReferralRedemption.objects.create(
-                        code=referral_code,
-                        booking=booking,
-                        discount_percent=settings_obj.discount_percent,
-                        commission_percent=settings_obj.commission_percent,
-                        trip_total=trip_total,
-                        commission_amount=commission_amount,
-                    )
-                    referral_code.is_used = True
-                    referral_code.used_at = timezone.now()
-                    referral_code.save(update_fields=["is_used", "used_at"])
-        except IntegrityError:
-            # A second, concurrent pay for the same booking: both passed the stage check
-            # above, and the invoice's one-to-one constraint stopped this one.
+            settings_obj = ReferralSettings.get_solo()
+            discount_percent = settings_obj.discount_percent
+            commission_percent = settings_obj.commission_percent
+
+        trip_total = trip_total_for(booking, discount_percent)
+        try:
+            payment = self._open_payment(
+                booking,
+                serializer.validated_data.get("locale"),
+                kind=Payment.KIND_DEPOSIT,
+                amount=deposit_for(trip_total),
+                trip_total=trip_total,
+                referral_code=referral_code,
+                discount_percent=discount_percent,
+                commission_percent=commission_percent,
+            )
+        except snippe.SnippeError:
+            logger.exception("Could not open a Snippe deposit session for booking %s", booking.id)
             return Response(
-                {"detail": "This booking has already been paid."}, status=status.HTTP_400_BAD_REQUEST
+                {"detail": "We couldn't reach the payment provider. Please try again in a moment."},
+                status=status.HTTP_502_BAD_GATEWAY,
             )
-        send_notification(
-            subject=f"Payment received — {booking.package_title}",
-            message=(
-                f"Hi {booking.customer.name or booking.customer.email},\n\n"
-                f"We've received your deposit of ${amount:,} for {booking.package_title}. This "
-                "is a mock payment confirmation for testing — no real charge was made; card "
-                "processing is coming soon. Thank you for booking with Pande Wilderness Safari!"
-            ),
-            recipient_list=[booking.customer.email],
-        )
-        log_action(
-            request.user,
-            "booking.payment_recorded",
-            f"Mock deposit of ${amount:,} recorded for booking #{booking.id} (invoice #{invoice.id})",
-        )
-        if redemption:
-            send_notification(
-                subject="Your referral code was used!",
-                message=(
-                    f"Hi {redemption.code.agent.name or redemption.code.agent.email},\n\n"
-                    f"Your referral code {redemption.code.code} was just used for a new booking. "
-                    f"You've earned an estimated ${redemption.commission_amount:,} commission "
-                    "(paid out once the customer's trip is complete). You can track this in your "
-                    "referral dashboard."
-                ),
-                recipient_list=[redemption.code.agent.email],
-            )
-            log_action(
-                request.user,
-                "referral.code_redeemed",
-                f"Referral code {redemption.code.code} redeemed on booking #{booking.id} "
-                f"(commission ${redemption.commission_amount:,} owed to {redemption.code.agent.email})",
-            )
-        booking.refresh_from_db()
-        return Response(self._detail(booking))
+        return self._checkout_response(payment)
 
     @action(detail=True, methods=["post"], url_path="pay-balance")
     def pay_balance(self, request, pk=None):
-        """Pays off whatever remains after the deposit, from the tourist's own dashboard —
-        no re-authentication needed, it's just another authenticated request on the same
-        cookie session. The amount is computed here from the invoice's trip_total rather than
-        trusted from the client, unlike the deposit (there's nothing left to negotiate: it's
-        exactly what's left)."""
+        """Opens a Snippe checkout session for whatever remains after the deposit, from the
+        tourist's own dashboard. The amount is computed here from the invoice's trip_total
+        rather than trusted from the client."""
         booking = self.get_object()
         if request.user.role != User.ROLE_TOURIST or booking.customer_id != request.user.id:
             return Response(status=status.HTTP_403_FORBIDDEN)
+        invoice = Invoice.objects.filter(booking=booking).first()
+        if not invoice or invoice.trip_total is None:
+            return Response({"detail": "No balance is due on this booking."}, status=status.HTTP_400_BAD_REQUEST)
+        remaining = invoice.remaining_balance
+        if not remaining:
+            return Response({"detail": "This booking is already fully paid."}, status=status.HTTP_400_BAD_REQUEST)
+        if not snippe.is_configured():
+            return Response(
+                {"detail": "Online payment isn't available right now. Please contact us to pay."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        refusal = self._outage_refusal(request, booking)
+        if refusal:
+            return refusal
+        serializer = BookingPaySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            payment = self._open_payment(
+                booking, serializer.validated_data.get("locale"), kind=Payment.KIND_BALANCE, amount=remaining
+            )
+        except snippe.SnippeError:
+            logger.exception("Could not open a Snippe balance session for booking %s", booking.id)
+            return Response(
+                {"detail": "We couldn't reach the payment provider. Please try again in a moment."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        return self._checkout_response(payment)
 
-        with transaction.atomic():
-            # Locked and re-read inside the transaction, so a double-clicked payment
-            # sees the first one's result instead of paying (and emailing) twice.
-            invoice = Invoice.objects.select_for_update().filter(booking=booking).first()
-            if not invoice or invoice.trip_total is None:
-                return Response({"detail": "No balance is due on this booking."}, status=status.HTTP_400_BAD_REQUEST)
-            remaining = invoice.remaining_balance
-            if not remaining:
-                return Response({"detail": "This booking is already fully paid."}, status=status.HTTP_400_BAD_REQUEST)
-            invoice.amount = invoice.trip_total
-            invoice.status = Invoice.STATUS_PAID
-            invoice.save(update_fields=["amount", "status"])
-            # Only a deposit-paid booking moves on. An admin may already have advanced
-            # it (to confirmed, or completed after the trip), and paying the balance
-            # late must not move it backwards.
-            if booking.stage == Booking.STAGE_DEPOSIT_PAID:
-                booking.stage = Booking.STAGE_CONFIRMED
-                booking.save(update_fields=["stage"])
-        send_notification(
-            subject=f"Balance paid — {booking.package_title}",
-            message=(
-                f"Hi {booking.customer.name or booking.customer.email},\n\n"
-                f"We've received your remaining balance of ${remaining:,} for {booking.package_title}. "
-                "Your trip is now fully paid and confirmed. This is a mock payment confirmation for "
-                "testing — no real charge was made."
-            ),
-            recipient_list=[booking.customer.email],
+    @action(detail=True, methods=["get"], url_path=r"payments/(?P<payment_id>\d+)")
+    def payment_status(self, request, pk=None, payment_id=None):
+        """Where a payment stands, for the page Snippe sends the tourist back to. A payment
+        still pending here is checked against Snippe's API, so the page doesn't depend on
+        the webhook having arrived first."""
+        booking = self.get_object()
+        if booking.customer_id != request.user.id:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        payment = Payment.objects.filter(booking=booking, pk=payment_id).first()
+        if payment is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        payment = refresh_from_snippe(payment)
+        return Response(
+            {
+                "payment_id": payment.id,
+                "kind": payment.kind,
+                "status": payment.status,
+                "amount": payment.amount,
+                "currency": payment.currency,
+                "customer_email": booking.customer.email,
+                "package_title": booking.package_title,
+            }
         )
-        log_action(
-            request.user,
-            "booking.balance_paid",
-            f"Remaining balance of ${remaining:,} paid for booking #{booking.id} (invoice #{invoice.id})",
-        )
-        booking.refresh_from_db()
-        return Response(self._detail(booking))
 
+
+class PaymentAvailabilityView(APIView):
+    """Whether online payment works right now, for the checkout pages to show before the
+    tourist clicks pay: `blocked` (with `message`) while Snippe is down entirely, and
+    `warnings` for a single network being out (bookings.outages)."""
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        return Response(payment_availability())
+
+
+class SnippeWebhookView(APIView):
+    """Receives Snippe's payment events. No session or JWT auth — the request is trusted
+    only once its X-Webhook-Signature checks out against SNIPPE_WEBHOOK_SECRET.
+
+    Unknown or unmatched events still get a 200: a non-2xx makes Snippe retry for the
+    next ~45 minutes, which only helps when retrying could succeed."""
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+    throttle_classes = []
+
+    def post(self, request):
+        raw_body = request.body
+        if not snippe.verify_webhook(
+            raw_body,
+            request.headers.get("X-Webhook-Timestamp", ""),
+            request.headers.get("X-Webhook-Signature", ""),
+        ):
+            logger.warning("Rejected a Snippe webhook with a missing or invalid signature")
+            return Response({"detail": "Invalid signature."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            event = json.loads(raw_body)
+        except ValueError:
+            return Response({"detail": "Invalid JSON."}, status=status.HTTP_400_BAD_REQUEST)
+
+        event_type = event.get("type") or event.get("event")
+        data = event.get("data") or {}
+        payment = self._payment_for(data)
+        if payment is None:
+            logger.warning("Snippe webhook %s (%s) matched no payment", event.get("id"), event_type)
+            return Response({"received": True})
+
+        if event_type == "payment.completed":
+            amount = data.get("amount") or {}
+            complete_payment(
+                payment,
+                amount=amount.get("value"),
+                currency=amount.get("currency"),
+                provider_reference=data.get("reference") or "",
+            )
+        elif event_type in ("payment.failed", "payment.voided"):
+            close_payment(payment, Payment.STATUS_FAILED)
+        elif event_type == "payment.expired":
+            close_payment(payment, Payment.STATUS_EXPIRED)
+
+        if event_type in ("payment.completed", "payment.failed"):
+            try:
+                record_attempt(
+                    event_id=event.get("id"),
+                    payment=payment,
+                    data=data,
+                    succeeded=event_type == "payment.completed",
+                )
+            except Exception:
+                # Outage detection is a side job: it must never make Snippe retry a
+                # payment event that was otherwise handled.
+                logger.exception("Could not record payment attempt for event %s", event.get("id"))
+        return Response({"received": True})
+
+    @staticmethod
+    def _payment_for(data):
+        session_reference = data.get("session_reference")
+        if session_reference:
+            payment = Payment.objects.filter(session_reference=session_reference).first()
+            if payment:
+                return payment
+        metadata = data.get("metadata") or {}
+        payment_id = str(metadata.get("payment_id") or "")
+        if payment_id.isdigit():
+            return Payment.objects.filter(pk=int(payment_id)).first()
+        return None
 
 class InvoiceViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     """Invoices are issued automatically when a quote is sent (2.2) or a checkout deposit is
-    paid (1.3) — there's no create endpoint here. Status is otherwise set manually by Admin;
-    there's no real payment gateway yet (5.1 / 5.2), just the mock checkout deposit above."""
+    paid through Snippe (1.3, bookings.payments) — there's no create endpoint here. Admin can
+    still set status by hand, e.g. for a payment taken outside Snippe."""
 
     pagination_class = StandardPagination
     queryset = Invoice.objects.select_related(
@@ -519,7 +627,7 @@ class InvoiceViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.
             subject=f"Payment reminder — {invoice.booking.package_title}",
             message=(
                 f"Hi {invoice.booking.customer.name or invoice.booking.customer.email},\n\n"
-                f"This is a reminder that ${invoice.amount:,} is due by {invoice.due_date} for "
+                f"This is a reminder that TZS {invoice.amount:,} is due by {invoice.due_date} for "
                 f"your {invoice.booking.package_title} booking. Please reply if you have any "
                 "questions."
             ),

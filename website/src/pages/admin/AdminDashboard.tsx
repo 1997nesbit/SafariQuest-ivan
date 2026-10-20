@@ -3,6 +3,7 @@ import { Ticket, Money, Compass, Lightning, DownloadSimple, ArrowRight, Calendar
 import { getBookings, STAGE_LABELS, type Booking, type BookingStage } from '../../api/bookings'
 import { useAuth } from '../../auth/AuthContext'
 import { useFetch } from '../../lib/useFetch'
+import { formatMoney } from '../../lib/money'
 
 const STAGE_DOT: Record<BookingStage, string> = {
   new_inquiry: 'bg-secondary-container',
@@ -71,11 +72,11 @@ export function AdminDashboard() {
       note: `${activeBookings} active in pipeline`,
     },
     {
-      label: 'Revenue (USD)',
-      value: `$${totalRevenue.toLocaleString()}`,
+      label: 'Revenue (TZS)',
+      value: formatMoney(totalRevenue),
       icon: Money,
       tint: 'text-terracotta bg-terracotta/10',
-      note: `$${avgDealSize.toLocaleString()} avg per booking`,
+      note: `${formatMoney(avgDealSize)} avg per booking`,
     },
     {
       label: 'Active Travelers',
@@ -167,7 +168,7 @@ export function AdminDashboard() {
                   <div key={m.label} className="group relative flex-1 flex flex-col items-center justify-end h-full">
                     {m.total > 0 && (
                       <div className="absolute -top-7 opacity-0 group-hover:opacity-100 transition-opacity bg-deep-earth text-white text-[11px] px-2 py-1 rounded whitespace-nowrap">
-                        ${m.total.toLocaleString()}
+                        {formatMoney(m.total)}
                       </div>
                     )}
                     <div
@@ -255,7 +256,7 @@ export function AdminDashboard() {
                           {STAGE_LABELS[b.stage]}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right font-label-md text-on-surface">${b.subtotal.toLocaleString()}</td>
+                      <td className="px-6 py-4 text-right font-label-md text-on-surface">{formatMoney(b.subtotal)}</td>
                     </tr>
                   ))}
                   {recent.length === 0 && (

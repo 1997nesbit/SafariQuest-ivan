@@ -13,6 +13,7 @@ import { useFetch } from '../../lib/useFetch'
 import { usePaginatedFetch } from '../../lib/usePaginatedFetch'
 import { ApiError, STANDARD_PAGE_SIZE } from '../../lib/api'
 import { Pager } from '../../components/admin/Pager'
+import { formatMoney } from '../../lib/money'
 
 const STATUS_STYLES: Record<InvoiceStatus, string> = {
   unpaid: 'bg-surface-container text-on-surface-variant',
@@ -87,7 +88,7 @@ export function AdminFinance() {
               </div>
             </div>
             <p className="font-label-sm text-label-sm text-on-surface-variant mb-1 uppercase tracking-wider">Total Invoiced</p>
-            <p className="font-headline-md text-[26px] text-on-surface">${summary.totalInvoiced.toLocaleString()}</p>
+            <p className="font-headline-md text-[26px] text-on-surface">{formatMoney(summary.totalInvoiced)}</p>
           </div>
           <div className="bg-surface-container-lowest rounded-xl p-5 shadow-sm border border-sand-stone/50">
             <div className="flex justify-between items-start mb-4">
@@ -96,7 +97,7 @@ export function AdminFinance() {
               </div>
             </div>
             <p className="font-label-sm text-label-sm text-on-surface-variant mb-1 uppercase tracking-wider">Total Collected</p>
-            <p className="font-headline-md text-[26px] text-on-surface">${summary.totalCollected.toLocaleString()}</p>
+            <p className="font-headline-md text-[26px] text-on-surface">{formatMoney(summary.totalCollected)}</p>
           </div>
           <div className="bg-surface-container-lowest rounded-xl p-5 shadow-sm border border-sand-stone/50">
             <div className="flex justify-between items-start mb-4">
@@ -105,7 +106,7 @@ export function AdminFinance() {
               </div>
             </div>
             <p className="font-label-sm text-label-sm text-on-surface-variant mb-1 uppercase tracking-wider">Outstanding</p>
-            <p className="font-headline-md text-[26px] text-on-surface">${summary.totalOutstanding.toLocaleString()}</p>
+            <p className="font-headline-md text-[26px] text-on-surface">{formatMoney(summary.totalOutstanding)}</p>
           </div>
           <div className="bg-surface-container-lowest rounded-xl p-5 shadow-sm border border-sand-stone/50">
             <div className="flex justify-between items-start mb-4">
@@ -115,7 +116,7 @@ export function AdminFinance() {
               <span className="text-xs font-label-md text-on-surface-variant">{summary.overdueCount} invoices</span>
             </div>
             <p className="font-label-sm text-label-sm text-on-surface-variant mb-1 uppercase tracking-wider">Overdue Amount</p>
-            <p className="font-headline-md text-[26px] text-on-surface">${summary.overdueAmount.toLocaleString()}</p>
+            <p className="font-headline-md text-[26px] text-on-surface">{formatMoney(summary.overdueAmount)}</p>
           </div>
         </div>
       )}
@@ -168,7 +169,7 @@ export function AdminFinance() {
                       <span className="font-label-md text-sm text-on-surface">{invoice.customerName}</span>
                       <p className="text-xs text-on-surface-variant">{invoice.packageTitle}</p>
                     </td>
-                    <td className="px-5 py-4 text-sm text-on-surface">${invoice.amount.toLocaleString()}</td>
+                    <td className="px-5 py-4 text-sm text-on-surface">{formatMoney(invoice.amount)}</td>
                     <td className="px-5 py-4 text-sm text-on-surface-variant">{invoice.dueDate}</td>
                     <td className="px-5 py-4">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-label-sm ${STATUS_STYLES[invoice.status]}`}>

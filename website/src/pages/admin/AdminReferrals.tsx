@@ -9,6 +9,7 @@ import {
 } from '../../api/referrals'
 import { useFetch } from '../../lib/useFetch'
 import { ApiError } from '../../lib/api'
+import { formatMoney } from '../../lib/money'
 
 const COMMISSION_BADGE: Record<'pending' | 'paid', string> = {
   pending: 'bg-golden-sun/10 text-golden-sun border border-golden-sun/20',
@@ -193,7 +194,7 @@ export function AdminReferrals() {
                       <p className="text-on-surface-variant text-xs">{r.customerEmail}</p>
                     </td>
                     <td className="py-3 pr-4 text-on-surface-variant">#{r.bookingId}</td>
-                    <td className="py-3 pr-4">${r.commissionAmount.toLocaleString()}</td>
+                    <td className="py-3 pr-4">{formatMoney(r.commissionAmount)}</td>
                     <td className="py-3 pr-4">
                       <span
                         className={`inline-flex items-center py-1 px-2.5 rounded-md text-xs ${COMMISSION_BADGE[r.commissionStatus]}`}

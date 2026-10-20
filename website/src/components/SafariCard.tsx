@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from '../i18n/routing'
 import { Star, Clock, Bed } from '@phosphor-icons/react'
 import type { SafariPackage } from '../api/safaris'
+import { formatMoney } from '../lib/money'
 
 interface SafariCardProps {
   safari: SafariPackage
@@ -45,7 +46,7 @@ export function SafariCard({ safari }: SafariCardProps) {
         <div className="border-t border-surface-variant pt-6 mt-auto flex items-center justify-between gap-3">
           <div>
             <p className="text-label-sm text-on-surface-variant uppercase tracking-tight">{t('card.startingFrom')}</p>
-            <p className="font-headline-md text-savanna-green">${safari.price.toLocaleString(i18n.language)}</p>
+            <p className="font-headline-md text-savanna-green">{formatMoney(safari.price, i18n.language)}</p>
           </div>
           <Link
             to={`/safaris/${safari.id}`}

@@ -17,6 +17,7 @@ import { ChipInput, ToggleSwitch } from '../../components/admin/FormControls'
 import { MediaSection } from '../../components/admin/MediaSection'
 import { ItineraryEditor } from '../../components/admin/ItineraryEditor'
 import { slugify } from '../../lib/slugify'
+import { formatMoney } from '../../lib/money'
 
 const DESTINATION_OPTIONS = [
   'Serengeti National Park',
@@ -274,7 +275,7 @@ function SafariFormFields({
               </div>
               <div>
                 <label htmlFor="safari-price" className="block font-label-sm text-label-sm mb-1.5">
-                  Price / Person ($)
+                  Price / Person (TZS)
                 </label>
                 <input
                   id="safari-price"
@@ -397,7 +398,7 @@ function SafariFormFields({
                   <div>
                     <span className="text-[10px] text-on-surface-variant block">From per person</span>
                     <span className="font-headline-md text-sm font-bold text-savanna-green">
-                      ${price || '0'} <span className="text-[10px] text-on-surface-variant font-normal">USD</span>
+                      {formatMoney(Number(price) || 0)}
                     </span>
                   </div>
                 </div>

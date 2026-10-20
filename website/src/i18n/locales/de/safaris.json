@@ -16,9 +16,9 @@
     },
     "budget": {
       "any": "Budget (Alle)",
-      "under-3000": "Unter 3.000 $",
-      "3000-6000": "3.000 $ – 6.000 $",
-      "6000+": "Über 6.000 $"
+      "under-7500k": "Unter 7,5 Mio. TZS",
+      "7500k-15m": "7,5 – 15 Mio. TZS",
+      "15m+": "Über 15 Mio. TZS"
     },
     "destination": {
       "all": "Reiseziel (Alle)",
@@ -62,7 +62,7 @@
     "notIncluded": "Nicht inbegriffen",
     "bookThisSafari": "Diese Safari buchen",
     "bookSubtitle": "Beginnen Sie noch heute mit der Planung Ihres Traumabenteuers.",
-    "fromPrice": "Ab {{price}} $",
+    "fromPrice": "Ab {{price}}",
     "perPerson": "p. P.",
     "bookNow": "Jetzt buchen",
     "talkToTourHelper": "Mit einem Reiseberater sprechen",

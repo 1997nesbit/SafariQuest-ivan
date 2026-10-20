@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 from django.contrib.auth import get_user_model
 from django.urls import reverse
@@ -10,6 +10,14 @@ from guides.models import Guide
 from safaris.models import ItineraryDay, SafariPackage
 
 User = get_user_model()
+
+# Booking dates must not be in the past, so tests book a couple of months ahead of
+# whenever they run rather than on a fixed date that eventually expires.
+TRIP_START = date.today() + timedelta(days=60)
+
+
+def trip_day(offset):
+    return (TRIP_START + timedelta(days=offset)).isoformat()
 
 
 def make_safari_with_itinerary():
@@ -43,8 +51,8 @@ class MilestoneGenerationTests(APITestCase):
                 "name": "Jane Doe",
                 "email": "jane@example.com",
                 "safari": self.safari.slug,
-                "start_date": "2026-10-01",
-                "end_date": "2026-10-03",
+                "start_date": trip_day(0),
+                "end_date": trip_day(2),
                 "guests": 2,
             },
         )
@@ -75,8 +83,8 @@ class MilestoneGenerationTests(APITestCase):
                 "name": "Jane Doe",
                 "email": "jane2@example.com",
                 "safari": bare_safari.slug,
-                "start_date": "2026-10-01",
-                "end_date": "2026-10-02",
+                "start_date": trip_day(0),
+                "end_date": trip_day(1),
                 "guests": 1,
             },
         )

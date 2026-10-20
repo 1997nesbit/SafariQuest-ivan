@@ -3,6 +3,7 @@ import { getSafaris, type SafariPackage } from '../../api/safaris'
 import { getBookings, type Booking } from '../../api/bookings'
 import { getFunnelSummary, type FunnelSummary } from '../../api/analytics'
 import { useFetch } from '../../lib/useFetch'
+import { formatMoney } from '../../lib/money'
 
 const REVENUE_STAGES: Booking['stage'][] = ['deposit_paid', 'confirmed', 'completed']
 
@@ -96,7 +97,7 @@ export function AdminAnalytics() {
             <span className="text-xs font-label-md text-on-surface-variant">{revenueBookings.length} bookings</span>
           </div>
           <p className="font-label-sm text-label-sm text-on-surface-variant mb-1 uppercase tracking-wider">Total Revenue</p>
-          <p className="font-headline-md text-[26px] text-on-surface">${totalRevenue.toLocaleString()}</p>
+          <p className="font-headline-md text-[26px] text-on-surface">{formatMoney(totalRevenue)}</p>
         </div>
         <div className="bg-surface-container-lowest rounded-xl p-5 shadow-sm border border-sand-stone/50">
           <div className="flex justify-between items-start mb-4">
@@ -106,7 +107,7 @@ export function AdminAnalytics() {
             <span className="text-xs font-label-md text-on-surface-variant">{allSafaris.length} packages</span>
           </div>
           <p className="font-label-sm text-label-sm text-on-surface-variant mb-1 uppercase tracking-wider">Avg Trip Value</p>
-          <p className="font-headline-md text-[26px] text-on-surface">${avgTripValue.toLocaleString()}</p>
+          <p className="font-headline-md text-[26px] text-on-surface">{formatMoney(avgTripValue)}</p>
         </div>
         <div className="bg-surface-container-lowest rounded-xl p-5 shadow-sm border border-sand-stone/50">
           <div className="flex justify-between items-start mb-4">
@@ -115,7 +116,7 @@ export function AdminAnalytics() {
             </div>
           </div>
           <p className="font-label-sm text-label-sm text-on-surface-variant mb-1 uppercase tracking-wider">Pending Quotes Value</p>
-          <p className="font-headline-md text-[26px] text-on-surface">${outstandingBalance.toLocaleString()}</p>
+          <p className="font-headline-md text-[26px] text-on-surface">{formatMoney(outstandingBalance)}</p>
         </div>
         <div className="bg-surface-container-lowest rounded-xl p-5 shadow-sm border border-sand-stone/50">
           <div className="flex justify-between items-start mb-4">
@@ -147,7 +148,7 @@ export function AdminAnalytics() {
                       {p.count} booking{p.count === 1 ? '' : 's'}
                     </p>
                   </div>
-                  <p className="font-label-md text-sm text-on-surface shrink-0">${p.amount.toLocaleString()}</p>
+                  <p className="font-label-md text-sm text-on-surface shrink-0">{formatMoney(p.amount)}</p>
                 </div>
               ))}
             </div>

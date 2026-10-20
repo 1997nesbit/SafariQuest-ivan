@@ -10,6 +10,7 @@ import { getRegionSafaris } from '../../api/regionSafaris'
 import { useFetch } from '../../lib/useFetch'
 import { useTripPlan } from '../../components/plan/tripPlanStore'
 import { trackFunnelEvent } from '../../lib/funnelTracking'
+import { formatMoney } from '../../lib/money'
 
 export function PlanExperiences() {
   const { t, i18n } = useTranslation('plan')
@@ -150,7 +151,7 @@ export function PlanExperiences() {
                                 {t('experiences.day', { count: safari.days })}
                               </span>
                               <span className="bg-surface/90 backdrop-blur-sm px-2.5 py-1 rounded-full text-label-sm font-label-sm text-on-surface">
-                                ${safari.price.toLocaleString(i18n.language)}
+                                {formatMoney(safari.price, i18n.language)}
                               </span>
                             </div>
                           </div>
@@ -223,7 +224,7 @@ export function PlanExperiences() {
                                     {t('experiences.day', { count: safari.days })}
                                   </span>
                                   <span className="bg-surface/90 backdrop-blur-sm px-2.5 py-1 rounded-full text-label-sm font-label-sm text-on-surface">
-                                    ${safari.price.toLocaleString(i18n.language)}
+                                    {formatMoney(safari.price, i18n.language)}
                                   </span>
                                 </div>
                               </div>

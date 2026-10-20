@@ -17,6 +17,7 @@ import { MediaSection } from '../../components/admin/MediaSection'
 import { ItineraryEditor } from '../../components/admin/ItineraryEditor'
 import { slugify } from '../../lib/slugify'
 import type { ItineraryDay } from '../../api/safaris'
+import { formatMoney } from '../../lib/money'
 
 export function AdminRegionSafariForm() {
   const { slug: existingSlug } = useParams<{ slug: string }>()
@@ -270,7 +271,7 @@ function RegionSafariFormFields({
               </div>
               <div>
                 <label htmlFor="rs-price" className="block font-label-sm text-label-sm mb-1.5">
-                  Price / Person ($)
+                  Price / Person (TZS)
                 </label>
                 <input
                   id="rs-price"
@@ -395,7 +396,7 @@ function RegionSafariFormFields({
                   <div>
                     <span className="text-[10px] text-on-surface-variant block">From per person</span>
                     <span className="font-headline-md text-sm font-bold text-savanna-green">
-                      ${price || '0'} <span className="text-[10px] text-on-surface-variant font-normal">USD</span>
+                      {formatMoney(Number(price) || 0)}
                     </span>
                   </div>
                 </div>

@@ -3,6 +3,7 @@ import { Link } from '../i18n/routing'
 import { Bed, CalendarBlank, CheckCircle, Clock, MapPin, SealCheck, Star, XCircle, ArrowRight, ChatCircleText } from '@phosphor-icons/react'
 import { Reveal } from './Reveal'
 import type { ItineraryDay } from '../api/safaris'
+import { formatMoney } from '../lib/money'
 
 /** Shared detail-page layout for anything shaped like a bookable safari — a full
  * SafariPackage or a region-scoped RegionSafari. Both fetch their own data and pass in
@@ -160,7 +161,7 @@ export function SafariLikeDetail({
                 {t('detail.bookSubtitle')}
               </p>
               <div className="font-display-lg text-[32px] text-savanna-green font-bold">
-                {t('detail.fromPrice', { price: price.toLocaleString(i18n.language) })}{' '}
+                {t('detail.fromPrice', { price: formatMoney(price, i18n.language) })}{' '}
                 <span className="font-body-md text-body-md font-normal text-on-surface-variant">{t('detail.perPerson')}</span>
               </div>
             </div>

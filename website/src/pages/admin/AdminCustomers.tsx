@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { MagnifyingGlass, UserPlus, ChartLineUp, Money, ArrowRight } from '@phosphor-icons/react'
 import { getCustomers } from '../../api/customers'
 import { useFetch } from '../../lib/useFetch'
+import { formatMoney } from '../../lib/money'
 
 function initials(name: string) {
   return name
@@ -87,7 +88,7 @@ export function AdminCustomers() {
               <p className="text-xs text-on-surface-variant/70">Across all customers</p>
             </div>
           </div>
-          <p className="font-headline-md text-[26px] text-on-surface">${totalRevenue.toLocaleString()}</p>
+          <p className="font-headline-md text-[26px] text-on-surface">{formatMoney(totalRevenue)}</p>
         </div>
       </div>
 
@@ -155,7 +156,7 @@ export function AdminCustomers() {
                     {new Date(c.joinedDate).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 text-right text-on-surface-variant text-sm">{c.tripCount}</td>
-                  <td className="px-6 py-4 text-right font-label-md text-on-surface">${c.totalSpend.toLocaleString()}</td>
+                  <td className="px-6 py-4 text-right font-label-md text-on-surface">{formatMoney(c.totalSpend)}</td>
                 </tr>
               ))}
               {filtered.length === 0 && (

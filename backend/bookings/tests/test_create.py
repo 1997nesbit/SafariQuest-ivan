@@ -1,8 +1,9 @@
-from datetime import date
+from datetime import date, timedelta
 
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -12,6 +13,14 @@ from region_safaris.models import RegionSafari
 from safaris.models import SafariPackage
 
 User = get_user_model()
+
+# Booking dates must not be in the past, so tests book a couple of months ahead of
+# whenever they run rather than on a fixed date that eventually expires.
+TRIP_START = date.today() + timedelta(days=60)
+
+
+def trip_day(offset):
+    return (TRIP_START + timedelta(days=offset)).isoformat()
 
 
 def make_safari(slug="migration-quest"):
@@ -67,8 +76,8 @@ class BookingCreateTests(APITestCase):
             "name": "Jane Doe",
             "email": "jane@example.com",
             "safari": self.safari.slug,
-            "start_date": "2026-10-01",
-            "end_date": "2026-10-08",
+            "start_date": trip_day(0),
+            "end_date": trip_day(7),
             "guests": 2,
             "message": "Custom itinerary notes here.",
         }
@@ -152,9 +161,22 @@ class BookingCreateTests(APITestCase):
         self.assertEqual(booking.customer, tourist)
 
     def test_end_date_before_start_date_rejected(self):
-        payload = dict(self.payload, start_date="2026-10-08", end_date="2026-10-01")
+        payload = dict(self.payload, start_date=trip_day(7), end_date=trip_day(0))
         response = self.client.post(self.url, payload)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_start_date_in_the_past_rejected(self):
+        yesterday = (date.today() - timedelta(days=1)).isoformat()
+        payload = dict(self.payload, start_date=yesterday, end_date=trip_day(0))
+        response = self.client.post(self.url, payload)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("start_date", response.data)
+
+    def test_start_date_today_accepted(self):
+        today = timezone.localdate().isoformat()
+        payload = dict(self.payload, start_date=today, end_date=trip_day(0))
+        response = self.client.post(self.url, payload)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_response_shape_includes_package_and_region(self):
         response = self.client.post(self.url, self.payload)

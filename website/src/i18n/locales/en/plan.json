@@ -121,11 +121,11 @@
   },
   "payment": {
     "heading": "Payment",
-    "subtitle": "Enter your card details to pay the deposit and secure your booking.",
+    "subtitle": "Pay the deposit with mobile money — M-Pesa, Airtel Money, Mixx by Yas or Halotel — to secure your booking.",
     "depositDueNow": "Deposit due now (30%)",
     "back": "Back",
     "processing": "Processing…",
-    "payAndBook": "Pay ${{amount}} & Book",
+    "payAndBook": "Pay {{amount}} & Book",
     "somethingWentWrong": "Something went wrong. Please try again."
   },
   "message": {

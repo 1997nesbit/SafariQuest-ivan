@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Funnel, CalendarCheck, Users, Kanban, Table } from '@phosphor-icons/react'
 import { getBookings, STAGE_LABELS, STAGE_ORDER, type BookingStage } from '../../api/bookings'
 import { useFetch } from '../../lib/useFetch'
+import { formatMoney } from '../../lib/money'
 
 const REGIONS = [
   'All',
@@ -160,7 +161,7 @@ export function AdminBookingsPipeline() {
                         </div>
                       </div>
                       <div className="flex justify-between items-center border-t border-sand-stone pt-3">
-                        <div className="font-label-md text-sm text-on-surface">${b.subtotal.toLocaleString()}</div>
+                        <div className="font-label-md text-sm text-on-surface">{formatMoney(b.subtotal)}</div>
                         {b.assignedGuideName ? (
                           <div
                             className="w-6 h-6 rounded-full bg-savanna-green/15 text-savanna-green flex items-center justify-center text-[10px] font-label-md border border-savanna-green/30"

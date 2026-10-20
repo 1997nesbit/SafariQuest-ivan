@@ -50,7 +50,7 @@ export function AgentDashboard() {
   }
 
   function handleCopy(code: string) {
-    navigator.clipboard?.writeText(code).then(() => {
+    void navigator.clipboard?.writeText(code).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     })

@@ -38,7 +38,7 @@ export function PlanExperiences() {
 
   useEffect(() => {
     if (plan.destinationIds.length === 0 && !loading) {
-      navigate('/plan')
+      void navigate('/plan')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plan.destinationIds.length, loading])

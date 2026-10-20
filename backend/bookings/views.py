@@ -47,6 +47,42 @@ User = get_user_model()
 logger = logging.getLogger(__name__)
 
 INVOICE_DUE_DAYS = 14
+# Snippe webhook event types acted on (SnippeWebhookView).
+EVENT_PAYMENT_COMPLETED = "payment.completed"
+EVENT_PAYMENT_FAILED = "payment.failed"
+
+
+NO_REFERRAL = (None, None, None)
+
+
+def _referral_terms(code_value, user):
+    """(code, discount %, commission %) for a code entered at checkout, at today's
+    referral settings; None if it can't be used. exclude(agent=...): an agent can also
+    book, and must not collect commission on their own trip — the validate endpoint
+    refuses that at checkout, this is the backstop. The code is only marked used once
+    the payment completes (complete_payment re-checks it under a lock), so an abandoned
+    checkout doesn't burn it."""
+    code = ReferralCode.objects.filter(code=code_value, is_used=False).exclude(agent=user).first()
+    if code is None or code.is_expired:
+        return None
+    settings_obj = ReferralSettings.get_solo()
+    return code, settings_obj.discount_percent, settings_obj.commission_percent
+
+
+def _carried_over_referral_terms(booking, user):
+    """A retry (My Trips' "Pay Deposit", after the first attempt failed or was abandoned)
+    sends no code. Carry over the one from this booking's earlier attempt, on the terms it
+    was opened with, so a failed payment doesn't cost the tourist their discount or the
+    agent their commission — or NO_REFERRAL if the code has since been used or expired."""
+    previous = (
+        Payment.objects.filter(booking=booking, kind=Payment.KIND_DEPOSIT, referral_code__isnull=False)
+        .select_related("referral_code")
+        .first()
+    )
+    code = previous.referral_code if previous else None
+    if not code or code.is_used or code.is_expired or code.agent_id == user.id:
+        return NO_REFERRAL
+    return code, previous.discount_percent, previous.commission_percent
 
 
 class BookingViewSet(
@@ -359,37 +395,9 @@ class BookingViewSet(
         serializer = BookingPaySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         referral_code_value = (serializer.validated_data.get("referral_code") or "").strip().upper()
-
-        referral_code = None
-        discount_percent = commission_percent = None
-        if not referral_code_value:
-            # A retry (My Trips' "Pay Deposit", after the first attempt failed or was
-            # abandoned) sends no code. Carry over the one from this booking's earlier
-            # attempt, on the same terms it was opened with, so a failed payment doesn't
-            # cost the tourist their discount or the agent their commission. Dropped
-            # quietly if the code has since been used or expired.
-            previous = (
-                Payment.objects.filter(booking=booking, kind=Payment.KIND_DEPOSIT, referral_code__isnull=False)
-                .select_related("referral_code")
-                .first()
-            )
-            code = previous.referral_code if previous else None
-            if code and not code.is_used and not code.is_expired and code.agent_id != request.user.id:
-                referral_code = code
-                discount_percent = previous.discount_percent
-                commission_percent = previous.commission_percent
-        else:
-            # exclude(agent=...): an agent can also book now, and must not collect
-            # commission on their own trip. The validate endpoint already refuses the
-            # code at checkout; this is the backstop. The code is only marked used once
-            # the payment completes (complete_payment re-checks it under a lock), so an
-            # abandoned checkout doesn't burn it.
-            referral_code = (
-                ReferralCode.objects.filter(code=referral_code_value, is_used=False)
-                .exclude(agent=request.user)
-                .first()
-            )
-            if referral_code is None or referral_code.is_expired:
+        if referral_code_value:
+            terms = _referral_terms(referral_code_value, request.user)
+            if terms is None:
                 # The page priced the trip with this code's discount. Charging full
                 # price instead would record a different amount than the tourist
                 # agreed to, so refuse and let them pay again without the code.
@@ -397,9 +405,9 @@ class BookingViewSet(
                     {"detail": "This referral code can no longer be used. Remove it and try again."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            settings_obj = ReferralSettings.get_solo()
-            discount_percent = settings_obj.discount_percent
-            commission_percent = settings_obj.commission_percent
+        else:
+            terms = _carried_over_referral_terms(booking, request.user)
+        referral_code, discount_percent, commission_percent = terms
 
         trip_total = trip_total_for(booking, discount_percent)
         try:
@@ -526,7 +534,7 @@ class SnippeWebhookView(APIView):
             logger.warning("Snippe webhook %s (%s) matched no payment", event.get("id"), event_type)
             return Response({"received": True})
 
-        if event_type == "payment.completed":
+        if event_type == EVENT_PAYMENT_COMPLETED:
             amount = data.get("amount") or {}
             complete_payment(
                 payment,
@@ -534,18 +542,18 @@ class SnippeWebhookView(APIView):
                 currency=amount.get("currency"),
                 provider_reference=data.get("reference") or "",
             )
-        elif event_type in ("payment.failed", "payment.voided"):
+        elif event_type in (EVENT_PAYMENT_FAILED, "payment.voided"):
             close_payment(payment, Payment.STATUS_FAILED)
         elif event_type == "payment.expired":
             close_payment(payment, Payment.STATUS_EXPIRED)
 
-        if event_type in ("payment.completed", "payment.failed"):
+        if event_type in (EVENT_PAYMENT_COMPLETED, EVENT_PAYMENT_FAILED):
             try:
                 record_attempt(
                     event_id=event.get("id"),
                     payment=payment,
                     data=data,
-                    succeeded=event_type == "payment.completed",
+                    succeeded=event_type == EVENT_PAYMENT_COMPLETED,
                 )
             except Exception:
                 # Outage detection is a side job: it must never make Snippe retry a

@@ -47,7 +47,11 @@ CHANNEL_PATTERNS = {
     PaymentOutage.CHANNEL_MIXX: r"\bmixx\b|\btigo\b|\byas\b",
     PaymentOutage.CHANNEL_HALOTEL: r"\bhalo\s*(?:tel|pesa)\b",
 }
-NETWORK_CHANNELS = list(CHANNEL_PATTERNS)
+NETWORK_CHANNELS = frozenset(CHANNEL_PATTERNS)
+# Audit-log actions written here.
+ACTION_OUTAGE_RECORDED = "payments.outage_recorded"
+ACTION_OUTAGE_ENDED = "payments.outage_ended"
+ACTION_OUTAGE_DETECTED = "payments.outage_detected"
 OUTAGE_WORDS = re.compile(
     r"\b(maintenance|outage|unavailable|downtime|disruption|interruption|degraded|suspended|disabled)\b", re.I
 )
@@ -111,32 +115,37 @@ def _channels_in(text):
     return [channel for channel, pattern in CHANNEL_PATTERNS.items() if re.search(pattern, text, re.I)]
 
 
-def parse_notice(subject, body):
-    """Reads one Snippe email. Networks are taken from the subject when it names any (the
-    body tends to list every network, e.g. "other channels remain available"), and from
-    the body otherwise. None named means every channel. Every network named means the
-    same."""
-    # The subject decides "it's over" ("Maintenance Completed", "Collections Restored");
-    # any outage word anywhere makes it a new outage.
+def _notice_kind(subject, body):
+    """"outage", "resolved", "payouts_only", or None. The subject decides "it's over"
+    ("Maintenance Completed", "Collections Restored"); any outage word anywhere makes it a
+    new outage — unless it names payouts and not collections, judged on the subject when
+    it mentions either, else on the body."""
     if RESOLVED_WORDS.search(subject):
         kind = "resolved"
     elif OUTAGE_WORDS.search(f"{subject}\n{body}"):
         kind = "outage"
     else:
-        return Notice(kind=None)
-
-    # Payouts named and collections not — judged on the subject when it says either, else
-    # on the body.
+        return None
     in_subject = PAYOUT_WORDS.search(subject) or COLLECTION_WORDS.search(subject)
     scope = subject if in_subject else body
     if PAYOUT_WORDS.search(scope) and not COLLECTION_WORDS.search(scope):
-        return Notice(kind="payouts_only")
+        return "payouts_only"
+    return kind
 
+
+def _notice_channels(subject, body):
+    """From the subject when it names any network (the body tends to list every network,
+    e.g. "other channels remain available"), else the body. None named — or every one —
+    means all channels."""
     channels = _channels_in(subject) or _channels_in(body)
-    if not channels or set(channels) == set(NETWORK_CHANNELS):
-        channels = [PaymentOutage.CHANNEL_ALL]
+    if not channels or set(channels) == NETWORK_CHANNELS:
+        return [PaymentOutage.CHANNEL_ALL]
+    return channels
 
-    # "Start: <date> - End: <date>"; without those labels, the first two dates in the body.
+
+def _notice_window(body):
+    """(starts_at, ends_at) from "Start: <date> - End: <date>"; without those labels, the
+    first two dates in the body. Either may be None."""
     start_label = re.search(r"\b(?:start|starts|from)\s*:", body, re.I)
     end_label = re.search(r"\b(?:end|ends|until|to)\s*:", body, re.I)
     if start_label or end_label:
@@ -147,7 +156,16 @@ def parse_notice(subject, body):
         ends_at = _parse_datetime(body[end_of_start:]) if starts_at else None
     if starts_at and ends_at and ends_at <= starts_at:
         ends_at = None
-    return Notice(kind=kind, channels=channels, starts_at=starts_at, ends_at=ends_at)
+    return starts_at, ends_at
+
+
+def parse_notice(subject, body):
+    """Reads one Snippe email: what kind of notice it is, which networks, and when."""
+    kind = _notice_kind(subject, body)
+    if kind in (None, "payouts_only"):
+        return Notice(kind=kind)
+    starts_at, ends_at = _notice_window(body)
+    return Notice(kind=kind, channels=_notice_channels(subject, body), starts_at=starts_at, ends_at=ends_at)
 
 
 def _body_text(message):
@@ -237,7 +255,7 @@ def _apply_notice(notice, message_id, subject, received_at):
         count = ended.update(ends_at=now)
         outcome = f"Ended {count} current outage(s) for {labels}."
         if count:
-            log_action(None, "payments.outage_ended", f"{outcome} Snippe email: {subject}"[:500])
+            log_action(None, ACTION_OUTAGE_ENDED, f"{outcome} Snippe email: {subject}"[:500])
         return outcome
 
     needs_review = notice.starts_at is None
@@ -264,7 +282,7 @@ def _apply_notice(notice, message_id, subject, received_at):
         outcome = f"Needs review: outage for {labels} recorded but not active; its times couldn't be read."
     else:
         outcome = f"Outage recorded for {labels}: {window}."
-    log_action(None, "payments.outage_recorded", f"{outcome} Snippe email: {subject}"[:500])
+    log_action(None, ACTION_OUTAGE_RECORDED, f"{outcome} Snippe email: {subject}"[:500])
     if needs_review or PaymentOutage.CHANNEL_ALL in notice.channels:
         _alert_admins(
             f"Snippe outage notice: {subject}",
@@ -336,7 +354,7 @@ def check_status_page():
     if status not in BLOCKING_STATUSES | WARNING_STATUSES:
         if open_rows.update(ends_at=now):
             change = f"Snippe status page reports {STATUS_COMPONENT} {status}; status-page outage ended."
-            log_action(None, "payments.outage_ended", change)
+            log_action(None, ACTION_OUTAGE_ENDED, change)
             return change
         return None
     if open_rows.filter(blocks_payments=blocking).exists():
@@ -351,7 +369,7 @@ def check_status_page():
         subject=f"{STATUS_COMPONENT}: {status}",
     )
     change = f"Snippe status page reports {STATUS_COMPONENT} {status}; payments {'blocked' if blocking else 'warned'}."
-    log_action(None, "payments.outage_recorded", change)
+    log_action(None, ACTION_OUTAGE_RECORDED, change)
     if blocking:
         _alert_admins("Snippe is down — online payments paused", change)
     return change
@@ -377,13 +395,54 @@ def channel_for_provider(provider):
     return None
 
 
+def _attempt_channel(data):
+    """The network a webhook's payment went through: `channel.provider` in the current
+    payload format, `payment_channel` in the legacy one."""
+    channel_info = data.get("channel") or {}
+    provider = channel_info.get("provider") if isinstance(channel_info, dict) else None
+    return channel_for_provider(provider or data.get("payment_channel"))
+
+
+def _failures_since_last_success(channel, since):
+    """This network's countable failures since `since`, after its most recent success."""
+    recent = PaymentAttempt.objects.filter(channel=channel, created_at__gte=since)
+    last_success = recent.filter(succeeded=True).order_by("-created_at").values_list("created_at", flat=True).first()
+    failures = recent.filter(counts_toward_outage=True)
+    if last_success:
+        failures = failures.filter(created_at__gt=last_success)
+    return failures
+
+
+def _open_detected_outage(channel, failure_count, reason, now, window):
+    label = dict(PaymentOutage.CHANNEL_CHOICES)[channel]
+    minutes = settings.SNIPPE_FAILURE_WINDOW_MINUTES
+    PaymentOutage.objects.create(
+        channel=channel,
+        blocks_payments=False,
+        starts_at=now,
+        ends_at=now + window,
+        source=PaymentOutage.SOURCE_DETECTED,
+        source_ref=f"detected:{channel}:{now.isoformat()}",
+        subject=f"{failure_count} {label} payments failed in {minutes} minutes",
+    )
+    change = (
+        f"{failure_count} {label} payments failed within {minutes} minutes with none succeeding "
+        f"(latest: {reason or 'no reason given'}). Tourists are now warned to use another network."
+    )
+    log_action(None, ACTION_OUTAGE_DETECTED, change[:500])
+    logger.warning(change)
+    _alert_admins(
+        f"{label} payments are failing",
+        f"{change}\n\nSnippe hasn't announced an outage. "
+        "See Bookings → Payment attempts and Payment outages in Django admin.",
+    )
+
+
 def record_attempt(*, event_id, payment, data, succeeded):
     """Records one attempt from a payment.completed / payment.failed webhook and updates
     the detected outage for its network: a success ends it; enough failures from
     different payments with no success in between start (or extend) it."""
-    channel_info = data.get("channel") or {}
-    provider = channel_info.get("provider") if isinstance(channel_info, dict) else None
-    channel = channel_for_provider(provider or data.get("payment_channel"))
+    channel = _attempt_channel(data)
     if channel is None:
         return None
     reason = str(data.get("failure_reason") or "")[:300]
@@ -402,46 +461,26 @@ def record_attempt(*, event_id, payment, data, succeeded):
 
     now = timezone.now()
     window = timedelta(minutes=settings.SNIPPE_FAILURE_WINDOW_MINUTES)
-    label = dict(PaymentOutage.CHANNEL_CHOICES)[channel]
     detected = PaymentOutage.objects.current(now).filter(source=PaymentOutage.SOURCE_DETECTED, channel=channel)
 
     if succeeded:
         if detected.update(ends_at=now):
-            log_action(None, "payments.outage_ended", f"{label} payments are going through again; detected outage ended.")
+            label = dict(PaymentOutage.CHANNEL_CHOICES)[channel]
+            log_action(None, ACTION_OUTAGE_ENDED, f"{label} payments are going through again; detected outage ended.")
         return attempt
     if not attempt.counts_toward_outage:
         return attempt
 
-    recent = PaymentAttempt.objects.filter(channel=channel, created_at__gte=now - window)
-    last_success = recent.filter(succeeded=True).order_by("-created_at").values_list("created_at", flat=True).first()
-    failures = recent.filter(counts_toward_outage=True)
-    if last_success:
-        failures = failures.filter(created_at__gt=last_success)
-
     if detected.exists():
         detected.update(ends_at=now + window)  # still failing: keep the warning up
-    elif (
+        return attempt
+    failures = _failures_since_last_success(channel, now - window)
+    distinct_payments = failures.exclude(payment=None).values("payment").distinct().count()
+    if (
         failures.count() >= settings.SNIPPE_FAILURE_THRESHOLD
-        and failures.exclude(payment=None).values("payment").distinct().count() >= settings.SNIPPE_FAILURE_MIN_PAYMENTS
+        and distinct_payments >= settings.SNIPPE_FAILURE_MIN_PAYMENTS
     ):
-        PaymentOutage.objects.create(
-            channel=channel,
-            blocks_payments=False,
-            starts_at=now,
-            ends_at=now + window,
-            source=PaymentOutage.SOURCE_DETECTED,
-            source_ref=f"detected:{channel}:{now.isoformat()}",
-            subject=f"{failures.count()} {label} payments failed in {settings.SNIPPE_FAILURE_WINDOW_MINUTES} minutes",
-        )
-        change = (
-            f"{failures.count()} {label} payments failed within {settings.SNIPPE_FAILURE_WINDOW_MINUTES} minutes "
-            f"with none succeeding (latest: {reason or 'no reason given'}). Tourists are now warned to use "
-            "another network."
-        )
-        log_action(None, "payments.outage_detected", change[:500])
-        logger.warning(change)
-        _alert_admins(f"{label} payments are failing", f"{change}\n\nSnippe hasn't announced an outage. "
-                      "See Bookings → Payment attempts and Payment outages in Django admin.")
+        _open_detected_outage(channel, failures.count(), reason, now, window)
     return attempt
 
 

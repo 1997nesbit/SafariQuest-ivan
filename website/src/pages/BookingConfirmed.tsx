@@ -121,7 +121,7 @@ function ReferAndEarnCard() {
 
 /** Shown in place of the confirmation while Snippe's payment is still settling, or when it
  * didn't go through — the booking isn't confirmed until the deposit is. */
-function PaymentNotYetConfirmed({ failed, gaveUp }: { failed: boolean; gaveUp: boolean }) {
+function PaymentNotYetConfirmed({ failed, gaveUp }: Readonly<{ failed: boolean; gaveUp: boolean }>) {
   const { t } = useTranslation('booking')
   const Icon = failed ? WarningCircle : HourglassMedium
   let body = t('confirmed.pending.body')

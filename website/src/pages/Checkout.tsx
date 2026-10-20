@@ -38,6 +38,22 @@ type CheckoutStep = 'details' | 'review' | 'account' | 'payment'
 
 const ALL_STEP_KEYS: CheckoutStep[] = ['details', 'account', 'review', 'payment']
 
+/** The main button's label key for each checkout step (S3358: no nested ternaries). */
+function ctaLabelKey({
+  step,
+  submitting,
+  accountMode,
+  isAuthenticated,
+}: Readonly<{ step: CheckoutStep; submitting: boolean; accountMode: AccountMode; isAuthenticated: boolean }>): string {
+  if (step === 'payment') return submitting ? 'cta.processing' : 'cta.payAndBook'
+  if (step === 'account') {
+    if (submitting) return 'cta.pleaseWait'
+    return accountMode === 'register' ? 'cta.createAccountAndContinue' : 'cta.signInAndContinue'
+  }
+  if (step === 'review') return 'cta.continueToPayment'
+  return isAuthenticated ? 'cta.continueToReview' : 'cta.continueToAccount'
+}
+
 export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
   const { t, i18n } = useTranslation('booking')
   const { id } = useParams<{ id: string }>()
@@ -226,22 +242,10 @@ export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
     }
   }
 
-  const ctaLabel =
-    step === 'payment'
-      ? submitting
-        ? t('cta.processing')
-        : t('cta.payAndBook', { amount: formatMoney(deposit, i18n.language) })
-      : step === 'account'
-        ? submitting
-          ? t('cta.pleaseWait')
-          : accountMode === 'register'
-            ? t('cta.createAccountAndContinue')
-            : t('cta.signInAndContinue')
-        : step === 'review'
-          ? t('cta.continueToPayment')
-          : isAuthenticated
-            ? t('cta.continueToReview')
-            : t('cta.continueToAccount')
+  // `amount` is only used by cta.payAndBook; the other labels ignore it.
+  const ctaLabel = t(ctaLabelKey({ step, submitting, accountMode, isAuthenticated }), {
+    amount: formatMoney(deposit, i18n.language),
+  })
 
   return (
     <section className="min-h-screen bg-surface-container-low py-16 md:py-20 px-5 md:px-margin-desktop">

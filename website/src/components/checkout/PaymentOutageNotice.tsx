@@ -3,7 +3,7 @@ import type { PaymentAvailability } from '../../api/bookings'
 
 /** Snippe outage messages above a pay button: a blocking outage in red (the button is
  * disabled by the page), single-network outages as warnings. Renders nothing otherwise. */
-export function PaymentOutageNotice({ availability }: { availability: PaymentAvailability | null }) {
+export function PaymentOutageNotice({ availability }: Readonly<{ availability: PaymentAvailability | null }>) {
   if (!availability) return null
   const { blocked, message, warnings } = availability
   if (!blocked && warnings.length === 0) return null

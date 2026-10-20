@@ -13,14 +13,14 @@ export function CountInput({
   min = 0,
   required,
   className,
-}: {
+}: Readonly<{
   id: string
   value: number
   onChange: (value: number) => void
   min?: number
   required?: boolean
   className?: string
-}) {
+}>) {
   const [draft, setDraft] = useState<string | null>(null)
 
   return (

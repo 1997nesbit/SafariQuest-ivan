@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { CalendarBlank, CheckCircle, Clock, ClockCounterClockwise, MapPin, CreditCard } from '@phosphor-icons/react'
 import { Link } from '../../i18n/routing'
-import { getBookings, getPaymentAvailability, payForBooking, payRemainingBalance, type Booking, type BookingStage } from '../../api/bookings'
+import { getBookings, getPaymentAvailability, payForBooking, payRemainingBalance, type Booking, type BookingStage, type PaymentStatusValue } from '../../api/bookings'
 import { getMyInvoices } from '../../api/invoices'
 import { useFetch } from '../../lib/useFetch'
 import { ApiError } from '../../lib/api'
@@ -18,6 +18,16 @@ const BADGE: Record<BookingStage, { className: string; icon: ComponentType<{ siz
   deposit_paid: { className: 'bg-golden-sun text-on-surface', icon: Clock },
   confirmed: { className: 'bg-surface-tint text-on-primary', icon: CheckCircle },
   completed: { className: 'bg-outline text-on-tertiary', icon: ClockCounterClockwise },
+}
+
+/** What to tell a tourist who has just come back from Snippe's checkout after paying a balance. */
+function returnBannerText(status: PaymentStatusValue | undefined, gaveUp: boolean): string {
+  if (status === 'completed') return 'Payment received — thank you! Your trip has been updated.'
+  if (status === 'failed' || status === 'expired') {
+    return "That payment didn't go through, so nothing was charged. You can try again below."
+  }
+  if (gaveUp) return "We haven't had confirmation yet. If you approved the payment it will show here shortly."
+  return "Confirming your payment… approve the prompt on your phone if you haven't yet."
 }
 
 export function MyTrips() {
@@ -59,15 +69,7 @@ export function MyTrips() {
     }
   }
 
-  let returnBanner: string | null = null
-  if (returnedPaymentId !== null) {
-    if (returnedStatus === 'completed') returnBanner = 'Payment received — thank you! Your trip has been updated.'
-    else if (returnedStatus === 'failed' || returnedStatus === 'expired')
-      returnBanner = "That payment didn't go through, so nothing was charged. You can try again below."
-    else if (gaveUp)
-      returnBanner = "We haven't had confirmation yet. If you approved the payment it will show here shortly."
-    else returnBanner = "Confirming your payment… approve the prompt on your phone if you haven't yet."
-  }
+  const returnBanner = returnedPaymentId === null ? null : returnBannerText(returnedStatus, gaveUp)
 
   return (
     <div>
@@ -140,7 +142,7 @@ export function MyTrips() {
                       {depositDue && (
                         <button
                           type="button"
-                          onClick={() => handlePay(trip.id, 'deposit')}
+                          onClick={() => void handlePay(trip.id, 'deposit')}
                           disabled={payingId === trip.id || paymentsBlocked}
                           className="w-full mb-2 inline-flex items-center justify-center gap-2 bg-golden-sun text-on-primary py-3 rounded-lg font-label-md hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
                         >
@@ -151,7 +153,7 @@ export function MyTrips() {
                       {Boolean(remainingBalance) && (
                         <button
                           type="button"
-                          onClick={() => handlePay(trip.id, 'balance')}
+                          onClick={() => void handlePay(trip.id, 'balance')}
                           disabled={payingId === trip.id || paymentsBlocked}
                           className="w-full mb-2 inline-flex items-center justify-center gap-2 bg-golden-sun text-on-primary py-3 rounded-lg font-label-md hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
                         >

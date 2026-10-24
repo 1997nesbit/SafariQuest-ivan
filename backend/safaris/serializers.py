@@ -20,7 +20,7 @@ class SafariPackageSerializer(serializers.ModelSerializer):
         model = SafariPackage
         fields = [
             "slug", "title", "image", "image_alt", "gallery_images", "rating", "days",
-            "accommodation", "price", "badge", "signature", "destination", "parks",
+            "accommodation", "price", "price_usd", "badge", "signature", "destination", "parks",
             "overview", "highlights", "included", "excluded", "itinerary",
         ]
 

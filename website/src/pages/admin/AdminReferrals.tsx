@@ -194,7 +194,7 @@ export function AdminReferrals() {
                       <p className="text-on-surface-variant text-xs">{r.customerEmail}</p>
                     </td>
                     <td className="py-3 pr-4 text-on-surface-variant">#{r.bookingId}</td>
-                    <td className="py-3 pr-4">{formatMoney(r.commissionAmount)}</td>
+                    <td className="py-3 pr-4">{formatMoney(r.commissionAmount, undefined, r.currency)}</td>
                     <td className="py-3 pr-4">
                       <span
                         className={`inline-flex items-center py-1 px-2.5 rounded-md text-xs ${COMMISSION_BADGE[r.commissionStatus]}`}

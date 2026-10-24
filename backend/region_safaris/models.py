@@ -13,7 +13,11 @@ class RegionSafari(models.Model):
     rating = models.DecimalField(max_digits=2, decimal_places=1)
     days = models.PositiveIntegerField()
     accommodation = models.CharField(max_length=120)
+    # Per adult, in TZS (paid by mobile money through Snippe).
     price = models.PositiveIntegerField()
+    # Per adult, in USD (paid by card through Senjaropay). Optional: a product without
+    # one can only be booked in TZS.
+    price_usd = models.PositiveIntegerField(null=True, blank=True)
     badge = models.CharField(max_length=64, blank=True)
     signature = models.BooleanField(default=False)
     parks = models.ManyToManyField("destinations.Park", related_name="region_safaris", blank=True)

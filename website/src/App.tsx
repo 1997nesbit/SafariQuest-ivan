@@ -64,6 +64,7 @@ import { AdminComplaints } from './pages/admin/AdminComplaints'
 import { AdminAnalytics } from './pages/admin/AdminAnalytics'
 import { AdminUsers } from './pages/admin/AdminUsers'
 import { AuthProvider } from './auth/AuthContext'
+import { CurrencyProvider } from './lib/currencyPreference'
 import { RequireRole } from './auth/RequireRole'
 import { RequireAgent } from './auth/RequireAgent'
 import { LocaleRoot } from './i18n/LocaleRoot'
@@ -104,6 +105,7 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+      <CurrencyProvider>
       <ScrollManager />
       <SkipLink />
       <Routes>
@@ -198,6 +200,7 @@ function App() {
 
         <Route path="*" element={<LocaleRedirect />} />
       </Routes>
+      </CurrencyProvider>
       </AuthProvider>
     </BrowserRouter>
   )

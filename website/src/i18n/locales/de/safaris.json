@@ -16,9 +16,9 @@
     },
     "budget": {
       "any": "Budget (Alle)",
-      "under-7500k": "Unter 7,5 Mio. TZS",
-      "7500k-15m": "7,5 – 15 Mio. TZS",
-      "15m+": "Über 15 Mio. TZS"
+      "low": "Unter {{low}}",
+      "mid": "{{low}} – {{high}}",
+      "high": "Über {{high}}"
     },
     "destination": {
       "all": "Reiseziel (Alle)",
@@ -62,8 +62,9 @@
     "notIncluded": "Nicht inbegriffen",
     "bookThisSafari": "Diese Safari buchen",
     "bookSubtitle": "Beginnen Sie noch heute mit der Planung Ihres Traumabenteuers.",
-    "fromPrice": "Ab {{price}}",
-    "perPerson": "p. P.",
+    "priceFrom": "Ab",
+    "perAdult": "pro Erwachsenem",
+    "childrenHalfPrice": "Kinder (2–11) zum halben Preis",
     "bookNow": "Jetzt buchen",
     "talkToTourHelper": "Mit einem Reiseberater sprechen",
     "duration": "Dauer",

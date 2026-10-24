@@ -10,5 +10,5 @@ class ItineraryDayInline(admin.TabularInline):
 
 @admin.register(SafariPackage)
 class SafariPackageAdmin(admin.ModelAdmin):
-    list_display = ["slug", "title", "destination", "price", "signature"]
+    list_display = ["slug", "title", "destination", "price", "price_usd", "signature"]
     inlines = [ItineraryDayInline]

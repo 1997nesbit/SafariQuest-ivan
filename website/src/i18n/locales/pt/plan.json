@@ -126,7 +126,8 @@
     "back": "Voltar",
     "processing": "A processar…",
     "payAndBook": "Pagar {{amount}} e reservar",
-    "somethingWentWrong": "Algo correu mal. Tente novamente."
+    "somethingWentWrong": "Algo correu mal. Tente novamente.",
+    "subtitleUsd": "A sua reserva é em dólares americanos (USD)."
   },
   "message": {
     "destinations": "Destinos: {{list}}",

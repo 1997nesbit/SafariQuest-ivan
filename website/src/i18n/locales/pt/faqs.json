@@ -16,7 +16,7 @@
         },
         "paymentMethods": {
           "question": "Que métodos de pagamento aceitam?",
-          "answer": "Aceitamos mobile money — M-Pesa, Airtel Money, Mixx by Yas e Halotel — através do nosso checkout seguro Snippe. Todos os preços estão em xelins tanzanianos (TZS). Um sinal de 30% garante a sua reserva, com o saldo a pagar antes da partida."
+          "answer": "Os preços são apresentados em xelins tanzanianos (TZS) ou dólares americanos (USD) — escolha no menu. Pague em TZS por mobile money (M-Pesa, Airtel Money, Mixx by Yas ou Halotel); os pagamentos com cartão em USD estarão disponíveis em breve. Um sinal de 30% garante a sua reserva, com o saldo a pagar antes da partida."
         },
         "depositRequired": {
           "question": "É necessário um depósito?",

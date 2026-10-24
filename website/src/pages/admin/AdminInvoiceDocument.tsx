@@ -232,8 +232,8 @@ export function AdminInvoiceDocument() {
                   <tr key={i}>
                     <td className="py-3 text-sm text-on-surface">{li.label}</td>
                     <td className="py-3 text-sm text-on-surface-variant text-right">{li.quantity}</td>
-                    <td className="py-3 text-sm text-on-surface-variant text-right">{formatMoney(li.unitPrice)}</td>
-                    <td className="py-3 text-sm text-on-surface text-right">{formatMoney(li.quotePrice)}</td>
+                    <td className="py-3 text-sm text-on-surface-variant text-right">{formatMoney(li.unitPrice, undefined, invoice.currency)}</td>
+                    <td className="py-3 text-sm text-on-surface text-right">{formatMoney(li.quotePrice, undefined, invoice.currency)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -247,28 +247,28 @@ export function AdminInvoiceDocument() {
               </p>
               <div className="flex justify-between text-sm mb-1">
                 <span className="text-on-surface-variant">{schedule!.depositLabel}</span>
-                <span className="text-on-surface font-label-md">{formatMoney(schedule!.depositAmount)}</span>
+                <span className="text-on-surface font-label-md">{formatMoney(schedule!.depositAmount, undefined, invoice.currency)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-on-surface-variant">{schedule!.balanceLabel}</span>
-                <span className="text-on-surface font-label-md">{formatMoney(schedule!.balanceAmount)}</span>
+                <span className="text-on-surface font-label-md">{formatMoney(schedule!.balanceAmount, undefined, invoice.currency)}</span>
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-on-surface-variant">Subtotal</span>
-                <span className="text-on-surface">{formatMoney(schedule!.total)}</span>
+                <span className="text-on-surface">{formatMoney(schedule!.total, undefined, invoice.currency)}</span>
               </div>
               <div className="flex justify-between items-center pt-3 border-t border-sand-stone bg-savanna-green text-on-primary rounded-lg px-4 py-3">
                 <span className="font-label-md text-sm">TOTAL</span>
-                <span className="font-headline-md text-[22px]">{formatMoney(schedule!.total)}</span>
+                <span className="font-headline-md text-[22px]">{formatMoney(schedule!.total, undefined, invoice.currency)}</span>
               </div>
             </div>
           </div>
 
           <div className="pt-6 border-t border-sand-stone text-center">
             <p className="text-on-surface-variant text-xs mb-1">
-              Bank transfer details will be shared directly by your safari consultant. All amounts are in Tanzanian shillings (TZS).
+              Bank transfer details will be shared directly by your safari consultant. All amounts are in {invoice.currency === 'USD' ? 'US dollars (USD)' : 'Tanzanian shillings (TZS)'}.
             </p>
             <p className="text-on-surface-variant text-xs italic">
               Thank you for choosing Pande Wilderness Safari. We look forward to hosting your adventure.

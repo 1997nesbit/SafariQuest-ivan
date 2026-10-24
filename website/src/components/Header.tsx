@@ -7,6 +7,7 @@ import { NavLink } from '../i18n/routing'
 import { useCurrentLocale, useLocalizedNavigate as useNavigate } from '../i18n/useLocale'
 import { localizeHome } from '../i18n/localize'
 import { LanguageSwitcher } from './LanguageSwitcher'
+import { CurrencySwitcher } from './CurrencySwitcher'
 
 export function Header() {
   const { t } = useTranslation('common')
@@ -42,16 +43,16 @@ export function Header() {
       <nav className="flex items-center px-5 md:px-8 lg:px-6 xl:px-margin-desktop py-4 w-full max-w-container-max mx-auto">
         <NavLink
           to="/"
-          className="flex items-center gap-2 lg:shrink-0 lg:whitespace-nowrap mr-6 xl:mr-10"
+          className="flex items-center gap-2 lg:shrink-0 lg:whitespace-nowrap mr-6 lg:mr-4 xl:mr-10"
           onClick={() => setMenuOpen(false)}
         >
           <img src="/images/pande-safaris-logo.svg" alt="" className="h-10 w-10 shrink-0" />
-          <span className="font-headline-md text-headline-md font-bold text-savanna-green">
+          <span className="font-headline-md text-headline-md lg:text-[22px] xl:text-headline-md font-bold text-savanna-green">
             {t('brandName')}
           </span>
         </NavLink>
 
-        <div className="hidden lg:flex items-center gap-4 xl:gap-8 shrink-0">
+        <div className="hidden lg:flex items-center gap-3 xl:gap-8 shrink-0">
           {NAV_LINKS.map((link) => (
             <NavLink key={link.to} to={link.to} className={navLinkClass}>
               {link.label}
@@ -60,7 +61,7 @@ export function Header() {
         </div>
         <div className="flex-1" />
 
-        <div className="flex items-center gap-1.5 xl:gap-2 shrink-0 lg:ml-6 xl:ml-10">
+        <div className="flex items-center gap-1.5 xl:gap-2 shrink-0 lg:ml-4 xl:ml-10">
           <NavLink
             to="/plan"
             className="hidden lg:flex items-center bg-savanna-green text-on-primary font-label-md text-label-md px-4 xl:px-6 py-3 rounded hover:opacity-90 transition-opacity shrink-0 mr-1 xl:mr-2 whitespace-nowrap"
@@ -96,7 +97,8 @@ export function Header() {
               <UserCircle size={20} />
             </NavLink>
           )}
-          <div className="hidden lg:block">
+          <div className="hidden lg:flex items-center gap-2 shrink-0">
+            <CurrencySwitcher />
             <LanguageSwitcher />
           </div>
           <button
@@ -172,6 +174,7 @@ export function Header() {
               {t('signIn')}
             </NavLink>
           )}
+          <CurrencySwitcher variant="mobile" />
           <LanguageSwitcher variant="mobile" />
         </div>
       )}

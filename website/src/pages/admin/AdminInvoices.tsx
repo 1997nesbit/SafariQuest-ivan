@@ -103,7 +103,7 @@ export function AdminInvoices() {
                       <p className="text-xs text-on-surface-variant">{invoice.customerEmail}</p>
                     </td>
                     <td className="px-5 py-4 text-sm text-on-surface-variant">{invoice.packageTitle}</td>
-                    <td className="px-5 py-4 text-sm text-on-surface">{formatMoney(invoice.amount)}</td>
+                    <td className="px-5 py-4 text-sm text-on-surface">{formatMoney(invoice.amount, undefined, invoice.currency)}</td>
                     <td className="px-5 py-4 text-sm text-on-surface-variant">{invoice.issuedDate}</td>
                     <td className="px-5 py-4 text-sm text-on-surface-variant">{invoice.dueDate}</td>
                     <td className="px-5 py-4">

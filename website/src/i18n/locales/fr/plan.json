@@ -126,7 +126,8 @@
     "back": "Retour",
     "processing": "Traitement en cours…",
     "payAndBook": "Payer {{amount}} et réserver",
-    "somethingWentWrong": "Une erreur s'est produite. Veuillez réessayer."
+    "somethingWentWrong": "Une erreur s'est produite. Veuillez réessayer.",
+    "subtitleUsd": "Votre réservation est en dollars américains (USD)."
   },
   "message": {
     "destinations": "Destinations : {{list}}",

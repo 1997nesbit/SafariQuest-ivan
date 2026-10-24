@@ -41,6 +41,7 @@ export function SafariDetail() {
       accommodation={safari.accommodation}
       locationLabel={safari.destination}
       price={safari.price}
+      priceUsd={safari.priceUsd}
       overview={safari.overview}
       highlights={safari.highlights}
       included={safari.included}

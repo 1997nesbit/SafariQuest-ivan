@@ -3,7 +3,8 @@ import { Link } from '../i18n/routing'
 import { Bed, CalendarBlank, CheckCircle, Clock, MapPin, SealCheck, Star, XCircle, ArrowRight, ChatCircleText } from '@phosphor-icons/react'
 import { Reveal } from './Reveal'
 import type { ItineraryDay } from '../api/safaris'
-import { formatMoney } from '../lib/money'
+import { formatProductPrice } from '../lib/money'
+import { useDisplayCurrency } from '../lib/currencyPreference'
 
 /** Shared detail-page layout for anything shaped like a bookable safari — a full
  * SafariPackage or a region-scoped RegionSafari. Both fetch their own data and pass in
@@ -18,6 +19,7 @@ export interface SafariLikeDetailProps {
   accommodation: string
   locationLabel: string
   price: number
+  priceUsd: number | null
   overview: string
   highlights: string[]
   included: string[]
@@ -36,6 +38,7 @@ export function SafariLikeDetail({
   accommodation,
   locationLabel,
   price,
+  priceUsd,
   overview,
   highlights,
   included,
@@ -44,6 +47,7 @@ export function SafariLikeDetail({
   bookPath,
 }: SafariLikeDetailProps) {
   const { t, i18n } = useTranslation('safaris')
+  const { currency } = useDisplayCurrency()
   return (
     <section className="pt-28 md:pt-32 pb-16 md:pb-section-gap px-5 md:px-margin-desktop max-w-container-max mx-auto">
       {/* Hero */}
@@ -160,9 +164,17 @@ export function SafariLikeDetail({
               <p className="font-body-md text-body-md text-on-surface-variant mb-4">
                 {t('detail.bookSubtitle')}
               </p>
-              <div className="font-display-lg text-[32px] text-savanna-green font-bold">
-                {t('detail.fromPrice', { price: formatMoney(price, i18n.language) })}{' '}
-                <span className="font-body-md text-body-md font-normal text-on-surface-variant">{t('detail.perPerson')}</span>
+              {/* Prices are per adult; children 2–11 pay half (bookings/pricing.py). */}
+              <div>
+                <span className="block font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">
+                  {t('detail.priceFrom')}
+                </span>
+                <span className="block font-display-lg text-[32px] leading-tight text-savanna-green font-bold">
+                  {formatProductPrice({ price, priceUsd }, currency, i18n.language)}
+                </span>
+                <span className="block mt-1 font-body-md text-sm text-on-surface-variant">
+                  {t('detail.perAdult')} · {t('detail.childrenHalfPrice')}
+                </span>
               </div>
             </div>
 

@@ -86,7 +86,7 @@ export function Footer() {
             </li>
             <li className="flex items-center gap-2 text-on-surface-variant">
               <Phone size={18} className="shrink-0" />
-              <a className="hover:text-terracotta transition-colors" href={`tel:${contact.phoneHref}`}>{contact.phone}</a>
+              <a className="hover:text-terracotta transition-colors" href={contact.phoneHref}>{contact.phone}</a>
             </li>
             <li className="flex items-center gap-2 text-on-surface-variant">
               <EnvelopeSimple size={18} className="shrink-0" />

@@ -21,7 +21,7 @@ class RegionSafariSerializer(serializers.ModelSerializer):
         model = RegionSafari
         fields = [
             "slug", "title", "image", "image_alt", "gallery_images", "rating", "days",
-            "accommodation", "price", "badge", "signature", "region", "parks",
+            "accommodation", "price", "price_usd", "badge", "signature", "region", "parks",
             "overview", "highlights", "included", "excluded", "itinerary",
         ]
 

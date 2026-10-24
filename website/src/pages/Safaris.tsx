@@ -4,7 +4,9 @@ import { Link } from '../i18n/routing'
 import { FunnelSimple, ShieldCheck, Leaf, Medal } from '@phosphor-icons/react'
 import { Reveal } from '../components/Reveal'
 import { SafariCard } from '../components/SafariCard'
-import { getSafaris } from '../api/safaris'
+import { getSafaris, type SafariPackage } from '../api/safaris'
+import { formatMoney, productPrice, type Currency } from '../lib/money'
+import { useDisplayCurrency } from '../lib/currencyPreference'
 import { useFetch } from '../lib/useFetch'
 import { useSiteImages } from '../lib/useSiteImage'
 
@@ -17,9 +19,9 @@ const DURATION_OPTIONS = [
 
 const BUDGET_OPTIONS = [
   { key: 'any', value: '' },
-  { key: 'under-7500k', value: 'under-7500k' },
-  { key: '7500k-15m', value: '7500k-15m' },
-  { key: '15m+', value: '15m+' },
+  { key: 'low', value: 'low' },
+  { key: 'mid', value: 'mid' },
+  { key: 'high', value: 'high' },
 ] as const
 
 const DESTINATION_OPTIONS = [
@@ -38,20 +40,32 @@ function matchesDuration(days: number, filter: string) {
   return true
 }
 
-// Per-person price bands in TZS (prices are stored in shillings).
-const BUDGET_LOW = 7_500_000
-const BUDGET_HIGH = 15_000_000
+// Per-adult price bands in each currency, compared against the price in that currency.
+const BUDGET_BANDS: Record<Currency, { low: number; high: number }> = {
+  TZS: { low: 15_000_000, high: 20_000_000 },
+  USD: { low: 6_000, high: 8_000 },
+}
 
-function matchesBudget(price: number, filter: string) {
+function matchesBudget(safari: SafariPackage, currency: Currency, filter: string) {
   if (!filter) return true
-  if (filter === 'under-7500k') return price < BUDGET_LOW
-  if (filter === '7500k-15m') return price >= BUDGET_LOW && price <= BUDGET_HIGH
-  if (filter === '15m+') return price > BUDGET_HIGH
+  // A trip with no USD price is filtered by its TZS price, the one shown on its card.
+  const usd = currency === 'USD' ? productPrice(safari, 'USD') : null
+  const [price, bandCurrency]: [number, Currency] = usd === null ? [safari.price, 'TZS'] : [usd, 'USD']
+  const { low, high } = BUDGET_BANDS[bandCurrency]
+  if (filter === 'low') return price < low
+  if (filter === 'mid') return price >= low && price <= high
+  if (filter === 'high') return price > high
   return true
 }
 
 export function Safaris() {
-  const { t } = useTranslation('safaris')
+  const { t, i18n } = useTranslation('safaris')
+  const { currency } = useDisplayCurrency()
+  const band = BUDGET_BANDS[currency]
+  const budgetAmounts = {
+    low: formatMoney(band.low, i18n.language, currency),
+    high: formatMoney(band.high, i18n.language, currency),
+  }
   const siteImage = useSiteImages()
   const heroPhoto = siteImage('safaris_hero', "A green Land Rover safari vehicle driving through tall golden grass in the Serengeti at hazy sunset.")
   const [duration, setDuration] = useState('')
@@ -65,10 +79,10 @@ export function Safaris() {
       (safariPackages ?? []).filter(
         (safari) =>
           matchesDuration(safari.days, duration) &&
-          matchesBudget(safari.price, budget) &&
+          matchesBudget(safari, currency, budget) &&
           (!destination || safari.destination === destination),
       ),
-    [safariPackages, duration, budget, destination],
+    [safariPackages, duration, budget, destination, currency],
   )
 
   const selectClass = (active: boolean) =>
@@ -123,7 +137,7 @@ export function Safaris() {
             >
               {BUDGET_OPTIONS.map((opt) => (
                 <option key={opt.key} value={opt.value}>
-                  {t(`filter.budget.${opt.key}`)}
+                  {t(`filter.budget.${opt.key}`, budgetAmounts)}
                 </option>
               ))}
             </select>

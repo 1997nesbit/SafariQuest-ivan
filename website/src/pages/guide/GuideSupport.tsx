@@ -60,7 +60,7 @@ export function GuideSupport() {
           <div className="flex gap-3">
             {/* The company's own numbers (config/contact.ts), not a guide-specific line. */}
             <a
-              href={`tel:${contact.phoneHref}`}
+              href={contact.phoneHref}
               className="flex-1 flex items-center justify-center gap-2 bg-surface-container text-on-surface py-3 rounded-lg font-label-md text-label-md hover:bg-surface-container-high transition-colors"
             >
               <Phone size={20} />

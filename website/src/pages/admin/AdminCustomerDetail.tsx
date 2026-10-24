@@ -4,7 +4,7 @@ import { getCustomer } from '../../api/customers'
 import { STAGE_LABELS } from '../../api/bookings'
 import { INVOICE_STATUS_LABELS, type InvoiceStatus } from '../../api/invoices'
 import { useFetch } from '../../lib/useFetch'
-import { formatMoney } from '../../lib/money'
+import { formatMoney, formatTotals } from '../../lib/money'
 
 const INVOICE_STATUS_STYLES: Record<InvoiceStatus, string> = {
   unpaid: 'bg-surface-container text-on-surface-variant',
@@ -73,7 +73,7 @@ export function AdminCustomerDetail() {
         </div>
         <div className="flex flex-col bg-surface p-4 rounded-lg border border-sand-stone min-w-[180px]">
           <span className="font-label-sm text-xs text-on-surface-variant mb-1 uppercase tracking-wider">Lifetime Spend</span>
-          <span className="font-headline-md text-[22px] text-savanna-green font-bold">{formatMoney(customer.totalSpend)}</span>
+          <span className="font-headline-md text-[22px] text-savanna-green font-bold">{formatTotals(customer.totalSpend)}</span>
         </div>
       </div>
 
@@ -98,7 +98,7 @@ export function AdminCustomerDetail() {
                     {STAGE_LABELS[b.stage]}
                   </span>
                 </div>
-                <span className="font-label-md text-sm text-on-surface">{formatMoney(b.subtotal)}</span>
+                <span className="font-label-md text-sm text-on-surface">{formatMoney(b.subtotal, undefined, b.currency)}</span>
               </Link>
             ))
           )}
@@ -127,7 +127,7 @@ export function AdminCustomerDetail() {
                 <span className={`px-2 py-0.5 rounded-full text-xs font-label-sm ${INVOICE_STATUS_STYLES[inv.status]}`}>
                   {INVOICE_STATUS_LABELS[inv.status]}
                 </span>
-                <span className="font-label-md text-sm text-on-surface">{formatMoney(inv.amount)}</span>
+                <span className="font-label-md text-sm text-on-surface">{formatMoney(inv.amount, undefined, inv.currency)}</span>
               </Link>
             ))}
           </div>

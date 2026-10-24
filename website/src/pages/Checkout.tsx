@@ -1,8 +1,8 @@
-import { Fragment, useState, type FormEvent } from 'react'
+import { Fragment, useState, type FormEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import { Link } from '../i18n/routing'
-import { useCurrentLocale } from '../i18n/useLocale'
+import { useCurrentLocale, useLocalizedNavigate as useNavigate } from '../i18n/useLocale'
 import {
   DeviceMobile,
   CalendarBlank,
@@ -30,11 +30,26 @@ import { contact } from '../config/contact'
 import { AccountFields, type AccountMode } from '../components/checkout/AccountFields'
 import { CountInput } from '../components/checkout/CountInput'
 import { MobileMoneyNotice } from '../components/checkout/MobileMoneyNotice'
+import { PaymentWaiting } from '../components/checkout/PaymentWaiting'
+import { PhoneNumberField } from '../components/checkout/PhoneNumberField'
+import { canPayWith } from '../lib/mobileNumbers'
 import { PaymentOutageNotice } from '../components/checkout/PaymentOutageNotice'
 import { ReferralCodeField } from '../components/checkout/ReferralCodeField'
-import { formatMoney } from '../lib/money'
+import { formatMoney, productPrice, type Currency } from '../lib/money'
+import { useDisplayCurrency } from '../lib/currencyPreference'
+import { CurrencyChoice } from '../components/checkout/CurrencyChoice'
+import { UsdComingSoonNotice } from '../components/checkout/UsdComingSoonNotice'
 
 type CheckoutStep = 'details' | 'review' | 'account' | 'payment'
+
+/** A direct payment whose prompt is on the tourist's phone, waiting for their PIN. */
+interface WaitingPayment {
+  bookingId: number
+  paymentId: number
+  phoneMasked: string
+  amount: number
+  currency: Currency
+}
 
 const ALL_STEP_KEYS: CheckoutStep[] = ['details', 'account', 'review', 'payment']
 
@@ -77,6 +92,7 @@ export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
   const { data: seasons } = useFetch(getSeasons, [])
   const { data: paymentAvailability } = useFetch(getPaymentAvailability, [])
   const locale = useCurrentLocale()
+  const navigate = useNavigate()
   const { user, login, register, logout } = useAuth()
   const isAuthenticated = Boolean(user)
 
@@ -100,6 +116,12 @@ export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
   // Payment step — the tourist pays on Snippe's hosted checkout; the server prices the
   // deposit itself.
   const [referralCode, setReferralCode] = useState('')
+  // Direct payments: the number the prompt goes to, and the prompt now waiting for a PIN.
+  const [phone, setPhone] = useState('')
+  // What this booking is priced and paid in: the visitor's currency, shared with the
+  // header toggle — choosing here switches the whole site, and vice versa.
+  const { currency: chosenCurrency, setCurrency: setChosenCurrency } = useDisplayCurrency()
+  const [waiting, setWaiting] = useState<WaitingPayment | null>(null)
   const [referralDiscountPercent, setReferralDiscountPercent] = useState<number | null>(null)
 
   const loading = safariLoading || regionSafariLoading
@@ -155,7 +177,6 @@ export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
     image: source.image,
     imageAlt: source.imageAlt,
     days: source.days,
-    price: source.price,
     destination:
       kind === 'safari'
         ? (source as SafariPackage).destination
@@ -163,8 +184,14 @@ export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
           (source as RegionSafari).region,
   }
 
+  // A trip with no USD price can only be booked in TZS, whatever was chosen.
+  const usdPriced = productPrice(source, 'USD') !== null
+  const currency: Currency = usdPriced ? chosenCurrency : 'TZS'
+  const basePrice = productPrice(source, currency) ?? source.price
+  const money = (amount: number) => formatMoney(amount, i18n.language, currency)
+
   const activeSeason = activeSeasonForDate(seasons ?? [], preferredDate)
-  const adultPrice = seasonalPrice(item.price, seasons ?? [], preferredDate)
+  const adultPrice = seasonalPrice(basePrice, seasons ?? [], preferredDate)
   const childPrice = Math.round(adultPrice * 0.5)
   const total = adultPrice * adults + childPrice * children
   const discountedTotal = referralDiscountPercent ? Math.round(total * (1 - referralDiscountPercent / 100)) : total
@@ -225,6 +252,7 @@ export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
         guests: adults + children,
         children,
         message: `${travelersText}.`,
+        currency,
       }
       const bookingKey = JSON.stringify(bookingInput)
       let bookingId = pendingBooking?.key === bookingKey ? pendingBooking.id : null
@@ -232,19 +260,53 @@ export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
         bookingId = (await createBooking(bookingInput)).id
         setPendingBooking({ id: bookingId, key: bookingKey })
       }
-      const checkout = await payForBooking(bookingId, locale, referralDiscountPercent ? referralCode.trim() : undefined)
-      // Off to Snippe's hosted checkout; it sends the tourist back to /booking-confirmed.
-      // `submitting` stays true so the button can't be pressed again on the way out.
-      window.location.assign(checkout.checkoutUrl)
+      const checkout = await payForBooking(bookingId, locale, {
+        referralCode: referralDiscountPercent ? referralCode.trim() : undefined,
+        phoneNumber: payingByPhone ? phone : undefined,
+      })
+      if (checkout.mode === 'hosted') {
+        // Off to Snippe's checkout page; it sends the tourist back to /booking-confirmed.
+        // `submitting` stays true so the button can't be pressed again on the way out.
+        window.location.assign(checkout.checkoutUrl)
+        return
+      }
+      setWaiting({
+        bookingId,
+        paymentId: checkout.paymentId,
+        phoneMasked: checkout.phoneMasked,
+        amount: checkout.amount,
+        currency,
+      })
+      setSubmitting(false)
     } catch (err) {
       setSubmitError(err instanceof ApiError ? err.message : t('somethingWentWrong'))
       setSubmitting(false)
     }
   }
 
+  // Direct unless the server says hosted; it's the server that decides either way.
+  const directMode = paymentAvailability?.mode !== 'hosted'
+  // TZS goes to Snippe (a phone prompt in direct mode); USD to Senjaropay, once connected.
+  const payingByPhone = currency === 'TZS' && directMode
+  const usdUnavailable = currency === 'USD' && !paymentAvailability?.currencies?.USD
+  const snippeBlocked = currency === 'TZS' && Boolean(paymentAvailability?.blocked)
+  const payDisabled =
+    step === 'payment' &&
+    (snippeBlocked || usdUnavailable || waiting !== null || (payingByPhone && !canPayWith(phone)))
+
+  let paymentMethodField: ReactNode = <MobileMoneyNotice />
+  if (currency === 'USD') {
+    // While USD can't be paid, the coming-soon callout at the top of the step says so.
+    paymentMethodField = null
+  } else if (directMode) {
+    paymentMethodField = (
+      <PhoneNumberField id="checkout-phone" value={phone} onChange={setPhone} disabled={submitting} />
+    )
+  }
+
   // `amount` is only used by cta.payAndBook; the other labels ignore it.
   const ctaLabel = t(ctaLabelKey({ step, submitting, accountMode, isAuthenticated }), {
-    amount: formatMoney(deposit, i18n.language),
+    amount: money(deposit),
   })
 
   return (
@@ -364,6 +426,15 @@ export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
                       />
                     </div>
                   </div>
+                  <div className="mt-6">
+                    <CurrencyChoice
+                      name="checkout-currency"
+                      value={currency}
+                      onChange={setChosenCurrency}
+                      usdPriced={usdPriced}
+                      usdPayable={Boolean(paymentAvailability?.currencies?.USD)}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -468,21 +539,39 @@ export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
                     {t('payment.heading')}
                   </h1>
                   <p className="text-on-surface-variant mb-6">
-                    {t('payment.subtitle')}
+                    {currency === 'USD' ? t('payment.subtitleUsd') : t('payment.subtitle')}
                   </p>
 
-                  <ReferralCodeField
-                    code={referralCode}
-                    onCodeChange={setReferralCode}
-                    onDiscountChange={setReferralDiscountPercent}
-                  />
-
-                  <div className="mt-6">
-                    <MobileMoneyNotice />
-                    <div className="mt-4">
-                      <PaymentOutageNotice availability={paymentAvailability} />
-                    </div>
-                  </div>
+                  {waiting ? (
+                    <PaymentWaiting
+                      bookingId={waiting.bookingId}
+                      paymentId={waiting.paymentId}
+                      phoneMasked={waiting.phoneMasked}
+                      amount={waiting.amount}
+                      currency={waiting.currency}
+                      onCompleted={() =>
+                        void navigate(`/booking-confirmed?booking=${waiting.bookingId}&payment=${waiting.paymentId}`)
+                      }
+                      onTryAgain={() => setWaiting(null)}
+                    />
+                  ) : (
+                    <>
+                      {usdUnavailable && (
+                        <div className="mb-6">
+                          <UsdComingSoonNotice onSwitchToTzs={() => setChosenCurrency('TZS')} />
+                        </div>
+                      )}
+                      <ReferralCodeField
+                        code={referralCode}
+                        onCodeChange={setReferralCode}
+                        onDiscountChange={setReferralDiscountPercent}
+                      />
+                      <div className="mt-6 space-y-4">
+                        {paymentMethodField}
+                        {currency === 'TZS' && <PaymentOutageNotice availability={paymentAvailability} />}
+                      </div>
+                    </>
+                  )}
 
                   <button
                     type="button"
@@ -547,13 +636,13 @@ export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
 
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between text-on-surface-variant">
-                    <span>{t('priceLine.adults', { count: adults, price: formatMoney(adultPrice, i18n.language) })}</span>
-                    <span>{formatMoney((adultPrice * adults), i18n.language)}</span>
+                    <span>{t('priceLine.adults', { count: adults, price: money(adultPrice) })}</span>
+                    <span>{money(adultPrice * adults)}</span>
                   </div>
                   {children > 0 && (
                     <div className="flex justify-between text-on-surface-variant">
-                      <span>{t('priceLine.children', { count: children, price: formatMoney(childPrice, i18n.language) })}</span>
-                      <span>{formatMoney((childPrice * children), i18n.language)}</span>
+                      <span>{t('priceLine.children', { count: children, price: money(childPrice) })}</span>
+                      <span>{money(childPrice * children)}</span>
                     </div>
                   )}
                   {activeSeason && (
@@ -565,14 +654,14 @@ export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
 
                 <div className="flex justify-between items-baseline pt-4 border-t border-sand-stone">
                   <span className="font-label-md text-label-md text-on-surface-variant">{t('summary.total')}</span>
-                  <span className="font-headline-md text-[28px] text-savanna-green">{formatMoney(total, i18n.language)}</span>
+                  <span className="font-headline-md text-[28px] text-savanna-green">{money(total)}</span>
                 </div>
                 <div className="flex justify-between font-label-md text-label-md text-terracotta">
                   <span>
                     {t('summary.depositDueNow')}
                     {referralDiscountPercent ? ` (${referralDiscountPercent}% off applied)` : ''}
                   </span>
-                  <span>{formatMoney(deposit, i18n.language)}</span>
+                  <span>{money(deposit)}</span>
                 </div>
 
                 {submitError && (
@@ -583,7 +672,7 @@ export function Checkout({ kind }: { kind: 'safari' | 'regionSafari' }) {
                 <button
                   type="submit"
                   form="checkout-form"
-                  disabled={submitting || (step === 'payment' && Boolean(paymentAvailability?.blocked))}
+                  disabled={submitting || payDisabled}
                   className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 bg-savanna-green text-on-primary py-4 rounded-lg font-label-md text-label-md hover:opacity-90 transition-opacity shadow-lg shadow-savanna-green/20 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {ctaLabel}

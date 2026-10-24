@@ -19,6 +19,22 @@ function safeNextPath(nextParam: string | null): string | null {
   return nextParam
 }
 
+const STAFF_PORTAL = /^\/(admin|guide)(\/|$)/
+
+function isWithin(path: string, base: string): boolean {
+  return path === base || path.startsWith(`${base}/`)
+}
+
+/** Where to go after signing in: `next` only when it fits the account that just signed
+ * in, otherwise its own home. Staff (home /admin or /guide) stay inside their portal —
+ * a ?next= left over from a tourist page (/agent, /become-agent) used to drop an admin
+ * on the agent sign-up page. Tourists are never sent into a staff portal. */
+function destinationAfterSignIn(next: string | null, home: string): string {
+  if (!next) return home
+  if (STAFF_PORTAL.test(home)) return isWithin(next, home) ? next : home
+  return STAFF_PORTAL.test(next) ? home : next
+}
+
 function tabClass(active: boolean): string {
   const state = active ? 'text-savanna-green border-b-2 border-savanna-green' : 'text-on-surface-variant hover:text-savanna-green'
   return `pb-3 font-label-md text-label-md transition-colors ${state}`
@@ -42,7 +58,7 @@ export function SignIn() {
   const passwordsMismatch = signUpConfirmPassword !== '' && signUpConfirmPassword !== signUpPassword
 
   function goOnward(home: string) {
-    navigateHome(next ?? home)
+    navigateHome(destinationAfterSignIn(next, home))
   }
 
   async function handleSignInSubmit(event: FormEvent<HTMLFormElement>) {

@@ -57,7 +57,7 @@ export function AccountInvoices() {
                 {allInvoices.map((invoice) => (
                   <tr key={invoice.id} className="hover:bg-surface-container-low transition-colors">
                     <td className="px-5 py-4 font-label-md text-sm text-on-surface">{invoice.packageTitle}</td>
-                    <td className="px-5 py-4 text-sm text-on-surface">{formatMoney(invoice.amount, i18n.language)}</td>
+                    <td className="px-5 py-4 text-sm text-on-surface">{formatMoney(invoice.amount, i18n.language, invoice.currency)}</td>
                     <td className="px-5 py-4 text-sm text-on-surface-variant">{invoice.issuedDate}</td>
                     <td className="px-5 py-4 text-sm text-on-surface-variant">{invoice.dueDate}</td>
                     <td className="px-5 py-4">

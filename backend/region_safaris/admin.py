@@ -10,6 +10,6 @@ class RegionSafariItineraryDayInline(admin.TabularInline):
 
 @admin.register(RegionSafari)
 class RegionSafariAdmin(admin.ModelAdmin):
-    list_display = ["slug", "title", "region", "price", "signature"]
+    list_display = ["slug", "title", "region", "price", "price_usd", "signature"]
     list_filter = ["region"]
     inlines = [RegionSafariItineraryDayInline]

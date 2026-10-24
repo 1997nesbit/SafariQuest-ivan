@@ -1,4 +1,5 @@
 import { apiGet, apiGetPage, apiPatch, apiPost, type Page } from '../lib/api'
+import type { Currency } from '../lib/money'
 import { mapQuoteLineItem, type QuoteLineItemApiShape } from './bookings'
 import { fromApiShape } from '../lib/caseMap'
 
@@ -27,6 +28,8 @@ export interface Invoice {
   amount: number
   tripTotal: number | null
   remainingBalance: number | null
+  /** Every amount on the invoice is in its booking's currency. */
+  currency: Currency
   status: InvoiceStatus
   issuedDate: string
   dueDate: string
@@ -46,12 +49,17 @@ export interface InvoiceDetail extends Invoice {
   guests: number
 }
 
-export interface FinanceSummary {
+/** One currency's finance totals. TZS and USD are totalled separately, never added. */
+export interface CurrencyFinance {
   totalInvoiced: number
   totalCollected: number
   totalOutstanding: number
-  overdueCount: number
   overdueAmount: number
+}
+
+export interface FinanceSummary {
+  byCurrency: Record<Currency, CurrencyFinance>
+  overdueCount: number
 }
 
 export interface InvoiceApiShape {
@@ -63,6 +71,7 @@ export interface InvoiceApiShape {
   amount: number
   trip_total: number | null
   remaining_balance: number | null
+  currency: Currency
   status: InvoiceStatus
   issued_date: string
   due_date: string
@@ -77,12 +86,16 @@ interface InvoiceDetailApiShape extends InvoiceApiShape {
   guests: number
 }
 
-interface FinanceSummaryApiShape {
+interface CurrencyFinanceApiShape {
   total_invoiced: number
   total_collected: number
   total_outstanding: number
-  overdue_count: number
   overdue_amount: number
+}
+
+interface FinanceSummaryApiShape {
+  by_currency: Record<Currency, CurrencyFinanceApiShape>
+  overdue_count: number
 }
 
 export function mapInvoice(raw: InvoiceApiShape): Invoice {
@@ -100,7 +113,11 @@ function mapInvoiceDetail(raw: InvoiceDetailApiShape): InvoiceDetail {
 }
 
 function mapFinanceSummary(raw: FinanceSummaryApiShape): FinanceSummary {
-  return fromApiShape<FinanceSummaryApiShape, FinanceSummary>(raw)
+  const mapTotals = (t: CurrencyFinanceApiShape) => fromApiShape<CurrencyFinanceApiShape, CurrencyFinance>(t)
+  return {
+    byCurrency: { TZS: mapTotals(raw.by_currency.TZS), USD: mapTotals(raw.by_currency.USD) },
+    overdueCount: raw.overdue_count,
+  }
 }
 
 /** One page of invoices, optionally filtered by status. Both admin consumers

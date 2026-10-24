@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { MagnifyingGlass, UserPlus, ChartLineUp, Money, ArrowRight } from '@phosphor-icons/react'
 import { getCustomers } from '../../api/customers'
 import { useFetch } from '../../lib/useFetch'
-import { formatMoney } from '../../lib/money'
+import { emptyTotals, formatTotals } from '../../lib/money'
 
 function initials(name: string) {
   return name
@@ -47,7 +47,8 @@ export function AdminCustomers() {
   const newCustomers = travellers.filter((c) => c.tripCount === 0).length
   const repeatCustomers = travellers.filter((c) => c.tripCount > 1).length
   const repeatRate = travellers.length ? Math.round((repeatCustomers / travellers.length) * 100) : 0
-  const totalRevenue = allCustomers.reduce((sum, c) => sum + c.totalSpend, 0)
+  // Per currency: TZS and USD spend are never added together.
+  const totalRevenue = allCustomers.reduce((sum, c) => ({ TZS: sum.TZS + c.totalSpend.TZS, USD: sum.USD + c.totalSpend.USD }), emptyTotals())
 
   return (
     <div>
@@ -88,7 +89,7 @@ export function AdminCustomers() {
               <p className="text-xs text-on-surface-variant/70">Across all customers</p>
             </div>
           </div>
-          <p className="font-headline-md text-[26px] text-on-surface">{formatMoney(totalRevenue)}</p>
+          <p className="font-headline-md text-[26px] text-on-surface">{formatTotals(totalRevenue)}</p>
         </div>
       </div>
 
@@ -156,7 +157,7 @@ export function AdminCustomers() {
                     {new Date(c.joinedDate).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 text-right text-on-surface-variant text-sm">{c.tripCount}</td>
-                  <td className="px-6 py-4 text-right font-label-md text-on-surface">{formatMoney(c.totalSpend)}</td>
+                  <td className="px-6 py-4 text-right font-label-md text-on-surface">{formatTotals(c.totalSpend)}</td>
                 </tr>
               ))}
               {filtered.length === 0 && (

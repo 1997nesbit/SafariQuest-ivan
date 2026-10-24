@@ -12,6 +12,8 @@ import math
 
 from pricing.models import Season
 
+from .currency import product_price
+
 CHILD_RATE = 0.5
 DEPOSIT_RATE = 0.3
 
@@ -22,7 +24,10 @@ def _js_round(value: float) -> int:
 
 
 def trip_total_for(booking, discount_percent=None) -> int:
+    """In the booking's own currency. BookingCreateSerializer only accepts a currency the
+    product has a price in, so the price is always there by the time this runs."""
     product = booking.safari if booking.safari_id else booking.region_safari
+    base_price = product_price(product, booking.currency)
     # First season covering the start date, in the order the site lists them
     # (SeasonViewSet) — the same pick as lib/seasonalPrice.ts.
     season = (
@@ -30,7 +35,7 @@ def trip_total_for(booking, discount_percent=None) -> int:
         .order_by("start_date", "id")
         .first()
     )
-    adult_price = _js_round(product.price * float(season.multiplier)) if season else product.price
+    adult_price = _js_round(base_price * float(season.multiplier)) if season else base_price
     child_price = _js_round(adult_price * CHILD_RATE)
     adults = booking.guests - booking.children
     total = adult_price * adults + child_price * booking.children

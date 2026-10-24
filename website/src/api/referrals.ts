@@ -1,8 +1,11 @@
 import { apiGet, apiPatch, apiPost } from '../lib/api'
+import type { Currency } from '../lib/money'
 
 export interface ReferralRedemptionSummary {
   bookingId: number
   commissionAmount: number
+  /** Commission is in the booking's currency. */
+  currency: Currency
   commissionStatus: 'pending' | 'paid'
   createdAt: string
 }
@@ -29,6 +32,7 @@ interface ReferralCodeApiShape {
   redemption: {
     bookingId: number
     commission_amount: number
+    currency: Currency
     commission_status: 'pending' | 'paid'
     created_at: string
   } | null
@@ -47,6 +51,7 @@ function normalizeCode(raw: ReferralCodeApiShape): ReferralCode {
       ? {
           bookingId: raw.redemption.bookingId,
           commissionAmount: raw.redemption.commission_amount,
+          currency: raw.redemption.currency,
           commissionStatus: raw.redemption.commission_status,
           createdAt: raw.redemption.created_at,
         }
@@ -134,6 +139,7 @@ export interface ReferralRedemption {
   discountPercent: number
   commissionPercent: number
   commissionAmount: number
+  currency: Currency
   commissionStatus: 'pending' | 'paid'
   createdAt: string
 }
@@ -150,6 +156,7 @@ interface ReferralRedemptionApiShape {
   discount_percent: string
   commission_percent: string
   commission_amount: number
+  currency: Currency
   commission_status: 'pending' | 'paid'
   created_at: string
 }
@@ -167,6 +174,7 @@ function normalizeRedemption(raw: ReferralRedemptionApiShape): ReferralRedemptio
     discountPercent: Number(raw.discount_percent),
     commissionPercent: Number(raw.commission_percent),
     commissionAmount: raw.commission_amount,
+    currency: raw.currency,
     commissionStatus: raw.commission_status,
     createdAt: raw.created_at,
   }

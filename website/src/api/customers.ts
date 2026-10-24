@@ -1,4 +1,5 @@
 import { apiGet, apiGetAllPages } from '../lib/api'
+import type { MoneyTotals } from '../lib/money'
 import { fromApiShape } from '../lib/caseMap'
 import { mapBooking, type Booking, type BookingApiShape } from './bookings'
 import { mapInvoice, type Invoice, type InvoiceApiShape } from './invoices'
@@ -11,7 +12,8 @@ export interface Customer {
   /** Has the referral agent profile switched on (may or may not also travel). */
   isReferralAgent: boolean
   tripCount: number
-  totalSpend: number
+  /** Per currency — a customer's TZS and USD bookings are never added together. */
+  totalSpend: MoneyTotals
   bookingIds: number[]
 }
 
@@ -27,7 +29,7 @@ interface CustomerApiShape {
   date_joined: string
   is_referral_agent: boolean
   trip_count: number
-  total_spend: number
+  total_spend: MoneyTotals
   booking_ids: number[]
 }
 

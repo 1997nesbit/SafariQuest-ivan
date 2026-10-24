@@ -10,10 +10,12 @@ import { getRegionSafaris } from '../../api/regionSafaris'
 import { useFetch } from '../../lib/useFetch'
 import { useTripPlan } from '../../components/plan/tripPlanStore'
 import { trackFunnelEvent } from '../../lib/funnelTracking'
-import { formatMoney } from '../../lib/money'
+import { formatProductPrice } from '../../lib/money'
+import { useDisplayCurrency } from '../../lib/currencyPreference'
 
 export function PlanExperiences() {
   const { t, i18n } = useTranslation('plan')
+  const { currency } = useDisplayCurrency()
   const { plan, toggleExperience } = useTripPlan()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -151,7 +153,7 @@ export function PlanExperiences() {
                                 {t('experiences.day', { count: safari.days })}
                               </span>
                               <span className="bg-surface/90 backdrop-blur-sm px-2.5 py-1 rounded-full text-label-sm font-label-sm text-on-surface">
-                                {formatMoney(safari.price, i18n.language)}
+                                {formatProductPrice(safari, currency, i18n.language)}
                               </span>
                             </div>
                           </div>
@@ -224,7 +226,7 @@ export function PlanExperiences() {
                                     {t('experiences.day', { count: safari.days })}
                                   </span>
                                   <span className="bg-surface/90 backdrop-blur-sm px-2.5 py-1 rounded-full text-label-sm font-label-sm text-on-surface">
-                                    {formatMoney(safari.price, i18n.language)}
+                                    {formatProductPrice(safari, currency, i18n.language)}
                                   </span>
                                 </div>
                               </div>

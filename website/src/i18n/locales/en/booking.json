@@ -69,7 +69,8 @@
     "heading": "Payment",
     "subtitle": "Pay the deposit with mobile money — M-Pesa, Airtel Money, Mixx by Yas or Halotel — to secure your booking.",
     "back": "Back",
-    "mobileMoneyNotice": "You'll be taken to Snippe's secure checkout to approve the payment on your phone, then brought back here."
+    "mobileMoneyNotice": "You'll be taken to Snippe's secure checkout to approve the payment on your phone, then brought back here.",
+    "subtitleUsd": "Your booking is priced in US dollars (USD)."
   },
   "trustBadges": {
     "certifiedOperator": "Certified Operator",
@@ -185,5 +186,42 @@
     "invalid": "This code isn't valid.",
     "earnAfterBooking": "Once you've booked, you can get your own referral code and earn a commission when friends book.",
     "earnAfterBookingWithRates": "Once you've booked, you can get your own referral code: friends get {{discount}}% off and you earn {{commission}}% commission."
+  },
+  "mobilePay": {
+    "phoneLabel": "Mobile money number",
+    "phonePlaceholder": "0754 123 456",
+    "phoneHint": "M-Pesa, Airtel Money, Mixx by Yas or Halotel. We'll send a payment request to this phone.",
+    "networkDetected": "{{network}} number",
+    "invalidPhone": "Enter a Tanzanian mobile number, e.g. 0754 123 456.",
+    "unsupportedNetwork": "Use an M-Pesa, Airtel Money, Mixx by Yas or Halotel number.",
+    "waitingHeading": "Check your phone",
+    "waitingBody": "We've sent a request for {{amount}} to {{phone}}. Enter your mobile money PIN to approve it.",
+    "waitingNote": "Keep this page open — it updates on its own once you approve.",
+    "stillWaiting": "We haven't had confirmation yet. If you approved the payment, it will show on your dashboard shortly and we'll email you.",
+    "resend": "Resend the request",
+    "resent": "Sent again — check your phone.",
+    "resendFailed": "Couldn't resend. Try again in a moment.",
+    "differentNumber": "Use a different number",
+    "failedHeading": "Payment didn't go through",
+    "failedBody": "The request was declined, timed out or expired, so nothing was charged. You can try again.",
+    "tryAgain": "Try again",
+    "payNow": "Pay {{amount}}",
+    "cancel": "Cancel"
+  },
+  "currencyChoice": {
+    "label": "Pay in",
+    "tzs": "Tanzanian shillings (TZS)",
+    "tzsHint": "Mobile money — M-Pesa, Airtel Money, Mixx by Yas, Halotel",
+    "usd": "US dollars (USD)",
+    "usdHint": "Card",
+    "usdHintSoon": "Card — enabled soon",
+    "usdNoPrice": "This trip doesn't have a USD price yet, so it's priced in TZS.",
+    "usdComingSoon": "USD card payments will be enabled soon. To pay now, choose TZS (mobile money), or contact us to arrange payment."
+  },
+  "usdSoon": {
+    "heading": "USD card payments are coming soon",
+    "body": "You can't pay in US dollars online just yet. Switch to Tanzanian shillings to pay your deposit now by mobile money, or call us and we'll arrange payment with you.",
+    "switchToTzs": "Pay in TZS instead",
+    "callUs": "Call {{phone}}"
   }
 }

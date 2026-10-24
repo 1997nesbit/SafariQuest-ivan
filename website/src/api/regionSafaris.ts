@@ -12,6 +12,7 @@ export interface RegionSafari {
   days: number
   accommodation: string
   price: number
+  priceUsd: number | null
   badge?: string
   signature?: boolean
   region: string
@@ -33,6 +34,7 @@ interface RegionSafariApiShape {
   days: number
   accommodation: string
   price: number
+  price_usd: number | null
   badge: string
   signature: boolean
   region: string
@@ -78,6 +80,7 @@ export interface RegionSafariInput {
   days: number
   accommodation: string
   price: number
+  priceUsd: number | null
   badge?: string
   signature: boolean
   region: string

@@ -5,6 +5,8 @@ from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from rest_framework import serializers
 
+from bookings.currency import CURRENCIES
+
 
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -70,7 +72,11 @@ class CustomerSerializer(serializers.ModelSerializer):
         return len(obj.bookings.all())
 
     def get_total_spend(self, obj):
-        return sum(b.subtotal for b in obj.bookings.all())
+        """Per currency — a customer's TZS and USD bookings are never added together."""
+        totals = {code: 0 for code in CURRENCIES}
+        for booking in obj.bookings.all():
+            totals[booking.currency] += booking.subtotal
+        return totals
 
     def get_booking_ids(self, obj):
         return [b.id for b in obj.bookings.all()]

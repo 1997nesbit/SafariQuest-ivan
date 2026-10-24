@@ -3,7 +3,7 @@ import { getSafaris, type SafariPackage } from '../../api/safaris'
 import { getBookings, type Booking } from '../../api/bookings'
 import { getFunnelSummary, type FunnelSummary } from '../../api/analytics'
 import { useFetch } from '../../lib/useFetch'
-import { formatMoney } from '../../lib/money'
+import { emptyTotals, formatMoney, formatTotals, sumByCurrency, type MoneyTotals } from '../../lib/money'
 
 const REVENUE_STAGES: Booking['stage'][] = ['deposit_paid', 'confirmed', 'completed']
 
@@ -33,24 +33,29 @@ export function AdminAnalytics() {
   const allSafaris = safaris ?? []
 
   const revenueBookings = allBookings.filter((b) => REVENUE_STAGES.includes(b.stage))
-  const totalRevenue = revenueBookings.reduce((s, b) => s + b.subtotal, 0)
-  const outstandingBalance = allBookings
-    .filter((b) => b.stage === 'new_inquiry' || b.stage === 'quoted')
-    .reduce((s, b) => s + b.subtotal, 0)
+  // Per currency throughout: TZS and USD are never added together.
+  const totalRevenue = sumByCurrency(revenueBookings, (b) => b.subtotal, (b) => b.currency)
+  const outstandingBalance = sumByCurrency(
+    allBookings.filter((b) => b.stage === 'new_inquiry' || b.stage === 'quoted'),
+    (b) => b.subtotal,
+    (b) => b.currency,
+  )
+  // Catalog prices, which are in TZS (the USD price is optional).
   const avgTripValue = allSafaris.length
     ? Math.round(allSafaris.reduce((s, p) => s + p.price, 0) / allSafaris.length)
     : 0
 
   const revenueByPackage = Object.values(
-    revenueBookings.reduce<Record<string, { title: string; amount: number; count: number }>>((acc, b) => {
-      const entry = acc[b.packageTitle] ?? { title: b.packageTitle, amount: 0, count: 0 }
-      entry.amount += b.subtotal
+    revenueBookings.reduce<Record<string, { title: string; amount: MoneyTotals; count: number }>>((acc, b) => {
+      const entry = acc[b.packageTitle] ?? { title: b.packageTitle, amount: emptyTotals(), count: 0 }
+      entry.amount[b.currency] += b.subtotal
       entry.count += 1
       acc[b.packageTitle] = entry
       return acc
     }, {}),
   )
-    .sort((a, b) => b.amount - a.amount)
+    // Ranked by bookings: revenue in two currencies has no single order.
+    .sort((a, b) => b.count - a.count)
     .slice(0, 5)
 
   const stageCounts = allBookings.reduce<Record<string, number>>((acc, b) => {
@@ -97,7 +102,7 @@ export function AdminAnalytics() {
             <span className="text-xs font-label-md text-on-surface-variant">{revenueBookings.length} bookings</span>
           </div>
           <p className="font-label-sm text-label-sm text-on-surface-variant mb-1 uppercase tracking-wider">Total Revenue</p>
-          <p className="font-headline-md text-[26px] text-on-surface">{formatMoney(totalRevenue)}</p>
+          <p className="font-headline-md text-[26px] text-on-surface">{formatTotals(totalRevenue)}</p>
         </div>
         <div className="bg-surface-container-lowest rounded-xl p-5 shadow-sm border border-sand-stone/50">
           <div className="flex justify-between items-start mb-4">
@@ -107,7 +112,7 @@ export function AdminAnalytics() {
             <span className="text-xs font-label-md text-on-surface-variant">{allSafaris.length} packages</span>
           </div>
           <p className="font-label-sm text-label-sm text-on-surface-variant mb-1 uppercase tracking-wider">Avg Trip Value</p>
-          <p className="font-headline-md text-[26px] text-on-surface">{formatMoney(avgTripValue)}</p>
+          <p className="font-headline-md text-[26px] text-on-surface">{formatMoney(avgTripValue, undefined, 'TZS')}</p>
         </div>
         <div className="bg-surface-container-lowest rounded-xl p-5 shadow-sm border border-sand-stone/50">
           <div className="flex justify-between items-start mb-4">
@@ -116,7 +121,7 @@ export function AdminAnalytics() {
             </div>
           </div>
           <p className="font-label-sm text-label-sm text-on-surface-variant mb-1 uppercase tracking-wider">Pending Quotes Value</p>
-          <p className="font-headline-md text-[26px] text-on-surface">{formatMoney(outstandingBalance)}</p>
+          <p className="font-headline-md text-[26px] text-on-surface">{formatTotals(outstandingBalance)}</p>
         </div>
         <div className="bg-surface-container-lowest rounded-xl p-5 shadow-sm border border-sand-stone/50">
           <div className="flex justify-between items-start mb-4">
@@ -132,7 +137,7 @@ export function AdminAnalytics() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Top packages by revenue */}
         <div className="bg-surface-container-lowest rounded-xl p-6 shadow-sm border border-sand-stone/50">
-          <h3 className="font-headline-md text-[18px] text-on-surface mb-5">Top Packages by Revenue</h3>
+          <h3 className="font-headline-md text-[18px] text-on-surface mb-5">Top Packages by Bookings</h3>
           {revenueByPackage.length === 0 ? (
             <p className="text-on-surface-variant text-sm py-6 text-center">No revenue-generating bookings yet.</p>
           ) : (
@@ -148,7 +153,7 @@ export function AdminAnalytics() {
                       {p.count} booking{p.count === 1 ? '' : 's'}
                     </p>
                   </div>
-                  <p className="font-label-md text-sm text-on-surface shrink-0">{formatMoney(p.amount)}</p>
+                  <p className="font-label-md text-sm text-on-surface shrink-0">{formatTotals(p.amount)}</p>
                 </div>
               ))}
             </div>

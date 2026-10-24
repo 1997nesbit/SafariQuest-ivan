@@ -17,6 +17,7 @@ export interface SafariPackage {
   days: number
   accommodation: string
   price: number
+  priceUsd: number | null
   badge?: string
   signature?: boolean
   destination: string
@@ -38,6 +39,7 @@ interface SafariApiShape {
   days: number
   accommodation: string
   price: number
+  price_usd: number | null
   badge: string
   signature: boolean
   destination: string
@@ -83,6 +85,7 @@ export interface SafariPackageInput {
   days: number
   accommodation: string
   price: number
+  priceUsd: number | null
   badge?: string
   signature: boolean
   destination: SafariPackage['destination']

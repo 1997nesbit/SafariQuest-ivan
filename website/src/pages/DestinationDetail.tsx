@@ -8,10 +8,12 @@ import { getParks, type Park } from '../api/parks'
 import { getSafaris, type SafariPackage } from '../api/safaris'
 import { getRegionSafaris, type RegionSafari } from '../api/regionSafaris'
 import { useFetch } from '../lib/useFetch'
-import { formatMoney } from '../lib/money'
+import { formatProductPrice } from '../lib/money'
+import { useDisplayCurrency } from '../lib/currencyPreference'
 
 export function DestinationDetail() {
   const { t, i18n } = useTranslation('destinations')
+  const { currency } = useDisplayCurrency()
   const { id } = useParams<{ id: string }>()
   const { data: destination, loading, error } = useFetch<Destination>(() => getDestination(id!), [id])
   const { data: safariPackages } = useFetch<SafariPackage[]>(getSafaris, [])
@@ -226,7 +228,7 @@ export function DestinationDetail() {
                     <div className="mt-auto flex items-center justify-between pt-2">
                       <span className="text-on-surface-variant text-sm">{t('detail.days', { count: rs.days })}</span>
                       <span className="font-headline-md text-savanna-green font-bold">
-                        {formatMoney(rs.price, i18n.language)}
+                        {formatProductPrice(rs, currency, i18n.language)}
                       </span>
                     </div>
                   </div>

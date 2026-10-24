@@ -505,6 +505,14 @@ def describe(outage):
     return f"Mobile money payments may be slow or fail right now{until}. If yours doesn't go through, try again shortly."
 
 
+def network_outage_message(channel):
+    """Why a payment on this one network can't go through right now, or None. Direct
+    payments know the network from the phone number before any prompt is sent, so a
+    single-network outage can turn the number away up front instead of only warning."""
+    outage = PaymentOutage.objects.current().filter(channel=channel).first()
+    return describe(outage) if outage else None
+
+
 def payment_availability():
     """{"blocked", "message", "warnings"} for the pay endpoints and the checkout pages."""
     current = list(PaymentOutage.objects.current())

@@ -69,7 +69,8 @@
     "heading": "Pagamento",
     "subtitle": "Pague o sinal por mobile money — M-Pesa, Airtel Money, Mixx by Yas ou Halotel — para garantir a sua reserva.",
     "back": "Voltar",
-    "mobileMoneyNotice": "Será levado para o checkout seguro da Snippe para aprovar o pagamento no seu telemóvel e depois regressará aqui."
+    "mobileMoneyNotice": "Será levado para o checkout seguro da Snippe para aprovar o pagamento no seu telemóvel e depois regressará aqui.",
+    "subtitleUsd": "A sua reserva é em dólares americanos (USD)."
   },
   "trustBadges": {
     "certifiedOperator": "Operador certificado",
@@ -185,5 +186,42 @@
     "invalid": "Este código não é válido.",
     "earnAfterBooking": "Depois de reservar, pode obter o seu próprio código de indicação e ganhar uma comissão quando os seus amigos reservarem.",
     "earnAfterBookingWithRates": "Depois de reservar, pode obter o seu próprio código de indicação: os seus amigos recebem {{discount}}% de desconto e ganha {{commission}}% de comissão."
+  },
+  "mobilePay": {
+    "phoneLabel": "Número de mobile money",
+    "phonePlaceholder": "0754 123 456",
+    "phoneHint": "M-Pesa, Airtel Money, Mixx by Yas ou Halotel. Enviaremos um pedido de pagamento para este telemóvel.",
+    "networkDetected": "Número {{network}}",
+    "invalidPhone": "Introduza um número móvel tanzaniano, ex. 0754 123 456.",
+    "unsupportedNetwork": "Use um número M-Pesa, Airtel Money, Mixx by Yas ou Halotel.",
+    "waitingHeading": "Verifique o seu telemóvel",
+    "waitingBody": "Enviámos um pedido de {{amount}} para {{phone}}. Introduza o seu PIN de mobile money para o aprovar.",
+    "waitingNote": "Mantenha esta página aberta — ela atualiza-se assim que aprovar.",
+    "stillWaiting": "Ainda não recebemos confirmação. Se aprovou o pagamento, ele aparecerá em breve no seu painel e enviaremos um e-mail.",
+    "resend": "Reenviar o pedido",
+    "resent": "Reenviado — verifique o seu telemóvel.",
+    "resendFailed": "Não foi possível reenviar. Tente novamente daqui a pouco.",
+    "differentNumber": "Usar outro número",
+    "failedHeading": "O pagamento não foi concluído",
+    "failedBody": "O pedido foi recusado, expirou ou não teve resposta, por isso nada foi cobrado. Pode tentar novamente.",
+    "tryAgain": "Tentar novamente",
+    "payNow": "Pagar {{amount}}",
+    "cancel": "Cancelar"
+  },
+  "currencyChoice": {
+    "label": "Pagar em",
+    "tzs": "Xelins tanzanianos (TZS)",
+    "tzsHint": "Mobile money — M-Pesa, Airtel Money, Mixx by Yas, Halotel",
+    "usd": "Dólares americanos (USD)",
+    "usdHint": "Cartão",
+    "usdHintSoon": "Cartão — disponível em breve",
+    "usdNoPrice": "Esta viagem ainda não tem preço em USD, por isso o preço é em TZS.",
+    "usdComingSoon": "Os pagamentos com cartão em USD serão ativados em breve. Para pagar agora, escolha TZS (mobile money) ou contacte-nos para combinar o pagamento."
+  },
+  "usdSoon": {
+    "heading": "Os pagamentos com cartão em USD estão quase disponíveis",
+    "body": "Ainda não é possível pagar em dólares americanos online. Mude para xelins tanzanianos para pagar o seu sinal agora por mobile money, ou ligue-nos e combinamos o pagamento consigo.",
+    "switchToTzs": "Pagar em TZS",
+    "callUs": "Ligar para {{phone}}"
   }
 }

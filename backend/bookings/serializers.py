@@ -11,6 +11,7 @@ from config.mail import send_notification
 from region_safaris.models import RegionSafari
 from safaris.models import SafariPackage
 
+from . import currency as currency_module
 from .models import Booking, BookingNote, Invoice, QuoteLineItem, Review, TripMilestone
 
 User = get_user_model()
@@ -39,6 +40,7 @@ class BookingListSerializer(serializers.ModelSerializer):
             "assigned_guide",
             "assigned_guide_name",
             "subtotal",
+            "currency",
         ]
 
     def get_subtotal(self, obj):
@@ -71,6 +73,8 @@ class InvoiceSerializer(serializers.ModelSerializer):
     package_title = serializers.CharField(source="booking.package_title", read_only=True)
     status = serializers.CharField(source="effective_status", read_only=True)
     remaining_balance = serializers.ReadOnlyField()
+    # Every amount on an invoice is in its booking's currency.
+    currency = serializers.CharField(source="booking.currency", read_only=True)
 
     class Meta:
         model = Invoice
@@ -83,6 +87,7 @@ class InvoiceSerializer(serializers.ModelSerializer):
             "amount",
             "trip_total",
             "remaining_balance",
+            "currency",
             "status",
             "issued_date",
             "due_date",
@@ -172,12 +177,15 @@ class BookingUpdateSerializer(serializers.ModelSerializer):
 
 
 class BookingPaySerializer(serializers.Serializer):
-    """Opens a Snippe checkout session for a deposit or balance. No amounts are accepted:
+    """Starts a Snippe payment for a deposit or balance. No amounts are accepted:
     they're computed server-side (bookings.pricing / the invoice), so a caller can't choose
     their own price. `locale` only picks which language the return page opens in."""
 
     referral_code = serializers.CharField(required=False, allow_blank=True)
     locale = serializers.ChoiceField(choices=["en", "fr", "de", "pt"], required=False, default="en")
+    # Direct payments: the number the prompt goes to. Checked and normalized by the view
+    # (bookings.mobile_numbers), which also knows whether this mode needs it.
+    phone_number = serializers.CharField(required=False, allow_blank=True, max_length=30)
 
 
 class QuoteLineItemInputSerializer(serializers.Serializer):
@@ -244,10 +252,17 @@ class BookingCreateSerializer(serializers.Serializer):
     guests = serializers.IntegerField(min_value=1)
     children = serializers.IntegerField(min_value=0, default=0)
     message = serializers.CharField(required=False, allow_blank=True)
+    # What the trip is priced and paid in. A product only has a USD price if one was set.
+    currency = serializers.ChoiceField(choices=currency_module.CURRENCIES, default=currency_module.TZS)
 
     def validate(self, attrs):
         if bool(attrs.get("safari")) == bool(attrs.get("region_safari")):
             raise serializers.ValidationError("Provide exactly one of safari or region_safari.")
+        product = attrs.get("safari") or attrs.get("region_safari")
+        if currency_module.product_price(product, attrs["currency"]) is None:
+            raise serializers.ValidationError(
+                {"currency": f"This trip can't be booked in {attrs['currency']} yet. Choose TZS instead."}
+            )
         # Today counts (Tanzania time, settings.TIME_ZONE): only trips that would already
         # have started are refused.
         if attrs["start_date"] < timezone.localdate():
@@ -339,6 +354,7 @@ class BookingCreateSerializer(serializers.Serializer):
                 guests=validated_data["guests"],
                 children=validated_data["children"],
                 message=validated_data.get("message", ""),
+                currency=validated_data["currency"],
             )
             self._create_milestones(booking)
         if is_new:

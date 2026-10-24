@@ -1,9 +1,10 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Ticket, Money, Compass, Lightning, DownloadSimple, ArrowRight, CalendarBlank } from '@phosphor-icons/react'
 import { getBookings, STAGE_LABELS, type Booking, type BookingStage } from '../../api/bookings'
 import { useAuth } from '../../auth/AuthContext'
 import { useFetch } from '../../lib/useFetch'
-import { formatMoney } from '../../lib/money'
+import { CURRENCIES, formatMoney, formatTotals, sumByCurrency, type Currency, type MoneyTotals } from '../../lib/money'
 
 const STAGE_DOT: Record<BookingStage, string> = {
   new_inquiry: 'bg-secondary-container',
@@ -53,13 +54,20 @@ export function AdminDashboard() {
   const { data: bookingsData, loading, error } = useFetch(() => getBookings(), [])
   const bookings: Booking[] = bookingsData ?? []
   const hasBookings = bookings.length > 0
+  // The revenue chart shows one currency at a time — TZS and USD bars can't share a scale.
+  const [chartCurrency, setChartCurrency] = useState<Currency>('TZS')
 
-  const totalRevenue = bookings.reduce((sum, b) => sum + b.subtotal, 0)
+  // Per currency throughout: TZS and USD are never added together.
+  const totalRevenue = sumByCurrency(bookings, (b) => b.subtotal, (b) => b.currency)
+  const bookingCounts = sumByCurrency(bookings, () => 1, (b) => b.currency)
   const activeBookings = bookings.filter((b) => b.stage !== 'completed').length
   const activeGuests = bookings.filter((b) => b.stage !== 'completed').reduce((sum, b) => sum + b.guests, 0)
   const confirmedOrCompleted = bookings.filter((b) => b.stage === 'confirmed' || b.stage === 'completed').length
   const conversionRate = hasBookings ? Math.round((confirmedOrCompleted / bookings.length) * 100) : 0
-  const avgDealSize = hasBookings ? Math.round(totalRevenue / bookings.length) : 0
+  const avgDealSize: MoneyTotals = {
+    TZS: bookingCounts.TZS ? Math.round(totalRevenue.TZS / bookingCounts.TZS) : 0,
+    USD: bookingCounts.USD ? Math.round(totalRevenue.USD / bookingCounts.USD) : 0,
+  }
   // Bookings already arrive newest-created-first (Booking.Meta.ordering on the backend).
   const recent = bookings.slice(0, 5)
 
@@ -72,11 +80,11 @@ export function AdminDashboard() {
       note: `${activeBookings} active in pipeline`,
     },
     {
-      label: 'Revenue (TZS)',
-      value: formatMoney(totalRevenue),
+      label: 'Revenue',
+      value: formatTotals(totalRevenue),
       icon: Money,
       tint: 'text-terracotta bg-terracotta/10',
-      note: `${formatMoney(avgDealSize)} avg per booking`,
+      note: `${formatTotals(avgDealSize)} avg per booking`,
     },
     {
       label: 'Active Travelers',
@@ -102,6 +110,7 @@ export function AdminDashboard() {
     label,
     total: bookings
       .filter((_, idx) => tripDates[idx].getMonth() === i && tripDates[idx].getFullYear() === today.getFullYear())
+      .filter((b) => b.currency === chartCurrency)
       .reduce((sum, b) => sum + b.subtotal, 0),
     isCurrent: i === currentMonthIndex,
   })).slice(0, currentMonthIndex + 1)
@@ -162,13 +171,30 @@ export function AdminDashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-8">
             <div className="lg:col-span-8 bg-surface-container-lowest rounded-xl p-6 shadow-sm border border-sand-stone/50">
               <h3 className="font-headline-md text-[18px] text-on-surface mb-1">Revenue by Trip Month</h3>
-              <p className="text-on-surface-variant text-sm mb-6">Booked trip revenue for {today.getFullYear()}</p>
+              <div className="flex items-start justify-between gap-4 mb-6">
+                <p className="text-on-surface-variant text-sm">
+                  Booked trip revenue for {today.getFullYear()}, {chartCurrency} bookings
+                </p>
+                <div role="group" aria-label="Chart currency" className="flex rounded-lg border border-sand-stone">
+                  {CURRENCIES.map((code) => (
+                    <button
+                      key={code}
+                      type="button"
+                      onClick={() => setChartCurrency(code)}
+                      aria-pressed={code === chartCurrency}
+                      className={`px-3 py-1 text-sm rounded-lg ${code === chartCurrency ? 'bg-savanna-green text-on-primary' : 'text-on-surface-variant'}`}
+                    >
+                      {code}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="h-56 w-full flex items-end justify-between gap-2 px-1">
                 {monthlyRevenue.map((m) => (
                   <div key={m.label} className="group relative flex-1 flex flex-col items-center justify-end h-full">
                     {m.total > 0 && (
                       <div className="absolute -top-7 opacity-0 group-hover:opacity-100 transition-opacity bg-deep-earth text-white text-[11px] px-2 py-1 rounded whitespace-nowrap">
-                        {formatMoney(m.total)}
+                        {formatMoney(m.total, undefined, chartCurrency)}
                       </div>
                     )}
                     <div
@@ -256,7 +282,7 @@ export function AdminDashboard() {
                           {STAGE_LABELS[b.stage]}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right font-label-md text-on-surface">{formatMoney(b.subtotal)}</td>
+                      <td className="px-6 py-4 text-right font-label-md text-on-surface">{formatMoney(b.subtotal, undefined, b.currency)}</td>
                     </tr>
                   ))}
                   {recent.length === 0 && (

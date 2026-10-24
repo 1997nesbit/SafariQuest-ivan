@@ -397,7 +397,7 @@ export function AdminBookingDetail() {
                           className="w-24 bg-surface border border-sand-stone rounded-md px-2 py-1 text-sm text-right"
                         />
                       </td>
-                      <td className="py-3 text-right font-label-md text-sm text-on-surface">{formatMoney(quotePrice(li))}</td>
+                      <td className="py-3 text-right font-label-md text-sm text-on-surface">{formatMoney(quotePrice(li), undefined, booking.currency)}</td>
                       <td className="py-2 text-right">
                         {!quoteLocked && (
                           <button type="button" onClick={() => removeLineItem(i)} className="text-on-surface-variant hover:text-terracotta">
@@ -424,7 +424,7 @@ export function AdminBookingDetail() {
             <div className="flex justify-end border-t-2 border-sand-stone pt-4">
               <div className="w-56 flex justify-between items-center">
                 <span className="font-headline-md text-[18px] text-on-surface">Total</span>
-                <span className="font-headline-md text-[18px] text-savanna-green">{formatMoney(Math.round(subtotal))}</span>
+                <span className="font-headline-md text-[18px] text-savanna-green">{formatMoney(Math.round(subtotal), undefined, booking.currency)}</span>
               </div>
             </div>
             {!quoteLocked && (

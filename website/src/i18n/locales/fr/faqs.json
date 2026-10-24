@@ -16,7 +16,7 @@
         },
         "paymentMethods": {
           "question": "Quels moyens de paiement acceptez-vous ?",
-          "answer": "Nous acceptons le mobile money — M-Pesa, Airtel Money, Mixx by Yas et Halotel — via notre paiement sécurisé Snippe. Tous les prix sont en shillings tanzaniens (TZS). Un acompte de 30 % garantit votre réservation, le solde étant dû avant le départ."
+          "answer": "Les prix sont affichés en shillings tanzaniens (TZS) ou en dollars américains (USD) — choisissez dans le menu. Payez en TZS par mobile money (M-Pesa, Airtel Money, Mixx by Yas ou Halotel) ; les paiements par carte en USD arrivent bientôt. Un acompte de 30 % garantit votre réservation, le solde étant dû avant le départ."
         },
         "depositRequired": {
           "question": "Un acompte est-il requis ?",

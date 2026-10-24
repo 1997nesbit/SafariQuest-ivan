@@ -69,7 +69,8 @@
     "heading": "Zahlung",
     "subtitle": "Zahlen Sie die Anzahlung per Mobile Money — M-Pesa, Airtel Money, Mixx by Yas oder Halotel —, um Ihre Buchung zu sichern.",
     "back": "Zurück",
-    "mobileMoneyNotice": "Sie werden zur sicheren Snippe-Kasse weitergeleitet, bestätigen die Zahlung auf Ihrem Telefon und kehren dann hierher zurück."
+    "mobileMoneyNotice": "Sie werden zur sicheren Snippe-Kasse weitergeleitet, bestätigen die Zahlung auf Ihrem Telefon und kehren dann hierher zurück.",
+    "subtitleUsd": "Ihre Buchung ist in US-Dollar (USD) berechnet."
   },
   "trustBadges": {
     "certifiedOperator": "Zertifizierter Veranstalter",
@@ -185,5 +186,42 @@
     "invalid": "Dieser Code ist ungültig.",
     "earnAfterBooking": "Nach Ihrer Buchung können Sie Ihren eigenen Empfehlungscode erhalten und eine Provision verdienen, wenn Freunde buchen.",
     "earnAfterBookingWithRates": "Nach Ihrer Buchung können Sie Ihren eigenen Empfehlungscode erhalten: Freunde erhalten {{discount}} % Rabatt und Sie verdienen {{commission}} % Provision."
+  },
+  "mobilePay": {
+    "phoneLabel": "Mobile-Money-Nummer",
+    "phonePlaceholder": "0754 123 456",
+    "phoneHint": "M-Pesa, Airtel Money, Mixx by Yas oder Halotel. Wir senden eine Zahlungsanfrage an dieses Telefon.",
+    "networkDetected": "{{network}}-Nummer",
+    "invalidPhone": "Geben Sie eine tansanische Mobilnummer ein, z. B. 0754 123 456.",
+    "unsupportedNetwork": "Verwenden Sie eine M-Pesa-, Airtel-Money-, Mixx-by-Yas- oder Halotel-Nummer.",
+    "waitingHeading": "Prüfen Sie Ihr Telefon",
+    "waitingBody": "Wir haben eine Anfrage über {{amount}} an {{phone}} gesendet. Geben Sie Ihre Mobile-Money-PIN ein, um sie zu bestätigen.",
+    "waitingNote": "Lassen Sie diese Seite geöffnet — sie aktualisiert sich, sobald Sie bestätigen.",
+    "stillWaiting": "Wir haben noch keine Bestätigung erhalten. Wenn Sie die Zahlung bestätigt haben, erscheint sie in Kürze in Ihrem Dashboard, und wir senden Ihnen eine E-Mail.",
+    "resend": "Anfrage erneut senden",
+    "resent": "Erneut gesendet — prüfen Sie Ihr Telefon.",
+    "resendFailed": "Erneutes Senden fehlgeschlagen. Versuchen Sie es gleich noch einmal.",
+    "differentNumber": "Andere Nummer verwenden",
+    "failedHeading": "Zahlung nicht erfolgt",
+    "failedBody": "Die Anfrage wurde abgelehnt, ist abgelaufen oder wurde nicht beantwortet, es wurde nichts abgebucht. Sie können es erneut versuchen.",
+    "tryAgain": "Erneut versuchen",
+    "payNow": "{{amount}} zahlen",
+    "cancel": "Abbrechen"
+  },
+  "currencyChoice": {
+    "label": "Zahlen in",
+    "tzs": "Tansania-Schilling (TZS)",
+    "tzsHint": "Mobile Money — M-Pesa, Airtel Money, Mixx by Yas, Halotel",
+    "usd": "US-Dollar (USD)",
+    "usdHint": "Karte",
+    "usdHintSoon": "Karte — bald verfügbar",
+    "usdNoPrice": "Für diese Reise gibt es noch keinen USD-Preis, daher wird sie in TZS berechnet.",
+    "usdComingSoon": "Kartenzahlungen in USD werden in Kürze freigeschaltet. Um jetzt zu zahlen, wählen Sie TZS (Mobile Money) oder kontaktieren Sie uns, um die Zahlung zu vereinbaren."
+  },
+  "usdSoon": {
+    "heading": "Kartenzahlungen in USD folgen in Kürze",
+    "body": "Online in US-Dollar zu zahlen ist noch nicht möglich. Wechseln Sie zu Tansania-Schilling, um Ihre Anzahlung jetzt per Mobile Money zu leisten, oder rufen Sie uns an, und wir vereinbaren die Zahlung mit Ihnen.",
+    "switchToTzs": "Stattdessen in TZS zahlen",
+    "callUs": "{{phone}} anrufen"
   }
 }

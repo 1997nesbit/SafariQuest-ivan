@@ -65,6 +65,8 @@ function RegionSafariFormFields({
   const [days, setDays] = useState(String(initial?.days ?? ''))
   const [accommodation, setAccommodation] = useState(initial?.accommodation ?? '')
   const [price, setPrice] = useState(String(initial?.price ?? ''))
+  // Optional: without a USD price the trip can only be booked in TZS.
+  const [priceUsd, setPriceUsd] = useState(initial?.priceUsd == null ? '' : String(initial.priceUsd))
   const [badge, setBadge] = useState(initial?.badge ?? '')
   const [signature, setSignature] = useState(initial?.signature ?? false)
   const [region, setRegion] = useState<string>(initial?.region ?? '')
@@ -108,6 +110,7 @@ function RegionSafariFormFields({
       days: Number(days),
       accommodation,
       price: Number(price),
+      priceUsd: priceUsd.trim() === '' ? null : Number(priceUsd),
       badge,
       signature,
       region: effectiveRegion,
@@ -284,6 +287,20 @@ function RegionSafariFormFields({
                 />
               </div>
               <div>
+                <label htmlFor="rs-price-usd" className="block font-label-sm text-label-sm mb-1.5">
+                  Price / Person (USD) <span className="text-on-surface-variant font-normal">— optional</span>
+                </label>
+                <input
+                  id="rs-price-usd"
+                  type="number"
+                  min={0}
+                  value={priceUsd}
+                  onChange={(e) => setPriceUsd(e.target.value)}
+                  placeholder="Leave empty if not sold in USD"
+                  className="w-full bg-surface-container-low border border-transparent rounded-lg px-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-savanna-green"
+                />
+              </div>
+              <div>
                 <label htmlFor="rs-rating" className="block font-label-sm text-label-sm mb-1.5">
                   Rating (0–5)
                 </label>
@@ -397,6 +414,7 @@ function RegionSafariFormFields({
                     <span className="text-[10px] text-on-surface-variant block">From per person</span>
                     <span className="font-headline-md text-sm font-bold text-savanna-green">
                       {formatMoney(Number(price) || 0)}
+                      {priceUsd.trim() !== '' && ` · ${formatMoney(Number(priceUsd) || 0, undefined, 'USD')}`}
                     </span>
                   </div>
                 </div>

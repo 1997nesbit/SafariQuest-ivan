@@ -29,6 +29,8 @@ SNIPPE_SETTINGS = {
     "SNIPPE_READ_API_KEY": "snp_test_read",
     "SNIPPE_WEBHOOK_SECRET": WEBHOOK_SECRET,
     "SNIPPE_WEBHOOK_URL": "https://api.example.com/api/payments/snippe/webhook/",
+    # These tests cover the hosted checkout page; test_direct_pay.py covers direct payments.
+    "SNIPPE_CHECKOUT_MODE": "hosted",
 }
 
 _safari_counter = [0]
@@ -60,12 +62,17 @@ class FakeSnippe:
     def __init__(self):
         self.requests = []
         self.api_keys = []
+        self.idempotency_keys = []
         self.sessions = {}
+        self.payments = {}
         self._ids = count(1)
 
     def __call__(self, method, path, payload=None, idempotency_key=None, api_key=None):
         self.requests.append((method, path, payload))
         self.api_keys.append(api_key)
+        self.idempotency_keys.append(idempotency_key)
+        if path.startswith("/v1/payments"):
+            return self._payments(method, path, payload)
         if method == "POST":
             reference = f"sess_{next(self._ids)}"
             self.sessions[reference] = {**payload, "reference": reference, "status": "pending"}
@@ -80,6 +87,21 @@ class FakeSnippe:
             }
         reference = path.rsplit("/", 1)[-1]
         return {"code": 200, "data": self.sessions[reference]}
+
+    def _payments(self, method, path, payload):
+        """Direct payments (/v1/payments): create, read, and re-send the prompt."""
+        if method == "POST" and path.endswith("/push"):
+            return {"code": 200, "data": {"reference": path.split("/")[-2], "status": "pending"}}
+        if method == "POST":
+            reference = f"pay_{next(self._ids)}"
+            self.payments[reference] = {
+                "reference": reference,
+                "status": "pending",
+                "amount": {"value": payload["details"]["amount"], "currency": payload["details"]["currency"]},
+                "channel": {"type": "mobile_money", "provider": "airtel"},
+            }
+            return {"code": 201, "data": {"reference": reference, "status": "pending"}}
+        return {"code": 200, "data": self.payments[path.rsplit("/", 1)[-1]]}
 
 
 class SnippeTestMixin:

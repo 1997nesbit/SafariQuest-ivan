@@ -242,11 +242,12 @@ class FinanceSummaryTests(APITestCase):
         self._login_as(self.admin)
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["total_invoiced"], 1500)
-        self.assertEqual(response.data["total_collected"], 1000)
-        self.assertEqual(response.data["total_outstanding"], 500)
+        tzs = response.data["by_currency"]["TZS"]
+        self.assertEqual(tzs["total_invoiced"], 1500)
+        self.assertEqual(tzs["total_collected"], 1000)
+        self.assertEqual(tzs["total_outstanding"], 500)
+        self.assertEqual(tzs["overdue_amount"], 500)
         self.assertEqual(response.data["overdue_count"], 1)
-        self.assertEqual(response.data["overdue_amount"], 500)
 
     def test_checkout_deposit_counts_as_collected_and_the_trip_as_invoiced(self):
         customer = User.objects.get(email="mark@example.com")
@@ -257,7 +258,23 @@ class FinanceSummaryTests(APITestCase):
         )
         self._login_as(self.admin)
         response = self.client.get(self.url)
-        self.assertEqual(response.data["total_invoiced"], 1500 + 10000)
-        self.assertEqual(response.data["total_collected"], 1000 + 3000)
-        self.assertEqual(response.data["total_outstanding"], 500 + 7000)
+        tzs = response.data["by_currency"]["TZS"]
+        self.assertEqual(tzs["total_invoiced"], 1500 + 10000)
+        self.assertEqual(tzs["total_collected"], 1000 + 3000)
+        self.assertEqual(tzs["total_outstanding"], 500 + 7000)
         self.assertEqual(response.data["overdue_count"], 1)
+
+    def test_usd_invoices_are_totalled_separately(self):
+        customer = User.objects.get(email="mark@example.com")
+        usd_booking = make_booking(customer, stage=Booking.STAGE_DEPOSIT_PAID)
+        usd_booking.currency = "USD"
+        usd_booking.save(update_fields=["currency"])
+        Invoice.objects.create(
+            booking=usd_booking, amount=900, trip_total=3000, status=Invoice.STATUS_DEPOSIT_PAID,
+            due_date=timezone.localdate() + timedelta(days=30),
+        )
+        self._login_as(self.admin)
+        response = self.client.get(self.url)
+        self.assertEqual(response.data["by_currency"]["TZS"]["total_invoiced"], 1500)
+        usd = response.data["by_currency"]["USD"]
+        self.assertEqual((usd["total_invoiced"], usd["total_collected"], usd["total_outstanding"]), (3000, 900, 2100))

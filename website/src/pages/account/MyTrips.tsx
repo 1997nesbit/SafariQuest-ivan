@@ -1,15 +1,15 @@
-import { useEffect, useState, type ComponentType } from 'react'
+import { useEffect, type ComponentType } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { CalendarBlank, CheckCircle, Clock, ClockCounterClockwise, MapPin, CreditCard } from '@phosphor-icons/react'
+import { CalendarBlank, CheckCircle, Clock, ClockCounterClockwise, MapPin } from '@phosphor-icons/react'
 import { Link } from '../../i18n/routing'
 import { getBookings, getPaymentAvailability, payForBooking, payRemainingBalance, type Booking, type BookingStage, type PaymentStatusValue } from '../../api/bookings'
 import { getMyInvoices } from '../../api/invoices'
 import { useFetch } from '../../lib/useFetch'
-import { ApiError } from '../../lib/api'
 import { useCurrentLocale } from '../../i18n/useLocale'
 import { paymentReturnParams, usePaymentStatus } from '../../lib/usePaymentStatus'
 import { PaymentOutageNotice } from '../../components/checkout/PaymentOutageNotice'
+import { TripPayButton } from '../../components/checkout/TripPayButton'
 import { formatMoney } from '../../lib/money'
 
 const BADGE: Record<BookingStage, { className: string; icon: ComponentType<{ size?: number; weight?: 'fill' }> }> = {
@@ -32,13 +32,14 @@ function returnBannerText(status: PaymentStatusValue | undefined, gaveUp: boolea
 
 export function MyTrips() {
   const { t } = useTranslation('account')
+  const { t: tBooking } = useTranslation('booking')
   const { data: bookings, loading, error, refetch: refetchBookings } = useFetch<Booking[]>(() => getBookings(), [])
   const { data: invoices, refetch: refetchInvoices } = useFetch(getMyInvoices, [])
   const { data: paymentAvailability } = useFetch(getPaymentAvailability, [])
   const paymentsBlocked = Boolean(paymentAvailability?.blocked)
+  // Direct unless the server says hosted; it's the server that decides either way.
+  const directMode = paymentAvailability?.mode !== 'hosted'
   const trips = bookings ?? []
-  const [payingId, setPayingId] = useState<number | null>(null)
-  const [payError, setPayError] = useState<string | null>(null)
   const locale = useCurrentLocale()
   // Snippe's checkout sends the tourist back here with ?booking=&payment= after a balance payment.
   const location = useLocation()
@@ -54,19 +55,20 @@ export function MyTrips() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [returnedStatus])
 
-  /** Opens a Snippe checkout for the deposit (a booking whose checkout payment didn't go
-   * through) or the remaining balance, and sends the browser there. */
-  async function handlePay(bookingId: number, kind: 'deposit' | 'balance') {
-    setPayError(null)
-    setPayingId(bookingId)
-    try {
-      const checkout =
-        kind === 'deposit' ? await payForBooking(bookingId, locale) : await payRemainingBalance(bookingId, locale)
-      window.location.assign(checkout.checkoutUrl)
-    } catch (err) {
-      setPayError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.')
-      setPayingId(null)
+  /** What a trip's pay buttons need from its currency: TZS pays through Snippe (a phone
+   * prompt in direct mode, stopped while Snippe is down); USD through Senjaropay. */
+  function payButtonProps(trip: Booking) {
+    const usdUnavailable = trip.currency === 'USD' && !paymentAvailability?.currencies?.USD
+    return {
+      directMode: directMode && trip.currency === 'TZS',
+      disabled: (trip.currency === 'TZS' && paymentsBlocked) || usdUnavailable,
+      note: usdUnavailable ? tBooking('currencyChoice.usdComingSoon') : null,
     }
+  }
+
+  function handlePaid() {
+    refetchInvoices()
+    refetchBookings()
   }
 
   const returnBanner = returnedPaymentId === null ? null : returnBannerText(returnedStatus, gaveUp)
@@ -91,11 +93,6 @@ export function MyTrips() {
         <div className="mb-6">
           <PaymentOutageNotice availability={paymentAvailability} />
         </div>
-      )}
-      {payError && (
-        <p role="alert" className="text-error font-label-sm text-label-sm mb-6">
-          {payError}
-        </p>
       )}
 
       {!loading && !error && (
@@ -140,28 +137,22 @@ export function MyTrips() {
                         {trip.assignedGuideName ? t('myTrips.guideAssigned', { name: trip.assignedGuideName }) : t('myTrips.guideNotAssigned')}
                       </p>
                       {depositDue && (
-                        <button
-                          type="button"
-                          onClick={() => void handlePay(trip.id, 'deposit')}
-                          disabled={payingId === trip.id || paymentsBlocked}
-                          className="w-full mb-2 inline-flex items-center justify-center gap-2 bg-golden-sun text-on-primary py-3 rounded-lg font-label-md hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                          <CreditCard size={18} weight="bold" />
-                          {payingId === trip.id ? 'Processing…' : 'Pay Deposit'}
-                        </button>
+                        <TripPayButton
+                          bookingId={trip.id}
+                          label="Pay Deposit"
+                          {...payButtonProps(trip)}
+                          start={(phoneNumber) => payForBooking(trip.id, locale, { phoneNumber })}
+                          onPaid={handlePaid}
+                        />
                       )}
                       {Boolean(remainingBalance) && (
-                        <button
-                          type="button"
-                          onClick={() => void handlePay(trip.id, 'balance')}
-                          disabled={payingId === trip.id || paymentsBlocked}
-                          className="w-full mb-2 inline-flex items-center justify-center gap-2 bg-golden-sun text-on-primary py-3 rounded-lg font-label-md hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                          <CreditCard size={18} weight="bold" />
-                          {payingId === trip.id
-                            ? 'Processing…'
-                            : `Pay Remaining Balance (${formatMoney(remainingBalance!)})`}
-                        </button>
+                        <TripPayButton
+                          bookingId={trip.id}
+                          label={`Pay Remaining Balance (${formatMoney(remainingBalance!, undefined, trip.currency)})`}
+                          {...payButtonProps(trip)}
+                          start={(phoneNumber) => payRemainingBalance(trip.id, locale, { phoneNumber })}
+                          onPaid={handlePaid}
+                        />
                       )}
                       <Link
                         to={`/account/trips/${trip.id}`}

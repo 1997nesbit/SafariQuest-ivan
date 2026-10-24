@@ -45,6 +45,7 @@ export function RegionSafariDetail() {
       accommodation={regionSafari.accommodation}
       locationLabel={regionName}
       price={regionSafari.price}
+      priceUsd={regionSafari.priceUsd}
       overview={regionSafari.overview}
       highlights={regionSafari.highlights}
       included={regionSafari.included}

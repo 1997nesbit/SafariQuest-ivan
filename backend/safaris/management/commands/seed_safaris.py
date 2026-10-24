@@ -19,7 +19,8 @@ SAFARIS = [
         "rating": "4.9",
         "days": 8,
         "accommodation": "Luxury Tents",
-        "price": 4250,
+        "price": 19240000,  # TZS
+        "price_usd": 7400,
         "badge": "Most Popular",
         "signature": True,
         "destination": "Serengeti National Park",
@@ -60,7 +61,8 @@ SAFARIS = [
         "rating": "5.0",
         "days": 5,
         "accommodation": "Safari Lodge",
-        "price": 2800,
+        "price": 15080000,  # TZS
+        "price_usd": 5800,
         "badge": "",
         "signature": True,
         "destination": "Ngorongoro Conservation Area",
@@ -98,7 +100,8 @@ SAFARIS = [
         "rating": "4.8",
         "days": 4,
         "accommodation": "Mobile Camp",
-        "price": 1950,
+        "price": 13520000,  # TZS
+        "price_usd": 5200,
         "badge": "",
         "signature": True,
         "destination": "Tarangire & Manyara",
@@ -130,7 +133,8 @@ SAFARIS = [
         "rating": "4.9",
         "days": 10,
         "accommodation": "Luxury Tents",
-        "price": 5600,
+        "price": 22360000,  # TZS
+        "price_usd": 8600,
         "badge": "",
         "signature": False,
         "destination": "Serengeti National Park",
@@ -173,7 +177,8 @@ SAFARIS = [
         "rating": "4.7",
         "days": 6,
         "accommodation": "Premier Lodge",
-        "price": 3900,
+        "price": 17940000,  # TZS
+        "price_usd": 6900,
         "badge": "",
         "signature": False,
         "destination": "Serengeti National Park",
@@ -212,7 +217,8 @@ SAFARIS = [
         "rating": "5.0",
         "days": 12,
         "accommodation": "Resort & Tent",
-        "price": 6400,
+        "price": 24700000,  # TZS
+        "price_usd": 9500,
         "badge": "",
         "signature": False,
         "destination": "Zanzibar Extensions",

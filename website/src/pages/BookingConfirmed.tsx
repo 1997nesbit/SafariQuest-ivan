@@ -188,7 +188,7 @@ export function BookingConfirmed() {
                 <CreditCard size={22} className="text-savanna-green shrink-0 mt-0.5" />
                 <div>
                   <p className="font-label-md text-label-md text-on-surface mb-1">
-                    {t('confirmed.depositReceived', { amount: formatMoney(paidAmount, i18n.language) })}
+                    {t('confirmed.depositReceived', { amount: formatMoney(paidAmount, i18n.language, payment?.currency) })}
                   </p>
                   <p className="text-on-surface-variant text-sm">
                     {t('confirmed.confirmationSentTo', { email: paidToEmail ?? t('confirmed.yourRegistrationEmail') })}

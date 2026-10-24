@@ -42,10 +42,12 @@ class ReferralAgentRegisterSerializer(serializers.ModelSerializer):
 
 class ReferralRedemptionSummarySerializer(serializers.ModelSerializer):
     bookingId = serializers.IntegerField(source="booking_id")
+    # Commission is in the booking's currency (TZS or USD).
+    currency = serializers.CharField(source="booking.currency", read_only=True)
 
     class Meta:
         model = ReferralRedemption
-        fields = ["bookingId", "commission_amount", "commission_status", "created_at"]
+        fields = ["bookingId", "commission_amount", "currency", "commission_status", "created_at"]
 
 
 class ReferralCodeSerializer(serializers.ModelSerializer):
@@ -145,6 +147,7 @@ class AdminReferralRedemptionSerializer(serializers.ModelSerializer):
     bookingId = serializers.IntegerField(source="booking_id")
     customerName = serializers.CharField(source="booking.customer.name")
     customerEmail = serializers.CharField(source="booking.customer.email")
+    currency = serializers.CharField(source="booking.currency", read_only=True)
 
     class Meta:
         model = ReferralRedemption
@@ -160,6 +163,7 @@ class AdminReferralRedemptionSerializer(serializers.ModelSerializer):
             "discount_percent",
             "commission_percent",
             "commission_amount",
+            "currency",
             "commission_status",
             "created_at",
         ]

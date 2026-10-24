@@ -1,8 +1,12 @@
-"""Thin client for Snippe's hosted checkout (https://docs.snippe.sh, API 2026-01-25).
+"""Thin client for Snippe (https://docs.snippe.sh, API 2026-01-25).
 
-Only the two calls this site needs — create a session, read one back — plus webhook
-signature verification. Plain urllib rather than an SDK so there's no new dependency
-and the requests stay easy to stub in tests (patch `_request`).
+Two ways to collect, chosen by settings.SNIPPE_CHECKOUT_MODE:
+- "direct": a mobile-money payment sent straight to the tourist's phone (USSD push) —
+  they never leave this site. create_mobile_payment / get_payment / push_payment.
+- "hosted": a session on Snippe's own checkout page. create_session / get_session.
+
+Plus webhook signature verification. Plain urllib rather than an SDK so there's no new
+dependency and the requests stay easy to stub in tests (patch `_request`).
 """
 
 import hashlib
@@ -15,6 +19,9 @@ import urllib.request
 from django.conf import settings
 
 SESSIONS_PATH = "/api/v1/sessions"
+PAYMENTS_PATH = "/v1/payments"
+# Snippe rejects longer Idempotency-Key values with a 500 (PAY_001).
+IDEMPOTENCY_KEY_MAX_LENGTH = 30
 # Snippe recommends rejecting webhooks older than this, against replays.
 WEBHOOK_TOLERANCE_SECONDS = 300
 REQUEST_TIMEOUT_SECONDS = 15
@@ -74,10 +81,43 @@ def create_session(*, amount, description, metadata, customer, redirect_url, ide
     return data
 
 
-def get_session(reference):
+def _read_key():
     # Snippe scopes keys separately; reads use the collection:read key when one is set.
-    api_key = settings.SNIPPE_READ_API_KEY or settings.SNIPPE_API_KEY
-    return _request("GET", f"{SESSIONS_PATH}/{reference}", api_key=api_key).get("data") or {}
+    return settings.SNIPPE_READ_API_KEY or settings.SNIPPE_API_KEY
+
+
+def create_mobile_payment(*, amount, phone_number, customer, metadata, idempotency_key):
+    """Sends a payment request to `phone_number` (255XXXXXXXXX) and returns Snippe's
+    `data` object (reference, status, expires_at, …). `customer` needs firstname,
+    lastname and email — all three are required by Snippe."""
+    if len(idempotency_key) > IDEMPOTENCY_KEY_MAX_LENGTH:
+        raise ValueError(f"Idempotency key over {IDEMPOTENCY_KEY_MAX_LENGTH} characters: {idempotency_key}")
+    payload = {
+        "payment_type": "mobile",
+        "details": {"amount": amount, "currency": settings.SNIPPE_CURRENCY},
+        "phone_number": phone_number,
+        "customer": customer,
+        "metadata": metadata,
+    }
+    if settings.SNIPPE_WEBHOOK_URL:
+        payload["webhook_url"] = settings.SNIPPE_WEBHOOK_URL
+    data = _request("POST", PAYMENTS_PATH, payload, idempotency_key=idempotency_key).get("data") or {}
+    if not data.get("reference"):
+        raise SnippeError("Snippe created a payment without a reference")
+    return data
+
+
+def get_payment(reference):
+    return _request("GET", f"{PAYMENTS_PATH}/{reference}", api_key=_read_key()).get("data") or {}
+
+
+def push_payment(reference):
+    """Re-sends the payment prompt to the customer's phone."""
+    return _request("POST", f"{PAYMENTS_PATH}/{reference}/push", {}).get("data") or {}
+
+
+def get_session(reference):
+    return _request("GET", f"{SESSIONS_PATH}/{reference}", api_key=_read_key()).get("data") or {}
 
 
 def verify_webhook(raw_body, timestamp, signature, now=None):

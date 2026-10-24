@@ -2,7 +2,8 @@ import { useTranslation } from 'react-i18next'
 import { Link } from '../i18n/routing'
 import { Star, Clock, Bed } from '@phosphor-icons/react'
 import type { SafariPackage } from '../api/safaris'
-import { formatMoney } from '../lib/money'
+import { formatProductPrice } from '../lib/money'
+import { useDisplayCurrency } from '../lib/currencyPreference'
 
 interface SafariCardProps {
   safari: SafariPackage
@@ -10,6 +11,7 @@ interface SafariCardProps {
 
 export function SafariCard({ safari }: SafariCardProps) {
   const { t, i18n } = useTranslation('safaris')
+  const { currency } = useDisplayCurrency()
   return (
     <article className="group bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 h-full flex flex-col">
       <div className="relative aspect-4/3 overflow-hidden">
@@ -46,7 +48,7 @@ export function SafariCard({ safari }: SafariCardProps) {
         <div className="border-t border-surface-variant pt-6 mt-auto flex items-center justify-between gap-3">
           <div>
             <p className="text-label-sm text-on-surface-variant uppercase tracking-tight">{t('card.startingFrom')}</p>
-            <p className="font-headline-md text-savanna-green">{formatMoney(safari.price, i18n.language)}</p>
+            <p className="font-headline-md text-savanna-green">{formatProductPrice(safari, currency, i18n.language)}</p>
           </div>
           <Link
             to={`/safaris/${safari.id}`}

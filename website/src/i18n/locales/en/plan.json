@@ -126,7 +126,8 @@
     "back": "Back",
     "processing": "Processing…",
     "payAndBook": "Pay {{amount}} & Book",
-    "somethingWentWrong": "Something went wrong. Please try again."
+    "somethingWentWrong": "Something went wrong. Please try again.",
+    "subtitleUsd": "Your booking is priced in US dollars (USD)."
   },
   "message": {
     "destinations": "Destinations: {{list}}",

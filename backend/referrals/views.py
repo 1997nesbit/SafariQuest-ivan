@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 from accounts.permissions import IsAdminRole
 from accounts.views import _set_auth_cookies, auth_payload
 from audit.utils import log_action
+from bookings.currency import format_amount
 
 from .models import ReferralCode, ReferralRedemption, ReferralSettings
 from .permissions import IsReferralAgentRole
@@ -65,7 +66,7 @@ class ReferralAgentActivateView(APIView):
 
 class ReferralCodeViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     serializer_class = ReferralCodeSerializer
-    queryset = ReferralCode.objects.select_related("agent").prefetch_related("redemptions")
+    queryset = ReferralCode.objects.select_related("agent").prefetch_related("redemptions__booking")
 
     def get_permissions(self):
         return [IsReferralAgentRole()]
@@ -141,7 +142,8 @@ class AdminReferralRedemptionViewSet(mixins.ListModelMixin, viewsets.GenericView
             log_action(
                 request.user,
                 "referral.commission_paid",
-                f"Marked TZS {redemption.commission_amount:,} commission paid to {redemption.code.agent.email} "
+                f"Marked {format_amount(redemption.commission_amount, redemption.booking.currency)} commission paid to "
+                f"{redemption.code.agent.email} "
                 f"(code {redemption.code.code}, booking #{redemption.booking_id})",
             )
         return Response(AdminReferralRedemptionSerializer(redemption).data)

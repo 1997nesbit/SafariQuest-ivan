@@ -126,7 +126,8 @@
     "back": "Zurück",
     "processing": "Wird verarbeitet…",
     "payAndBook": "{{amount}} zahlen & buchen",
-    "somethingWentWrong": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut."
+    "somethingWentWrong": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+    "subtitleUsd": "Ihre Buchung ist in US-Dollar (USD) berechnet."
   },
   "message": {
     "destinations": "Reiseziele: {{list}}",

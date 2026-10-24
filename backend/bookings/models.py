@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.db import models
 
+from . import currency as currency_module
+
 
 class Booking(models.Model):
     STAGE_NEW_INQUIRY = "new_inquiry"
@@ -35,6 +37,9 @@ class Booking(models.Model):
         "region_safaris.RegionSafari", related_name="bookings", null=True, blank=True, on_delete=models.PROTECT
     )
     stage = models.CharField(max_length=20, choices=STAGE_CHOICES, default=STAGE_NEW_INQUIRY)
+    # What the whole booking is priced, invoiced and paid in (bookings.currency) — chosen
+    # at checkout. Quote line items, the invoice and every payment use it too.
+    currency = models.CharField(max_length=3, choices=currency_module.CHOICES, default=currency_module.TZS)
     start_date = models.DateField()
     end_date = models.DateField()
     guests = models.PositiveIntegerField()
@@ -181,11 +186,22 @@ class Payment(models.Model):
         (STATUS_EXPIRED, "Expired"),
     ]
 
+    # "direct": a prompt sent straight to `phone_number`, paid without leaving the site.
+    # "hosted": a session on Snippe's checkout page (`checkout_url`).
+    MODE_DIRECT = "direct"
+    MODE_HOSTED = "hosted"
+    MODE_CHOICES = [(MODE_DIRECT, "Direct (phone prompt)"), (MODE_HOSTED, "Hosted checkout page")]
+
     booking = models.ForeignKey(Booking, related_name="payments", on_delete=models.CASCADE)
     kind = models.CharField(max_length=10, choices=KIND_CHOICES)
+    mode = models.CharField(max_length=10, choices=MODE_CHOICES, default=MODE_HOSTED)
+    # Direct payments only, as 255XXXXXXXXX.
+    phone_number = models.CharField(max_length=15, blank=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_PENDING)
     amount = models.PositiveIntegerField()
-    currency = models.CharField(max_length=3, default="TZS")
+    currency = models.CharField(max_length=3, choices=currency_module.CHOICES, default=currency_module.TZS)
+    # Who takes the money: Snippe for TZS, Senjaropay for USD (bookings.currency.PROVIDER_FOR).
+    provider = models.CharField(max_length=12, default=currency_module.PROVIDER_SNIPPE)
     # Deposit only: the full trip price the deposit was computed from.
     trip_total = models.PositiveIntegerField(null=True, blank=True)
     referral_code = models.ForeignKey(
@@ -193,6 +209,7 @@ class Payment(models.Model):
     )
     discount_percent = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     commission_percent = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    # Snippe's reference for this payment: the session's (hosted) or the payment's (direct).
     session_reference = models.CharField(max_length=100, unique=True, null=True, blank=True)
     checkout_url = models.URLField(max_length=500, blank=True)
     provider_reference = models.CharField(max_length=100, blank=True)
@@ -345,7 +362,7 @@ class QuoteLineItem(models.Model):
         return self.quantity * self.unit_price
 
     def __str__(self):
-        return f"{self.label} (TZS {self.quote_price:,})"
+        return f"{self.label} ({currency_module.format_amount(self.quote_price, self.booking.currency)})"
 
 
 class Review(models.Model):

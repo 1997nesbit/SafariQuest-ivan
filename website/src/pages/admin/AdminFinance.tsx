@@ -5,6 +5,7 @@ import {
   getInvoicesPage,
   sendInvoiceReminder,
   INVOICE_STATUS_LABELS,
+  type CurrencyFinance,
   type FinanceSummary,
   type Invoice,
   type InvoiceStatus,
@@ -13,7 +14,7 @@ import { useFetch } from '../../lib/useFetch'
 import { usePaginatedFetch } from '../../lib/usePaginatedFetch'
 import { ApiError, STANDARD_PAGE_SIZE } from '../../lib/api'
 import { Pager } from '../../components/admin/Pager'
-import { formatMoney } from '../../lib/money'
+import { formatMoney, formatTotals } from '../../lib/money'
 
 const STATUS_STYLES: Record<InvoiceStatus, string> = {
   unpaid: 'bg-surface-container text-on-surface-variant',
@@ -29,6 +30,12 @@ const FILTERS: { label: string; value: InvoiceStatus | 'all' }[] = [
   { label: 'Paid', value: 'paid' },
   { label: 'Overdue', value: 'overdue' },
 ]
+
+/** One finance figure across both currencies, e.g. "TZS 4,200,000 · USD 3,100" — the
+ * backend totals each currency separately and they're never added together. */
+function financeTotal(summary: FinanceSummary, key: keyof CurrencyFinance): string {
+  return formatTotals({ TZS: summary.byCurrency.TZS[key], USD: summary.byCurrency.USD[key] })
+}
 
 export function AdminFinance() {
   const [filter, setFilter] = useState<InvoiceStatus | 'all'>('all')
@@ -88,7 +95,7 @@ export function AdminFinance() {
               </div>
             </div>
             <p className="font-label-sm text-label-sm text-on-surface-variant mb-1 uppercase tracking-wider">Total Invoiced</p>
-            <p className="font-headline-md text-[26px] text-on-surface">{formatMoney(summary.totalInvoiced)}</p>
+            <p className="font-headline-md text-[26px] text-on-surface">{financeTotal(summary, 'totalInvoiced')}</p>
           </div>
           <div className="bg-surface-container-lowest rounded-xl p-5 shadow-sm border border-sand-stone/50">
             <div className="flex justify-between items-start mb-4">
@@ -97,7 +104,7 @@ export function AdminFinance() {
               </div>
             </div>
             <p className="font-label-sm text-label-sm text-on-surface-variant mb-1 uppercase tracking-wider">Total Collected</p>
-            <p className="font-headline-md text-[26px] text-on-surface">{formatMoney(summary.totalCollected)}</p>
+            <p className="font-headline-md text-[26px] text-on-surface">{financeTotal(summary, 'totalCollected')}</p>
           </div>
           <div className="bg-surface-container-lowest rounded-xl p-5 shadow-sm border border-sand-stone/50">
             <div className="flex justify-between items-start mb-4">
@@ -106,7 +113,7 @@ export function AdminFinance() {
               </div>
             </div>
             <p className="font-label-sm text-label-sm text-on-surface-variant mb-1 uppercase tracking-wider">Outstanding</p>
-            <p className="font-headline-md text-[26px] text-on-surface">{formatMoney(summary.totalOutstanding)}</p>
+            <p className="font-headline-md text-[26px] text-on-surface">{financeTotal(summary, 'totalOutstanding')}</p>
           </div>
           <div className="bg-surface-container-lowest rounded-xl p-5 shadow-sm border border-sand-stone/50">
             <div className="flex justify-between items-start mb-4">
@@ -116,7 +123,7 @@ export function AdminFinance() {
               <span className="text-xs font-label-md text-on-surface-variant">{summary.overdueCount} invoices</span>
             </div>
             <p className="font-label-sm text-label-sm text-on-surface-variant mb-1 uppercase tracking-wider">Overdue Amount</p>
-            <p className="font-headline-md text-[26px] text-on-surface">{formatMoney(summary.overdueAmount)}</p>
+            <p className="font-headline-md text-[26px] text-on-surface">{financeTotal(summary, 'overdueAmount')}</p>
           </div>
         </div>
       )}
@@ -169,7 +176,7 @@ export function AdminFinance() {
                       <span className="font-label-md text-sm text-on-surface">{invoice.customerName}</span>
                       <p className="text-xs text-on-surface-variant">{invoice.packageTitle}</p>
                     </td>
-                    <td className="px-5 py-4 text-sm text-on-surface">{formatMoney(invoice.amount)}</td>
+                    <td className="px-5 py-4 text-sm text-on-surface">{formatMoney(invoice.amount, undefined, invoice.currency)}</td>
                     <td className="px-5 py-4 text-sm text-on-surface-variant">{invoice.dueDate}</td>
                     <td className="px-5 py-4">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-label-sm ${STATUS_STYLES[invoice.status]}`}>

@@ -14,7 +14,8 @@ REGION_SAFARIS = [
         "rating": "4.6",
         "days": 3,
         "accommodation": "Highland Guesthouse",
-        "price": 480,
+        "price": 13780000,  # TZS
+        "price_usd": 5300,
         "badge": "Weekend Getaway",
         "signature": False,
         "park_slugs": [],
@@ -44,7 +45,8 @@ REGION_SAFARIS = [
         "rating": "4.4",
         "days": 2,
         "accommodation": "City Hotel",
-        "price": 320,
+        "price": 13260000,  # TZS
+        "price_usd": 5100,
         "badge": "",
         "signature": False,
         "park_slugs": [],
@@ -73,7 +75,8 @@ REGION_SAFARIS = [
         "rating": "4.8",
         "days": 3,
         "accommodation": "Boutique Hotel",
-        "price": 650,
+        "price": 15600000,  # TZS
+        "price_usd": 6000,
         "badge": "Popular",
         "signature": True,
         "park_slugs": ["zanzibar-beaches"],
@@ -103,7 +106,8 @@ REGION_SAFARIS = [
         "rating": "4.5",
         "days": 3,
         "accommodation": "Lodge",
-        "price": 540,
+        "price": 14300000,  # TZS
+        "price_usd": 5500,
         "badge": "",
         "signature": False,
         "park_slugs": [],
@@ -133,7 +137,8 @@ REGION_SAFARIS = [
         "rating": "4.7",
         "days": 3,
         "accommodation": "Beach Lodge",
-        "price": 590,
+        "price": 14820000,  # TZS
+        "price_usd": 5700,
         "badge": "",
         "signature": False,
         "park_slugs": [],

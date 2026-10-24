@@ -229,6 +229,12 @@ SNIPPE_WEBHOOK_SECRET = os.environ.get("SNIPPE_WEBHOOK_SECRET", "")
 SNIPPE_WEBHOOK_URL = os.environ.get("SNIPPE_WEBHOOK_URL", "")
 SNIPPE_PROFILE_ID = os.environ.get("SNIPPE_PROFILE_ID", "")
 SNIPPE_CURRENCY = "TZS"
+# "direct": the tourist enters their phone number on this site and approves the prompt
+# Snippe sends to it — no redirect. "hosted": send them to Snippe's checkout page instead
+# (the fallback, if direct payments ever misbehave).
+SNIPPE_CHECKOUT_MODE = os.environ.get("SNIPPE_CHECKOUT_MODE", "direct")
+if SNIPPE_CHECKOUT_MODE not in ("direct", "hosted"):
+    raise ImproperlyConfigured("SNIPPE_CHECKOUT_MODE must be 'direct' or 'hosted'.")
 # How long a checkout session stays payable, in seconds (Snippe allows 60–86400).
 SNIPPE_SESSION_EXPIRES_IN = int(os.environ.get("SNIPPE_SESSION_EXPIRES_IN", "3600"))
 

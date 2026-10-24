@@ -20,7 +20,9 @@ from config.mail import send_notification
 from referrals.models import ReferralCode, ReferralRedemption
 
 from . import snippe
+from .currency import PROVIDER_LABELS
 from .models import Booking, Invoice, Payment
+from .outages import record_attempt
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +79,45 @@ def open_session(payment, locale):
     payment.checkout_url = session["checkout_url"]
     payment.save(update_fields=["session_reference", "checkout_url"])
     return payment
+
+
+def _customer_names(user):
+    """Snippe requires a first and last name for direct payments. An account may only
+    have one name (or none, with an email), so fall back sensibly rather than fail."""
+    parts = (user.name or "").split()
+    if not parts:
+        parts = [user.email.split("@")[0]]
+    return parts[0], " ".join(parts[1:]) or parts[0]
+
+
+def open_direct_payment(payment):
+    """Sends the payment prompt to the pending Payment's phone number and stores Snippe's
+    reference. Raises snippe.SnippeError (after marking the payment failed) if Snippe
+    refuses or can't be reached."""
+    booking = payment.booking
+    firstname, lastname = _customer_names(booking.customer)
+    try:
+        data = snippe.create_mobile_payment(
+            amount=payment.amount,
+            phone_number=payment.phone_number,
+            customer={"firstname": firstname, "lastname": lastname, "email": booking.customer.email},
+            # Snippe metadata values must be strings, numbers or booleans.
+            metadata={"booking_id": booking.id, "payment_id": payment.id, "kind": payment.kind},
+            # Within Snippe's 30-character limit for any realistic id.
+            idempotency_key=f"sq-payment-{payment.id}",
+        )
+    except snippe.SnippeError:
+        payment.status = Payment.STATUS_FAILED
+        payment.save(update_fields=["status"])
+        raise
+    payment.session_reference = data["reference"]
+    payment.save(update_fields=["session_reference"])
+    return payment
+
+
+def resend_prompt(payment):
+    """Asks Snippe to send a still-pending direct payment's prompt to the phone again."""
+    return snippe.push_payment(payment.session_reference)
 
 
 def close_payment(payment, status):
@@ -191,7 +232,7 @@ def _apply_deposit(payment):
         log_action(
             customer,
             "booking.payment_recorded",
-            f"Deposit of {payment.currency} {payment.amount:,} paid via Snippe for booking "
+            f"Deposit of {payment.currency} {payment.amount:,} paid via {PROVIDER_LABELS.get(payment.provider, payment.provider)} for booking "
             f"#{booking.id} (invoice #{invoice.id}, payment #{payment.id})",
         )
 
@@ -253,7 +294,7 @@ def _apply_balance(payment):
         log_action(
             customer,
             "booking.balance_paid",
-            f"Remaining balance of {payment.currency} {payment.amount:,} paid via Snippe for "
+            f"Remaining balance of {payment.currency} {payment.amount:,} paid via {PROVIDER_LABELS.get(payment.provider, payment.provider)} for "
             f"booking #{booking.id} (invoice #{invoice.id}, payment #{payment.id})",
         )
 
@@ -293,13 +334,45 @@ def reconcile_open_payments(limit=50):
     return counts
 
 
+def _refresh_direct(payment):
+    """A direct payment's status straight from Snippe. Unlike a session, a failed direct
+    payment is final — retrying means a new payment — so only pending ones are checked.
+    The result also feeds outage detection, as a webhook would, in case none arrives."""
+    if payment.status != Payment.STATUS_PENDING:
+        return payment
+    try:
+        data = snippe.get_payment(payment.session_reference)
+    except snippe.SnippeError:
+        logger.warning("Could not check Snippe payment %s", payment.session_reference, exc_info=True)
+        return payment
+    snippe_status = data.get("status")
+    if snippe_status not in ("completed", "failed", "voided", "expired"):
+        return payment
+    # A direct payment is a single attempt: record it here only if its webhook didn't.
+    if snippe_status in ("completed", "failed") and not payment.attempts.exists():
+        record_attempt(
+            event_id=f"poll:{payment.session_reference}",
+            payment=payment,
+            data=data,
+            succeeded=snippe_status == "completed",
+        )
+    if snippe_status == "completed":
+        amount = data.get("amount") or {}
+        return complete_payment(payment, amount=amount.get("value"), currency=amount.get("currency"))
+    return close_payment(payment, Payment.STATUS_EXPIRED if snippe_status == "expired" else Payment.STATUS_FAILED)
+
+
 def refresh_from_snippe(payment):
-    """For a still-pending payment, asks Snippe directly how its session stands and applies
-    the answer. Covers a webhook that's late, or that can't reach a local dev server.
+    """For a still-pending payment, asks Snippe directly how it stands and applies the
+    answer. Covers a webhook that's late, or that can't reach a local dev server.
     Errors talking to Snippe are logged and the payment is returned unchanged."""
-    # A failed attempt leaves the session open for the tourist to try again, so a
+    if not payment.session_reference:
+        return payment
+    if payment.mode == Payment.MODE_DIRECT:
+        return _refresh_direct(payment)
+    # A failed attempt leaves a hosted session open for the tourist to try again, so a
     # "failed" payment can still complete.
-    if payment.status not in (Payment.STATUS_PENDING, Payment.STATUS_FAILED) or not payment.session_reference:
+    if payment.status not in (Payment.STATUS_PENDING, Payment.STATUS_FAILED):
         return payment
     try:
         session = snippe.get_session(payment.session_reference)

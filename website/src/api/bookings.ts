@@ -1,5 +1,6 @@
 import { apiGet, apiGetAllPages, apiGetPage, apiPatch, apiPost, type Page } from '../lib/api'
 import { fromApiShape } from '../lib/caseMap'
+import type { Currency } from '../lib/money'
 
 export type BookingStage = 'new_inquiry' | 'quoted' | 'deposit_paid' | 'confirmed' | 'completed'
 
@@ -59,6 +60,8 @@ export interface Booking {
   assignedGuideId: number | null
   assignedGuideName: string | null
   subtotal: number
+  /** What the booking is priced, invoiced and paid in. */
+  currency: Currency
 }
 
 export interface Review {
@@ -99,6 +102,7 @@ export interface BookingApiShape {
   assigned_guide: number | null
   assigned_guide_name: string | null
   subtotal: number
+  currency: Currency
 }
 
 interface TripMilestoneApiShape {
@@ -242,44 +246,79 @@ export async function sendQuote(id: number): Promise<BookingDetail> {
   return mapBookingDetail(raw)
 }
 
-/** A Snippe checkout session opened for a deposit or balance. The browser goes to
- * `checkoutUrl` to pay with mobile money; Snippe sends it back to the booking-confirmed
- * page (deposit) or /account (balance) with `?booking=&payment=` to poll. */
+/** How Snippe takes the money (backend SNIPPE_CHECKOUT_MODE). "direct": a prompt is sent
+ * to the tourist's phone and they approve it without leaving the site. "hosted": the
+ * browser goes to Snippe's checkout page and comes back with `?booking=&payment=`. */
+export type PaymentMode = 'direct' | 'hosted'
+
+/** A payment just started for a deposit or balance. Direct: show "approve the prompt on
+ * `phoneMasked`" and poll. Hosted: send the browser to `checkoutUrl`. */
 export interface PaymentCheckout {
   paymentId: number
+  mode: PaymentMode
   checkoutUrl: string
+  phoneMasked: string
   amount: number
-  currency: string
+  currency: Currency
 }
 
 interface PaymentCheckoutApiShape {
   payment_id: number
+  mode: PaymentMode
   checkout_url: string
+  phone_masked: string
   amount: number
-  currency: string
+  currency: Currency
 }
 
 function mapPaymentCheckout(raw: PaymentCheckoutApiShape): PaymentCheckout {
-  return { paymentId: raw.payment_id, checkoutUrl: raw.checkout_url, amount: raw.amount, currency: raw.currency }
+  return {
+    paymentId: raw.payment_id,
+    mode: raw.mode,
+    checkoutUrl: raw.checkout_url,
+    phoneMasked: raw.phone_masked,
+    amount: raw.amount,
+    currency: raw.currency,
+  }
 }
 
-/** Opens a Snippe checkout session for the deposit (1.3). No amounts are sent: the server
- * prices the trip and the deposit itself (backend/bookings/pricing.py), with the same
- * arithmetic the checkout page uses to show them, so the figure on screen is the figure
- * charged. Nothing about the booking changes until Snippe confirms the payment. */
-export async function payForBooking(id: number, locale: string, referralCode?: string): Promise<PaymentCheckout> {
-  const raw = await apiPost<PaymentCheckoutApiShape>(
-    `/api/bookings/${id}/pay/`,
-    referralCode ? { locale, referral_code: referralCode } : { locale },
-  )
+export interface PayOptions {
+  referralCode?: string
+  /** Direct mode only: the number the payment prompt goes to. */
+  phoneNumber?: string
+}
+
+function payBody(locale: string, { referralCode, phoneNumber }: PayOptions) {
+  return {
+    locale,
+    ...(referralCode ? { referral_code: referralCode } : {}),
+    ...(phoneNumber ? { phone_number: phoneNumber } : {}),
+  }
+}
+
+/** Starts the deposit payment (1.3). No amounts are sent: the server prices the trip and
+ * the deposit itself (backend/bookings/pricing.py), with the same arithmetic the checkout
+ * page uses to show them, so the figure on screen is the figure charged. Nothing about
+ * the booking changes until Snippe confirms the payment. */
+export async function payForBooking(id: number, locale: string, options: PayOptions = {}): Promise<PaymentCheckout> {
+  const raw = await apiPost<PaymentCheckoutApiShape>(`/api/bookings/${id}/pay/`, payBody(locale, options))
   return mapPaymentCheckout(raw)
 }
 
-/** Opens a Snippe checkout session for whatever remains after the deposit; the amount is
- * computed server-side from the invoice's trip_total, not trusted from the client. */
-export async function payRemainingBalance(id: number, locale: string): Promise<PaymentCheckout> {
-  const raw = await apiPost<PaymentCheckoutApiShape>(`/api/bookings/${id}/pay-balance/`, { locale })
+/** Starts a payment for whatever remains after the deposit; the amount is computed
+ * server-side from the invoice's trip_total, not trusted from the client. */
+export async function payRemainingBalance(
+  id: number,
+  locale: string,
+  options: Pick<PayOptions, 'phoneNumber'> = {},
+): Promise<PaymentCheckout> {
+  const raw = await apiPost<PaymentCheckoutApiShape>(`/api/bookings/${id}/pay-balance/`, payBody(locale, options))
   return mapPaymentCheckout(raw)
+}
+
+/** Sends a pending direct payment's prompt to the phone again. */
+export async function resendPaymentPrompt(bookingId: number, paymentId: number): Promise<void> {
+  await apiPost(`/api/bookings/${bookingId}/payments/${paymentId}/resend/`)
 }
 
 export type PaymentStatusValue = 'pending' | 'completed' | 'failed' | 'expired'
@@ -287,9 +326,11 @@ export type PaymentStatusValue = 'pending' | 'completed' | 'failed' | 'expired'
 export interface PaymentStatus {
   paymentId: number
   kind: 'deposit' | 'balance'
+  mode: PaymentMode
   status: PaymentStatusValue
   amount: number
-  currency: string
+  currency: Currency
+  phoneMasked: string
   customerEmail: string
   packageTitle: string
 }
@@ -297,9 +338,11 @@ export interface PaymentStatus {
 interface PaymentStatusApiShape {
   payment_id: number
   kind: 'deposit' | 'balance'
+  mode: PaymentMode
   status: PaymentStatusValue
   amount: number
-  currency: string
+  currency: Currency
+  phone_masked: string
   customer_email: string
   package_title: string
 }
@@ -311,9 +354,11 @@ export async function getPaymentStatus(bookingId: number, paymentId: number): Pr
   return {
     paymentId: raw.payment_id,
     kind: raw.kind,
+    mode: raw.mode,
     status: raw.status,
     amount: raw.amount,
     currency: raw.currency,
+    phoneMasked: raw.phone_masked,
     customerEmail: raw.customer_email,
     packageTitle: raw.package_title,
   }
@@ -359,6 +404,8 @@ export interface BookingCreateInput {
   /** How many of `guests` are children (half the adult rate); defaults to 0. */
   children?: number
   message?: string
+  /** What the trip is priced and paid in; defaults to TZS. */
+  currency?: Currency
 }
 
 export async function createBooking(input: BookingCreateInput): Promise<BookingDetail> {
@@ -373,6 +420,7 @@ export async function createBooking(input: BookingCreateInput): Promise<BookingD
   if (input.regionSafari) payload.region_safari = input.regionSafari
   if (input.children) payload.children = input.children
   if (input.message) payload.message = input.message
+  if (input.currency) payload.currency = input.currency
   const raw = await apiPost<BookingDetailApiShape>('/api/bookings/', payload)
   return mapBookingDetail(raw)
 }
@@ -384,6 +432,10 @@ export interface PaymentAvailability {
   blocked: boolean
   message: string | null
   warnings: string[]
+  /** Whether pay buttons ask for a phone number here (direct) or go to Snippe (hosted). */
+  mode: PaymentMode
+  /** Which currencies can be paid online right now (USD needs Senjaropay). */
+  currencies: Record<Currency, boolean>
 }
 
 export function getPaymentAvailability(): Promise<PaymentAvailability> {
